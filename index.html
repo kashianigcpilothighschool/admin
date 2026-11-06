@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔐 লগইন প্যানেল</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1F2D50;
+    --ink-soft: #47537A;
+    --paper: #FAF6EC;
+    --paper-line: #E7DFC8;
+    --gold: #C79A47;
+    --gold-deep: #A87E33;
+    --sage: #3F7A63;
+    --sage-bg: #E4F0E9;
+    --brick: #B4432E;
+    --brick-bg: #FBE7E2;
+    --card: #FFFFFF;
+    --muted: #7A8399;
+    --radius: 14px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans Bengali', sans-serif;
+    background:
+      radial-gradient(circle at 12% 15%, rgba(199, 154, 71, 0.16), transparent 45%),
+      radial-gradient(circle at 88% 85%, rgba(63, 122, 99, 0.14), transparent 45%),
+      var(--paper);
+    min-height: 100vh;
+    color: var(--ink);
+    font-size: 14px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ---------- পটভূমির বৃত্ত (লগইন পেজের মতো) ---------- */
+  .bg-shape { position: fixed; border-radius: 50%; border: 1.5px solid rgba(31,45,80,0.06); animation: float 8s infinite ease-in-out; pointer-events: none; }
+  .bg-shape:nth-child(1) { width: 260px; height: 260px; top: 6%; left: 6%; }
+  .bg-shape:nth-child(2) { width: 180px; height: 180px; top: 72%; right: 8%; animation-delay: 2.5s; }
+  .bg-shape:nth-child(3) { width: 120px; height: 120px; bottom: 15%; left: 14%; animation-delay: 5s; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+
+  /* ---------- লগইন ---------- */
+  #loginView { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 24px; position: relative; z-index: 1; }
+
+  .login-container {
+    background:
+      repeating-linear-gradient(to bottom, transparent 0px, transparent 38px, var(--paper-line) 38px, var(--paper-line) 39px),
+      var(--card);
+    border: 1px solid rgba(31,45,80,0.08);
+    padding: 40px 36px;
+    border-radius: 20px;
+    box-shadow: 0 24px 48px rgba(31,45,80,0.12), 0 2px 6px rgba(31,45,80,0.06);
+    width: 100%; max-width: 460px; position: relative;
+    animation: slideUp 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+  }
+  .login-container::before { content: ''; position: absolute; top: 0; left: 34px; width: 2px; height: 100%; background: rgba(180,67,46,0.14); border-radius: 2px; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+  .header { text-align: center; margin-bottom: 32px; }
+  .header .badge { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; color: var(--gold-deep); background: rgba(199,154,71,0.14); padding: 4px 14px; border-radius: 999px; margin-bottom: 12px; }
+  .header h2 { font-family: 'Noto Serif Bengali', serif; color: var(--ink); font-size: 30px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.01em; }
+  .header p { color: var(--muted); font-size: 14px; }
+
+  form { position: relative; z-index: 1; }
+  .form-group { position: relative; margin-bottom: 22px; }
+  .form-group label { position: absolute; top: 50%; left: 45px; transform: translateY(-50%); color: var(--muted); font-size: 15px; pointer-events: none; transition: all 0.25s cubic-bezier(0.25,0.46,0.45,0.94); background: var(--card); }
+  .form-group input { width: 100%; padding: 15px 18px 15px 45px; border: 1.5px solid #E3E1D8; border-radius: 11px; font-size: 15px; font-family: 'Noto Sans Bengali', sans-serif; background: var(--card); transition: all 0.25s; outline: none; }
+  .form-group input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(199,154,71,0.15); }
+  .form-group input:focus + label,
+  .form-group input:not(:placeholder-shown) + label { top: -9px; left: 14px; font-size: 11.5px; color: var(--gold-deep); padding: 0 7px; font-weight: 600; }
+  .form-group .icon { position: absolute; top: 50%; left: 15px; transform: translateY(-50%); font-size: 16px; color: #B7BCC9; transition: color 0.25s; }
+  .form-group input:focus ~ .icon { color: var(--gold-deep); }
+  .password-toggle { position: absolute; top: 50%; right: 14px; transform: translateY(-50%); cursor: pointer; font-size: 16px; color: #B7BCC9; transition: color 0.25s; }
+  .password-toggle:hover { color: var(--gold-deep); }
+
+  .login-btn { width: 100%; padding: 15px; background: linear-gradient(135deg, var(--ink) 0%, #2C3D6B 100%); color: #fff; border: none; border-radius: 11px; font-size: 15.5px; font-weight: 600; transition: all 0.25s; position: relative; overflow: hidden; margin-top: 6px; }
+  .login-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent); transition: left 0.5s; }
+  .login-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(31,45,80,0.28); }
+  .login-btn:hover::before { left: 100%; }
+  .login-btn:active { transform: translateY(0); }
+  .login-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+  .loading { display: none; align-items: center; justify-content: center; gap: 10px; }
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid #fff; border-radius: 50%; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error { background: var(--brick-bg); color: var(--brick); padding: 12px 16px; border-radius: 10px; font-size: 13.5px; text-align: center; margin-top: 18px; border: 1px solid rgba(180,67,46,0.25); display: none; animation: shake 0.5s ease-in-out; }
+  .error.show { display: block; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+
+  .success-animation { position: fixed; inset: 0; background: rgba(63,122,99,0.92); display: none; justify-content: center; align-items: center; z-index: 1000; }
+  .success-check { width: 80px; height: 80px; border-radius: 50%; background: #fff; display: flex; justify-content: center; align-items: center; font-size: 38px; color: var(--sage); animation: successPop 0.6s cubic-bezier(0.68,-0.55,0.265,1.55); }
+  @keyframes successPop { 0% { transform: scale(0) rotate(0deg); } 50% { transform: scale(1.2) rotate(180deg); } 100% { transform: scale(1) rotate(360deg); } }
+
+  /* ---------- সাইন আপ / পাসওয়ার্ড রিসেট ধাপ (লগইন পেজের মতো) ---------- */
+  .step-container { display: none; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row .form-group { margin-bottom: 0; }
+  .form-row + .form-group, .form-group + .form-row { margin-top: 22px; }
+  .forgot-password { text-align: center; margin-top: 18px; }
+  .forgot-password a { color: var(--ink-soft); font-size: 13.5px; font-weight: 500; cursor: pointer; }
+  .forgot-password a:hover { color: var(--gold-deep); text-decoration: underline; }
+  .switch-row { text-align: center; margin-top: 16px; font-size: 13.5px; color: var(--muted); }
+  .switch-row a { color: var(--gold-deep); font-weight: 600; cursor: pointer; }
+  .switch-row a:hover { text-decoration: underline; }
+  .info-msg { background: var(--sage-bg); color: var(--sage); padding: 12px 16px; border-radius: 10px; font-size: 13.5px; text-align: center; margin-top: 18px; border: 1px solid rgba(63,122,99,0.25); display: none; }
+  .info-msg.show { display: block; }
+  .otp-inputs { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 24px; }
+  .otp-inputs input { width: 100%; aspect-ratio: 1; text-align: center; font-size: 20px; font-weight: 700; color: var(--ink); border: 1.5px solid #E3E1D8; border-radius: 10px; outline: none; transition: all 0.25s; font-family: inherit; }
+  .otp-inputs input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(199,154,71,0.15); }
+  .otp-info { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
+  .otp-info b { color: var(--ink); }
+  .resend-row { text-align: center; margin-top: 18px; font-size: 13.5px; color: var(--muted); }
+  .resend-row a { color: var(--gold-deep); font-weight: 600; cursor: pointer; }
+  .resend-row a.disabled { color: #C9CDD6; pointer-events: none; }
+  .back-link { text-align: center; margin-top: 10px; }
+  .back-link a { color: #A6ACBB; font-size: 12.5px; cursor: pointer; }
+  .back-link a:hover { color: var(--gold-deep); }
+  .login-btn.secondary { background: #fff; color: var(--ink); border: 1.5px solid #DADFE8; }
+
+  .form-group label.class-select-label { position: static; transform: none; display: block; margin-bottom: 10px; color: var(--ink); font-size: 13.5px; font-weight: 600; pointer-events: auto; background: none; }
+  .multiselect-dropdown { position: relative; }
+  .multiselect-trigger { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 14px 16px; border: 1.5px solid #E3E1D8; border-radius: 11px; background: var(--card); cursor: pointer; transition: all 0.25s; user-select: none; }
+  .multiselect-dropdown.open .multiselect-trigger { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(199,154,71,0.15); }
+  .multiselect-label { font-size: 14px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .multiselect-label.placeholder { color: #A6ACBB; }
+  .multiselect-chevron { flex-shrink: 0; width: 11px; height: 11px; border-right: 2px solid #A6ACBB; border-bottom: 2px solid #A6ACBB; transform: rotate(45deg); transition: transform 0.25s; margin-top: -4px; }
+  .multiselect-dropdown.open .multiselect-chevron { transform: rotate(-135deg); margin-top: 4px; }
+  .multiselect-panel { display: none; position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 20; background: var(--card); border: 1.5px solid #E3E1D8; border-radius: 12px; box-shadow: 0 16px 32px rgba(31,45,80,0.16); padding: 8px; max-height: 240px; overflow-y: auto; }
+  .multiselect-dropdown.open .multiselect-panel { display: block; }
+  .class-checkbox-group { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 4px 6px; }
+  .form-group .class-checkbox-group label { position: static; transform: none; display: flex; align-items: center; gap: 7px; padding: 7px 6px; font-size: 13px; color: var(--ink-soft); cursor: pointer; pointer-events: auto; background: none; border-radius: 7px; }
+  .form-group .class-checkbox-group label:hover { background: rgba(199,154,71,0.08); }
+  .form-group .class-checkbox-group input[type="checkbox"] { width: 15px; height: 15px; padding: 0; border: none; box-shadow: none; accent-color: var(--gold-deep); cursor: pointer; flex-shrink: 0; }
+  @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; gap: 0; } .form-row .form-group:first-child { margin-bottom: 22px; } .class-checkbox-group { grid-template-columns: 1fr; } }
+
+  /* ---------- মডিউল হাব (লগইনের পর সব সিস্টেমের প্রবেশদ্বার) ---------- */
+  #hubView { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 24px; }
+  .hub-box { max-width: 760px; margin: 36px auto; animation: slideUp 0.5s ease; }
+  .hub-box .header { margin-bottom: 26px; }
+  .mod { cursor: pointer; text-align: left; transition: transform .25s, box-shadow .25s; }
+  .mod:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(31,45,80,0.14); }
+  .mod .mi { font-size: 30px; display: block; margin-bottom: 8px; }
+  .mod b { font-size: 17px; }
+  .hub-actions { display: flex; gap: 8px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+
+  /* ---------- প্যানেল ---------- */
+  #app { display: none; position: relative; z-index: 1; }
+  header.top { background: linear-gradient(135deg, var(--ink) 0%, #2C3D6B 100%); color: #fff; padding: 14px 22px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; box-shadow: 0 6px 18px rgba(31,45,80,0.18); }
+  header.top h1 { font-family: 'Noto Serif Bengali', serif; font-size: 19px; font-weight: 700; }
+  header.top .who { opacity: .85; font-size: 13px; margin-right: 10px; }
+
+  nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 22px; }
+  nav button { background: rgba(255,255,255,0.7); border: 1.5px solid #E3E1D8; padding: 8px 16px; border-radius: 999px; font-weight: 600; color: var(--ink-soft); font-size: 13.5px; transition: all 0.25s; }
+  nav button:hover { border-color: var(--gold); color: var(--gold-deep); }
+  nav button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  main { padding: 6px 22px 30px; max-width: 1100px; margin: auto; animation: slideUp 0.5s ease; }
+
+  .btn { border: none; border-radius: 9px; padding: 9px 16px; font-weight: 600; font-size: 13px; background: linear-gradient(135deg, var(--ink) 0%, #2C3D6B 100%); color: #fff; transition: all 0.25s; }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(31,45,80,0.22); }
+  .btn.ghost { background: #fff; color: var(--ink); border: 1.5px solid #DADFE8; }
+  .btn.ok { background: var(--sage); } .btn.bad { background: var(--brick); }
+  .btn.sm { padding: 5px 11px; font-size: 12px; }
+  .btn:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .stat { background: var(--card); border-radius: 16px; padding: 18px; border: 1px solid rgba(31,45,80,0.08); box-shadow: 0 8px 20px rgba(31,45,80,0.06); border-top: 3px solid var(--gold); }
+  .stat b { font-family: 'Noto Serif Bengali', serif; font-size: 30px; display: block; color: var(--ink); }
+  .stat span { color: var(--muted); font-size: 12.5px; }
+  .stat.click { cursor: pointer; transition: transform .25s; } .stat.click:hover { transform: translateY(-3px); }
+
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  input.f, select.f { font-family: inherit; font-size: 14px; padding: 10px 14px; border: 1.5px solid #E3E1D8; border-radius: 11px; background: #fff; outline: none; transition: all .25s; width: 100%; }
+  .bar input.f, .bar select.f { width: auto; min-width: 160px; }
+  input.f:focus, select.f:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(199,154,71,0.15); }
+  .lbl { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin: 14px 0 5px; }
+
+  .tw { overflow-x: auto; background: var(--card); border-radius: 16px; border: 1px solid rgba(31,45,80,0.08); box-shadow: 0 8px 20px rgba(31,45,80,0.06); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th, td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--paper-line); font-size: 13px; vertical-align: middle; }
+  th { background: #F7F1DF; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+  .sub { color: var(--muted); }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: #eee; }
+  .tag.active { background: var(--sage-bg); color: var(--sage); }
+  .tag.pending { background: rgba(199,154,71,0.18); color: var(--gold-deep); }
+  .tag.blocked, .tag.inactive { background: var(--brick-bg); color: var(--brick); }
+  .acts { display: flex; gap: 5px; flex-wrap: wrap; }
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+  dialog { border: none; border-radius: 20px; padding: 28px 26px; width: min(460px, 92vw); box-shadow: 0 24px 48px rgba(31,45,80,0.25); background: var(--card); }
+  dialog::backdrop { background: rgba(31,45,80,0.45); }
+  dialog h3 { font-family: 'Noto Serif Bengali', serif; font-size: 20px; }
+
+  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--sage); color: #fff; padding: 11px 20px; border-radius: 11px; display: none; z-index: 1100; max-width: 90vw; font-weight: 500; box-shadow: 0 12px 26px rgba(31,45,80,0.25); }
+  #toast.bad { background: var(--brick); }
+
+  @media (max-width: 480px) {
+    .login-container { padding: 30px 22px; margin: 8px; }
+    .header h2 { font-size: 24px; }
+    nav, main { padding-left: 14px; padding-right: 14px; }
+  }
+</style>
+</head>
+<body>
+  <div class="bg-shape"></div><div class="bg-shape"></div><div class="bg-shape"></div>
+
+  <!-- ===== লগইন ===== -->
+  <div id="loginView">
+    <div class="login-container" id="mainCard">
+     <!-- ধাপ ১: লগইন -->
+     <div id="loginStep">
+      <div class="header">
+        <span class="badge">স্কুল ম্যানেজমেন্ট সিস্টেম</span>
+        <h2>স্বাগতম</h2>
+        <p>আপনার অ্যাকাউন্টে প্রবেশ করুন</p>
+      </div>
+      <form id="loginForm">
+        <div class="form-group">
+          <input type="email" id="lEmail" placeholder=" " required autocomplete="username">
+          <label for="lEmail">ইমেইল ঠিকানা</label>
+          <span class="icon">✉️</span>
+        </div>
+        <div class="form-group">
+          <input type="password" id="lPass" placeholder=" " required autocomplete="current-password">
+          <label for="lPass">পাসওয়ার্ড</label>
+          <span class="icon">🔒</span>
+          <span class="password-toggle" onclick="togglePassword('lPass', this)">👁️</span>
+        </div>
+        <button type="submit" class="login-btn" id="lBtn">
+          <span class="btn-text">প্রবেশ করুন</span>
+          <div class="loading"><span class="spinner"></span><span>প্রবেশ করা হচ্ছে...</span></div>
+        </button>
+      </form>
+      <div class="error" id="lErr"></div>
+      <div class="forgot-password"><a onclick="goToStep('forgotStep')">পাসওয়ার্ড ভুলে গেছেন?</a></div>
+      <div class="switch-row">নতুন এখানে? <a onclick="goToStep('signupStep')">অ্যাকাউন্ট তৈরি করুন</a></div>
+     </div>
+
+     <!-- ধাপ ১.৫: লগইন OTP যাচাই -->
+     <div class="step-container" id="otpStep">
+      <div class="header"><h2>OTP যাচাই করুন</h2><p>আপনার ইমেইলে পাঠানো কোডটি লিখুন</p></div>
+      <div class="otp-info"><b id="otpEmailDisplay"></b> ঠিকানায় ৬-ডিজিটের একটি কোড পাঠানো হয়েছে।</div>
+      <form id="otpForm">
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="otp-digit">
+        </div>
+        <button type="submit" class="login-btn" id="otpBtn">
+          <span class="btn-text">যাচাই করুন</span>
+          <div class="loading"><span class="spinner"></span><span>যাচাই করা হচ্ছে...</span></div>
+        </button>
+      </form>
+      <div class="error" id="otpError"></div>
+      <div class="resend-row">নতুন কোড পাননি? <a id="resendLink" onclick="resendOtp()">আবার পাঠান</a><span id="resendTimer"></span></div>
+      <div class="back-link"><a onclick="backToLogin()">← ইমেইল পরিবর্তন করুন</a></div>
+     </div>
+
+     <!-- ধাপ ২: সাইন আপ -->
+     <div class="step-container" id="signupStep">
+      <div class="header">
+        <span class="badge">নতুন নিবন্ধন</span>
+        <h2>অ্যাকাউন্ট তৈরি করুন</h2>
+        <p>নতুন অ্যাকাউন্ট খুলতে তথ্য দিন</p>
+      </div>
+      <form id="signupForm">
+        <div class="form-row">
+          <div class="form-group">
+            <input type="text" id="signupName" placeholder=" " required>
+            <label for="signupName">পূর্ণ নাম</label><span class="icon">🧑</span>
+          </div>
+          <div class="form-group">
+            <input type="tel" id="signupMobile" placeholder=" " required pattern="^[0-9+\-\s]{6,15}$">
+            <label for="signupMobile">মোবাইল নম্বর</label><span class="icon">📱</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <input type="email" id="signupEmail" placeholder=" " required>
+          <label for="signupEmail">ইমেইল ঠিকানা</label><span class="icon">✉️</span>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <input type="password" id="signupPassword" placeholder=" " required minlength="6">
+            <label for="signupPassword">পাসওয়ার্ড</label><span class="icon">🔒</span>
+            <span class="password-toggle" onclick="togglePassword('signupPassword', this)">👁️</span>
+          </div>
+          <div class="form-group">
+            <input type="password" id="signupConfirmPassword" placeholder=" " required minlength="6">
+            <label for="signupConfirmPassword">নিশ্চিত করুন</label><span class="icon">🔒</span>
+            <span class="password-toggle" onclick="togglePassword('signupConfirmPassword', this)">👁️</span>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:22px;margin-bottom:6px;">
+          <label class="class-select-label">🏫 কোন কোন ক্লাস/শাখার জন্য অ্যাক্সেস চান?</label>
+          <div class="multiselect-dropdown" id="classMultiselect">
+            <div class="multiselect-trigger" onclick="toggleClassDropdown(event)">
+              <span class="multiselect-label placeholder" id="classLabel">শ্রেণি ও শাখা নির্বাচন করুন</span>
+              <span class="multiselect-chevron"></span>
+            </div>
+            <div class="multiselect-panel"><div id="classCheckboxGroup" class="class-checkbox-group"></div></div>
+          </div>
+        </div>
+        <button type="submit" class="login-btn" id="signupBtn" style="margin-top:22px;">
+          <span class="btn-text">সাইন আপ করুন</span>
+          <div class="loading"><span class="spinner"></span><span>তৈরি করা হচ্ছে...</span></div>
+        </button>
+      </form>
+      <div class="error" id="signupError"></div>
+      <div class="info-msg" id="signupInfo"></div>
+      <div class="switch-row">আগে থেকেই অ্যাকাউন্ট আছে? <a onclick="backToLogin()">লগইন করুন</a></div>
+     </div>
+
+     <!-- ধাপ ৩: পাসওয়ার্ড ভুলে গেছেন — ইমেইল -->
+     <div class="step-container" id="forgotStep">
+      <div class="header"><h2>পাসওয়ার্ড রিসেট</h2><p>আপনার ইমেইল ঠিকানা দিন</p></div>
+      <form id="forgotForm">
+        <div class="form-group">
+          <input type="email" id="forgotEmail" placeholder=" " required>
+          <label for="forgotEmail">ইমেইল ঠিকানা</label><span class="icon">✉️</span>
+        </div>
+        <button type="submit" class="login-btn" id="forgotBtn">
+          <span class="btn-text">কোড পাঠান</span>
+          <div class="loading"><span class="spinner"></span><span>পাঠানো হচ্ছে...</span></div>
+        </button>
+      </form>
+      <div class="error" id="forgotError"></div>
+      <div class="back-link"><a onclick="backToLogin()">← লগইনে ফিরে যান</a></div>
+     </div>
+
+     <!-- ধাপ ৪: OTP + নতুন পাসওয়ার্ড -->
+     <div class="step-container" id="resetStep">
+      <div class="header"><h2>নতুন পাসওয়ার্ড সেট করুন</h2><p>কোড যাচাই করে নতুন পাসওয়ার্ড দিন</p></div>
+      <div class="otp-info"><b id="resetEmailDisplay"></b> ঠিকানায় ৬-ডিজিটের একটি কোড পাঠানো হয়েছে (যদি অ্যাকাউন্টটি থাকে)।</div>
+      <form id="resetForm">
+        <div class="otp-inputs">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+          <input type="text" maxlength="1" inputmode="numeric" class="reset-otp-digit">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <input type="password" id="newPassword" placeholder=" " required minlength="6">
+            <label for="newPassword">নতুন পাসওয়ার্ড</label><span class="icon">🔒</span>
+            <span class="password-toggle" onclick="togglePassword('newPassword', this)">👁️</span>
+          </div>
+          <div class="form-group">
+            <input type="password" id="newPasswordConfirm" placeholder=" " required minlength="6">
+            <label for="newPasswordConfirm">নিশ্চিত করুন</label><span class="icon">🔒</span>
+            <span class="password-toggle" onclick="togglePassword('newPasswordConfirm', this)">👁️</span>
+          </div>
+        </div>
+        <button type="submit" class="login-btn" id="resetBtn" style="margin-top:22px;">
+          <span class="btn-text">পাসওয়ার্ড পরিবর্তন করুন</span>
+          <div class="loading"><span class="spinner"></span><span>পরিবর্তন করা হচ্ছে...</span></div>
+        </button>
+      </form>
+      <div class="error" id="resetError"></div>
+      <div class="resend-row">নতুন কোড পাননি? <a id="resetResendLink" onclick="resendResetOtp()">আবার পাঠান</a><span id="resetResendTimer"></span></div>
+      <div class="back-link"><a onclick="goToStep('forgotStep')">← ইমেইল পরিবর্তন করুন</a></div>
+     </div>
+    </div>
+  </div>
+
+  <!-- ===== মডিউল হাব: লগইনের পর সবাই (শিক্ষক/অফিস) এখান থেকে নিজের সিস্টেমে যাবে ===== -->
+  <div id="hubView">
+    <div class="hub-box">
+      <div class="header">
+        <span class="badge">স্কুল ম্যানেজমেন্ট সিস্টেম</span>
+        <h2>কোন সিস্টেমে যাবেন?</h2>
+        <p id="hubWho"></p>
+      </div>
+      <div class="cards" id="hubCards"></div>
+      <div class="hub-actions">
+        <button class="btn ghost" id="hubBack" onclick="showApp()" style="display:none">← অ্যাডমিন প্যানেল</button>
+        <button class="btn ghost" onclick="logout()">লগআউট</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== অ্যাপ ===== -->
+  <div id="app">
+    <header class="top">
+      <h1>🛡️ অ্যাডমিন প্যানেল</h1>
+      <div><span class="who" id="who"></span><button class="btn ghost sm" onclick="showHub(ME)" style="margin-right:6px">সব সিস্টেম</button><button class="btn ghost sm" onclick="logout()">লগআউট</button></div>
+    </header>
+    <nav id="nav">
+      <button data-t="overview" class="on">সারসংক্ষেপ</button>
+      <button data-t="users">ইউজার</button>
+      <button data-t="regs">নতুন নিবন্ধন</button>
+      <button data-t="sessions">সক্রিয় সেশন</button>
+      <button data-t="holidays">ছুটির দিন</button>
+      <button data-t="archive">হাজিরা আর্কাইভ</button>
+    </nav>
+    <main id="main"></main>
+  </div>
+
+  <!-- ইউজার ফর্ম -->
+  <dialog id="userDlg">
+    <form id="userForm" method="dialog">
+      <h3 id="userDlgTitle">ইউজার</h3>
+      <label class="lbl">ইমেইল</label><input class="f" id="uEmail" type="email" required>
+      <div id="uPassWrap"><label class="lbl">পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর)</label><input class="f" id="uPass" type="text" minlength="6"></div>
+      <label class="lbl">নাম</label><input class="f" id="uName">
+      <label class="lbl">মোবাইল</label><input class="f" id="uMobile">
+      <label class="lbl">Role</label><select class="f" id="uRole"></select>
+      <label class="lbl">Status</label><select class="f" id="uStatus"></select>
+      <label class="lbl">Access</label><input class="f" id="uAccess" placeholder="ALL অথবা 6_A,6_B,9_SCI_Boys">
+      <p class="hint">ক্লাস কী কমা দিয়ে লিখুন। সবার জন্য: ALL</p>
+      <div style="display:flex;gap:8px;margin-top:18px;justify-content:flex-end">
+        <button type="button" class="btn ghost" onclick="userDlg.close()">বাতিল</button>
+        <button class="btn ok" id="uSave">সংরক্ষণ</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast"></div>
+  <div class="success-animation" id="successAnimation"><div class="success-check">✓</div></div>
+
+<script>
+// ============================================================
+// 🌐 কনফিগ — আপনার Supabase Edge Function-এর URL এখানে বসান
+// ============================================================
+const API_URL  = "https://xemvwhqqpbxsdkqcscrg.supabase.co/functions/v1/attendance";
+const ANON_KEY = "sb_publishable_Ecayyqfsteeio6zjLzHAZw_F6I3h_F0";   // Supabase "anon public" key (service_role কখনো নয়)
+
+// ============================================================
+// 🧩 সিস্টেম/মডিউল তালিকা — লগইনের পর হাবে এগুলো দেখাবে
+// url: পেজের ফাইলের নাম (আপনার আসল নাম বসান); পেজটি ?token=... পাবে
+// officeOk: true হলে "অফিস" ইউজারও দেখবে (সার্ভারে যেগুলো অফিসকে অনুমতি দেয়)
+// নতুন সিস্টেম যোগ করতে শুধু একটি লাইন যোগ করুন।
+// ============================================================
+const MODULES = [
+  { icon: "📝", title: "মার্কস এন্ট্রি",   desc: "পরীক্ষার নম্বর এন্ট্রি",           url: "dashboard.html",     officeOk: false },
+  { icon: "🗓️", title: "হাজিরা",           desc: "দৈনিক হাজিরা ও রিপোর্ট",           url: "attendance.html",    officeOk: true  },
+  { icon: "📄", title: "ফরম ফিলাপ",        desc: "ফরম ফিলাপ, ফি ও জমা",              url: "formfillup.html",    officeOk: false },
+  { icon: "🧾", title: "নতুন নিবন্ধন",     desc: "শিক্ষার্থী নিবন্ধন কনফার্ম",        url: "registrations.html", officeOk: false },
+];
+let ME = null;   // বর্তমান ইউজার (whoAmI-এর ফল)
+
+function openModule(i) {
+  const u = MODULES[i].url;
+  location.href = u + (u.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
+}
+function showHub(me) {
+  me = me || ME; if (!me) return;
+  $("loginView").style.display = "none"; $("app").style.display = "none"; $("hubView").style.display = "block";
+  $("hubWho").textContent = (me.name || me.email) + (me.isAdmin ? " · অ্যাডমিন" : me.isOffice ? " · অফিস" : "");
+  $("hubBack").style.display = me.isAdmin ? "inline-block" : "none";
+  const items = MODULES.map((m, i) => ({ m, i })).filter((x) => !me.isOffice || x.m.officeOk);
+  $("hubCards").innerHTML = items.length
+    ? items.map(({ m, i }) => `<div class="stat click mod" onclick="openModule(${i})"><span class="mi">${m.icon}</span><b>${esc(m.title)}</b><span>${esc(m.desc)}</span></div>`).join("")
+    : '<div class="empty">আপনার জন্য কোনো সিস্টেম নির্ধারিত নেই।</div>';
+}
+
+let TOKEN = sessionStorage.getItem("app_token") || "";   // লগইন টোকেন (সব ধরনের ইউজারের; ট্যাব বন্ধ হলে মুছে যায়)
+let META = { roles: ["Admin","Teacher","Office"], statuses: ["active","pending","blocked","inactive"] };
+let tab = "overview", usersCache = [], editingEmail = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function togglePassword(id, el) {
+  const i = $(id); const show = i.type === "password";
+  i.type = show ? "text" : "password"; el.textContent = show ? "🙈" : "👁️";
+}
+// বিশ্বস্ত ডিভাইস টোকেন (ইমেইল অনুযায়ী, ৩০ দিন): OTP যাচাইয়ের পর সার্ভার দেয়
+function getDev(email) { try { return (JSON.parse(localStorage.getItem("trusted_devices") || "{}"))[String(email).trim().toLowerCase()] || ""; } catch (e) { return ""; } }
+function setDev(email, tok) { try { const m = JSON.parse(localStorage.getItem("trusted_devices") || "{}"); m[String(email).trim().toLowerCase()] = tok; localStorage.setItem("trusted_devices", JSON.stringify(m)); } catch (e) {} }
+async function api(fn, ...args) {
+  const h = { "Content-Type": "application/json" };
+  if (ANON_KEY) { h.apikey = ANON_KEY; h.Authorization = "Bearer " + ANON_KEY; }
+  const r = await fetch(API_URL, { method: "POST", headers: h, body: JSON.stringify({ fn, args }) });
+  const j = await r.json();
+  if (!j.ok) {
+    if (j.error === "SESSION_EXPIRED") { logout(true); throw new Error("সেশনের মেয়াদ শেষ। আবার লগইন করুন।"); }
+    throw new Error(j.error || "অজানা সমস্যা।");
+  }
+  return j.data;
+}
+function toast(msg, bad) {
+  const t = $("toast"); t.textContent = msg; t.className = bad ? "bad" : ""; t.style.display = "block";
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.display = "none"), 3500);
+}
+async function run(btn, fn) {
+  if (btn) btn.disabled = true;
+  try { return await fn(); } catch (e) { toast(e.message, true); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+// ---------- লগইন ----------
+$("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("lBtn"), txt = btn.querySelector(".btn-text"), ld = btn.querySelector(".loading"), err = $("lErr");
+  err.classList.remove("show"); btn.disabled = true; txt.style.display = "none"; ld.style.display = "flex";
+  try {
+    const email = $("lEmail").value.trim(), pass = $("lPass").value;
+    const r = await api("loginStart", email, pass, getDev(email));        // পাসওয়ার্ড ঠিক হলে ইমেইলে OTP যায়
+    if (r.token) { await completeLogin(r.token); }          // সার্ভারে OTP বন্ধ থাকলে (শুধু পরীক্ষার জন্য)
+    else {
+      otpEmail = email; otpPass = pass; $("otpEmailDisplay").textContent = email;
+      goToStep("otpStep"); document.querySelector(".otp-digit").focus(); startOtpTimer();
+    }
+  } catch (x) {
+    err.textContent = "❌ " + x.message; err.classList.add("show"); setTimeout(() => err.classList.remove("show"), 5000);
+  } finally { btn.disabled = false; txt.style.display = "block"; ld.style.display = "none"; }
+});
+// লগইন সফল (OTP যাচাইয়ের পর): কে ঢুকল দেখে অ্যাডমিন প্যানেল বা সিস্টেম-হাবে পাঠানো
+let otpEmail = "", otpPass = "", otpTimerId = null;
+async function completeLogin(token) {
+  TOKEN = token;
+  const me = await api("whoAmI", TOKEN);                 // কে ঢুকল: অ্যাডমিন, শিক্ষক না অফিস
+  ME = me; sessionStorage.setItem("app_token", TOKEN);
+  otpPass = ""; clearInterval(otpTimerId);
+  $("successAnimation").style.display = "flex";
+  setTimeout(async () => {
+    $("successAnimation").style.display = "none";
+    backToLogin();                                        // লগইন কার্ড আগের অবস্থায় (পরে লগআউট করলে কাজে লাগে)
+    if (!me.isAdmin) { showHub(me); return; }            // শিক্ষক/অফিস → সিস্টেম বাছাইয়ের হাব
+    try { const o = await api("adminOverview", TOKEN); META = { roles: o.roles, statuses: o.statuses }; } catch (_) {}
+    $("who").textContent = me.name || me.email;
+    showApp();
+  }, 900);
+}
+function showApp() { $("loginView").style.display = "none"; $("hubView").style.display = "none"; $("app").style.display = "block"; go(tab); }
+async function logout(silent) {
+  if (TOKEN && !silent) await api("logout", TOKEN).catch(() => {});
+  TOKEN = ""; ME = null; sessionStorage.removeItem("app_token");
+  $("app").style.display = "none"; $("hubView").style.display = "none"; $("loginView").style.display = "flex"; $("lPass").value = "";
+}
+
+// ============================================================
+// 🔁 ধাপ পরিবর্তন, সাইন আপ, পাসওয়ার্ড ভুলে গেলে (আগের লগইন পেজের মতো)
+// ============================================================
+let forgotEmail = "", resetTimerId = null;
+
+function showMsg(id, msg, cls) {
+  const d = $(id); d.textContent = msg; d.classList.add("show");
+  setTimeout(() => d.classList.remove("show"), cls === "info" ? 6000 : 5000);
+}
+function goToStep(stepId) {
+  $("loginStep").style.display = "none";
+  document.querySelectorAll(".step-container").forEach((el) => (el.style.display = "none"));
+  $(stepId).style.display = "block";
+  $("mainCard").style.maxWidth = stepId === "signupStep" ? "560px" : "460px";
+}
+function backToLogin() {
+  clearInterval(resetTimerId); clearInterval(otpTimerId); otpPass = "";
+  document.querySelectorAll(".step-container").forEach((el) => (el.style.display = "none"));
+  $("loginStep").style.display = "block";
+  document.querySelectorAll(".reset-otp-digit, .otp-digit").forEach((i) => (i.value = ""));
+  $("mainCard").style.maxWidth = "460px";
+}
+function setBusy(btn, busy) {
+  btn.disabled = busy;
+  btn.querySelector(".btn-text").style.display = busy ? "none" : "block";
+  btn.querySelector(".loading").style.display = busy ? "flex" : "none";
+}
+
+// ক্লাস/শাখা মাল্টি-সিলেক্ট (Users শীটের Access কী-র সাথে মেলে: 6_A, 9_SCI_Boys ...)
+(function buildClassBoxes() {
+  const BN = { 6: "৬ষ্ঠ", 7: "৭ম", 8: "৮ম", 9: "৯ম", 10: "১০ম" };
+  const SEC = { A: "ক", B: "খ", C: "গ" }, GRP = { SCI: "বিজ্ঞান", HUM: "মানবিক", BUS: "ব্যবসায় শিক্ষা" }, GS = { Boys: "বালক", Girls: "বালিকা" };
+  const items = [];
+  [6, 7, 8].forEach((c) => Object.keys(SEC).forEach((s) => items.push([c + "_" + s, BN[c] + " শ্রেণি - শাখা " + SEC[s]])));
+  [9, 10].forEach((c) => Object.keys(GRP).forEach((g) => Object.keys(GS).forEach((s) => items.push([c + "_" + g + "_" + s, BN[c] + " শ্রেণি - " + GRP[g] + " (" + GS[s] + ")"]))));
+  $("classCheckboxGroup").innerHTML = items.map(([v, t]) => `<label><input type="checkbox" class="classAccessBox" value="${v}"> ${t}</label>`).join("");
+  document.querySelectorAll(".classAccessBox").forEach((cb) => cb.addEventListener("change", updateClassLabel));
+})();
+function toggleClassDropdown(e) { e.stopPropagation(); $("classMultiselect").classList.toggle("open"); }
+document.addEventListener("click", (e) => { const d = $("classMultiselect"); if (d.classList.contains("open") && !d.contains(e.target)) d.classList.remove("open"); });
+function updateClassLabel() {
+  const sel = Array.from(document.querySelectorAll(".classAccessBox:checked")), l = $("classLabel");
+  if (!sel.length) { l.textContent = "শ্রেণি ও শাখা নির্বাচন করুন"; l.classList.add("placeholder"); return; }
+  l.textContent = sel.length === 1 ? sel[0].parentElement.textContent.trim() : sel.length + " টি শ্রেণি/শাখা নির্বাচিত";
+  l.classList.remove("placeholder");
+}
+
+// OTP বক্সের অটো-মুভ
+function setupOtpBoxes(selector) {
+  const all = document.querySelectorAll(selector);
+  all.forEach((input, idx) => {
+    input.addEventListener("input", function () { this.value = this.value.replace(/[^0-9]/g, ""); if (this.value && idx < all.length - 1) all[idx + 1].focus(); });
+    input.addEventListener("keydown", function (e) { if (e.key === "Backspace" && !this.value && idx > 0) all[idx - 1].focus(); });
+    input.addEventListener("paste", function (e) {
+      e.preventDefault();
+      const p = (e.clipboardData || window.clipboardData).getData("text").replace(/[^0-9]/g, "");
+      p.split("").forEach((c, i) => { if (all[i]) all[i].value = c; });
+      if (all[p.length]) all[p.length].focus();
+    });
+  });
+}
+setupOtpBoxes(".reset-otp-digit");
+setupOtpBoxes(".otp-digit");
+
+// লগইন OTP: কোড জমা
+$("otpForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = Array.from(document.querySelectorAll(".otp-digit")).map((i) => i.value).join("");
+  if (code.length !== 6) return showMsg("otpError", "৬ ডিজিটের কোডটি সম্পূর্ণ লিখুন।");
+  const btn = $("otpBtn"); setBusy(btn, true);
+  try {
+    const r = await api("loginVerify", otpEmail, code);
+    if (r.deviceToken) setDev(otpEmail, r.deviceToken);   // এই ডিভাইস ৩০ দিনের জন্য নিবন্ধিত
+    await completeLogin(r.token);
+  } catch (x) { showMsg("otpError", "❌ " + x.message); }
+  finally { setBusy(btn, false); }
+});
+
+// লগইন OTP: ৩০ সেকেন্ড টাইমারসহ আবার পাঠানো
+function startOtpTimer() {
+  let s = 30; const link = $("resendLink"), t = $("resendTimer");
+  link.classList.add("disabled"); clearInterval(otpTimerId);
+  otpTimerId = setInterval(() => {
+    s--; t.textContent = ` (${s}s)`;
+    if (s <= 0) { clearInterval(otpTimerId); link.classList.remove("disabled"); t.textContent = ""; }
+  }, 1000);
+}
+async function resendOtp() {
+  if ($("resendLink").classList.contains("disabled")) return;
+  try { await api("loginStart", otpEmail, otpPass, getDev(otpEmail)); startOtpTimer(); }
+  catch (x) { showMsg("otpError", "ত্রুটি: " + x.message); }
+}
+
+// সাইন আপ
+$("signupForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = $("signupName").value.trim(), email = $("signupEmail").value.trim(), mobile = $("signupMobile").value.trim();
+  const pw = $("signupPassword").value, pw2 = $("signupConfirmPassword").value;
+  const classes = Array.from(document.querySelectorAll(".classAccessBox:checked")).map((c) => c.value);
+  if (!classes.length) return showMsg("signupError", "অন্তত একটি ক্লাস/শাখা নির্বাচন করুন।");
+  if (pw !== pw2) return showMsg("signupError", "পাসওয়ার্ড দুটি মিলছে না।");
+  if (pw.length < 6) return showMsg("signupError", "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+  const btn = $("signupBtn"); setBusy(btn, true);
+  try {
+    const r = await api("signUp", name, email, pw, mobile, classes.join(", "));
+    $("signupForm").reset(); updateClassLabel(); $("classMultiselect").classList.remove("open");
+    showMsg("signupInfo", r.message || "✅ অ্যাকাউন্ট তৈরি হয়েছে!", "info");
+    setTimeout(backToLogin, 3000);
+  } catch (x) { showMsg("signupError", "ত্রুটি: " + x.message); }
+  finally { setBusy(btn, false); }
+});
+
+// পাসওয়ার্ড ভুলে গেছেন — কোড পাঠানো
+$("forgotForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = $("forgotEmail").value.trim(), btn = $("forgotBtn"); setBusy(btn, true);
+  try {
+    await api("requestPasswordReset", email);
+    forgotEmail = email; $("resetEmailDisplay").textContent = email;
+    goToStep("resetStep"); document.querySelector(".reset-otp-digit").focus(); startResetTimer();
+  } catch (x) { showMsg("forgotError", "ত্রুটি: " + x.message); }
+  finally { setBusy(btn, false); }
+});
+
+// কোড + নতুন পাসওয়ার্ড
+$("resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const code = Array.from(document.querySelectorAll(".reset-otp-digit")).map((i) => i.value).join("");
+  const p1 = $("newPassword").value, p2 = $("newPasswordConfirm").value;
+  if (code.length !== 6) return showMsg("resetError", "৬ ডিজিটের কোডটি সম্পূর্ণ লিখুন।");
+  if (p1 !== p2) return showMsg("resetError", "নতুন পাসওয়ার্ড দুটি মিলছে না।");
+  if (p1.length < 6) return showMsg("resetError", "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+  const btn = $("resetBtn"); setBusy(btn, true);
+  try {
+    await api("resetPassword", forgotEmail, code, p1);
+    $("resetForm").reset(); $("successAnimation").style.display = "flex";
+    setTimeout(() => { $("successAnimation").style.display = "none"; backToLogin(); }, 1800);
+  } catch (x) { showMsg("resetError", "❌ " + x.message); }
+  finally { setBusy(btn, false); }
+});
+
+function startResetTimer() {
+  let s = 30; const link = $("resetResendLink"), t = $("resetResendTimer");
+  link.classList.add("disabled"); clearInterval(resetTimerId);
+  resetTimerId = setInterval(() => {
+    s--; t.textContent = ` (${s}s)`;
+    if (s <= 0) { clearInterval(resetTimerId); link.classList.remove("disabled"); t.textContent = ""; }
+  }, 1000);
+}
+async function resendResetOtp() {
+  if ($("resetResendLink").classList.contains("disabled")) return;
+  try { await api("requestPasswordReset", forgotEmail); startResetTimer(); }
+  catch (x) { showMsg("resetError", "ত্রুটি: " + x.message); }
+}
+
+// ---------- ট্যাব ----------
+$("nav").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) go(b.dataset.t); });
+function go(t) {
+  tab = t;
+  document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+  $("main").innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
+  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, archive: vArchive })[t]()
+    .catch((e) => { $("main").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
+}
+
+// ---------- সারসংক্ষেপ ----------
+async function vOverview() {
+  const o = await api("adminOverview", TOKEN);
+  const card = (n, l, t) => `<div class="stat click" onclick="go('${t}')"><b>${n}</b><span>${l}</span></div>`;
+  $("main").innerHTML = '<div class="cards">' +
+    card(o.users, "মোট ইউজার", "users") + card(o.pendingUsers, "অনুমোদনের অপেক্ষায় ইউজার", "users") +
+    card(o.pendingStudents, "পেন্ডিং শিক্ষার্থী নিবন্ধন", "regs") + card(o.sessions, "এখন সক্রিয় সেশন", "sessions") +
+    card(o.holidays, "নির্ধারিত ছুটি", "holidays") + "</div>";
+}
+
+// ---------- ইউজার ----------
+async function vUsers() {
+  $("main").innerHTML = `<div class="bar">
+    <select class="f" id="fSt"><option value="">সব Status</option>${META.statuses.map((s) => `<option>${s}</option>`).join("")}</select>
+    <input class="f" id="fQ" placeholder="নাম/ইমেইল খুঁজুন"><button class="btn" id="addU">+ নতুন ইউজার</button></div>
+    <div class="tw" id="uTable"></div>`;
+  $("fSt").onchange = loadUsers; $("fQ").oninput = renderUsers; $("addU").onclick = () => openUser(null);
+  await loadUsers();
+}
+async function loadUsers() { usersCache = await api("adminListUsers", TOKEN, $("fSt").value); renderUsers(); }
+function renderUsers() {
+  const q = ($("fQ").value || "").toLowerCase();
+  const list = usersCache.filter((u) => !q || (u.email + " " + (u.name || "")).toLowerCase().includes(q));
+  if (!list.length) { $("uTable").innerHTML = '<div class="empty">কোনো ইউজার নেই</div>'; return; }
+  $("uTable").innerHTML = "<table><tr><th>নাম / ইমেইল</th><th>মোবাইল</th><th>Role</th><th>Status</th><th>Access</th><th>কাজ</th></tr>" +
+    list.map((u) => {
+      const st = String(u.status || "").toLowerCase();
+      return `<tr><td><b>${esc(u.name)}</b><br><span class="sub">${esc(u.email)}</span></td>
+        <td>${esc(u.mobile)}</td><td>${esc(u.role)}</td><td><span class="tag ${esc(st)}">${esc(st)}</span></td>
+        <td style="max-width:180px;word-break:break-word">${esc(u.access)}</td>
+        <td><div class="acts" data-e="${esc(u.email)}">
+          ${st === "pending" ? '<button class="btn ok sm" data-a="approve">অনুমোদন</button><button class="btn bad sm" data-a="reject">বাতিল</button>' : ""}
+          ${st === "active" ? '<button class="btn ghost sm" data-a="block">ব্লক</button>' : ""}
+          ${st === "blocked" || st === "inactive" ? '<button class="btn ok sm" data-a="approve">সক্রিয়</button>' : ""}
+          <button class="btn ghost sm" data-a="edit">সম্পাদনা</button>
+          <button class="btn ghost sm" data-a="pass">পাসওয়ার্ড</button>
+          <button class="btn bad sm" data-a="del">মুছুন</button></div></td></tr>`;
+    }).join("") + "</table>";
+}
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-a]"); if (!b || tab !== "users") return;
+  const email = b.closest("[data-e]").dataset.e, a = b.dataset.a;
+  if (a === "edit") return openUser(usersCache.find((u) => u.email === email));
+  await run(b, async () => {
+    if (a === "approve") await api("adminUpdateUser", TOKEN, email, { status: "active" });
+    else if (a === "reject") { if (!confirm(email + " বাতিল (ব্লক) করবেন?")) return; await api("adminUpdateUser", TOKEN, email, { status: "blocked" }); }
+    else if (a === "block") { if (!confirm(email + " ব্লক করবেন?")) return; await api("adminUpdateUser", TOKEN, email, { status: "blocked" }); }
+    else if (a === "pass") { const p = prompt(email + " এর নতুন পাসওয়ার্ড (কমপক্ষে ৬ অক্ষর):"); if (!p) return; await api("adminResetPassword", TOKEN, email, p); }
+    else if (a === "del") { if (!confirm(email + " স্থায়ীভাবে মুছবেন?")) return; await api("adminDeleteUser", TOKEN, email); }
+    toast("✅ সম্পন্ন হয়েছে"); await loadUsers();
+  });
+});
+function openUser(u) {
+  editingEmail = u ? u.email : null;
+  $("userDlgTitle").textContent = u ? "ইউজার সম্পাদনা" : "নতুন ইউজার";
+  $("uEmail").value = u ? u.email : ""; $("uEmail").disabled = !!u;
+  $("uPassWrap").style.display = u ? "none" : "block"; $("uPass").required = !u; $("uPass").value = "";
+  $("uName").value = u ? u.name || "" : ""; $("uMobile").value = u ? u.mobile || "" : "";
+  $("uRole").innerHTML = META.roles.map((r) => `<option>${r}</option>`).join("");
+  $("uRole").value = u ? META.roles.find((r) => r.toLowerCase() === String(u.role).toLowerCase()) || "Teacher" : "Teacher";
+  $("uStatus").innerHTML = META.statuses.map((s) => `<option>${s}</option>`).join("");
+  $("uStatus").value = u ? String(u.status).toLowerCase() : "active";
+  $("uAccess").value = u ? u.access || "" : "";
+  $("userDlg").showModal();
+}
+$("userForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  await run($("uSave"), async () => {
+    const d = { name: $("uName").value, mobile: $("uMobile").value, role: $("uRole").value, status: $("uStatus").value, access: $("uAccess").value };
+    if (editingEmail) await api("adminUpdateUser", TOKEN, editingEmail, d);
+    else await api("adminCreateUser", TOKEN, { ...d, email: $("uEmail").value, password: $("uPass").value });
+    $("userDlg").close(); toast("✅ সংরক্ষিত হয়েছে"); await loadUsers();
+  });
+});
+
+// ---------- নতুন নিবন্ধন (শিক্ষার্থী) ----------
+async function vRegs() {
+  $("main").innerHTML = `<div class="bar"><select class="f" id="rSt"><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option></select></div><div class="tw" id="rTable"></div>`;
+  $("rSt").onchange = loadRegs; await loadRegs();
+}
+async function loadRegs() {
+  const st = $("rSt").value, r = await api("getPending", TOKEN, st);
+  if (!r.items.length) { $("rTable").innerHTML = '<div class="empty">কোনো নিবন্ধন নেই</div>'; return; }
+  $("rTable").innerHTML = "<table><tr><th>শ্রেণি</th><th>রোল</th><th>নাম</th><th>মোবাইল</th><th>জমার সময়</th><th>কাজ</th></tr>" +
+    r.items.map((it) => `<tr><td>${esc(it.cls)}</td><td>${esc(it.roll)}</td><td>${esc(it.nameBn)}<br><span class="sub">${esc(it.nameEn)}</span></td>
+      <td>${esc(it.mobile)}</td><td>${esc(it.submitted)}</td><td><div class="acts" data-id="${esc(it.id)}">
+      ${st === "pending" ? '<button class="btn ok sm" data-r="confirm">কনফার্ম</button><button class="btn bad sm" data-r="reject">বাতিল</button>' : ""}
+      ${st === "cancelled" ? '<button class="btn ghost sm" data-r="restore">ফিরিয়ে আনুন</button>' : ""}</div></td></tr>`).join("") + "</table>";
+}
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-r]"); if (!b || tab !== "regs") return;
+  const id = b.closest("[data-id]").dataset.id, a = b.dataset.r;
+  await run(b, async () => {
+    if (a === "confirm") {
+      let r = await api("confirmRegistration", TOKEN, id, false);
+      if (r.warn) { if (!confirm(r.message + "\nতবুও যোগ করবেন?")) return; r = await api("confirmRegistration", TOKEN, id, true); }
+    } else if (a === "reject") { if (!confirm("এই নিবন্ধন বাতিল করবেন?")) return; await api("rejectRegistration", TOKEN, id); }
+    else if (a === "restore") await api("restoreRegistration", TOKEN, id);
+    toast("✅ সম্পন্ন হয়েছে"); await loadRegs();
+  });
+});
+
+// ---------- সক্রিয় সেশন ----------
+async function vSessions() {
+  const list = await api("adminListSessions", TOKEN);
+  $("main").innerHTML = '<div class="tw">' + (list.length ? "<table><tr><th>ইউজার</th><th>ধরন</th><th>সেশন বছর</th><th>মেয়াদ শেষ</th><th>কাজ</th></tr>" +
+    list.map((s) => `<tr><td>${esc(s.name)}<br><span class="sub">${esc(s.email)}</span></td>
+    <td>${s.is_admin ? "Admin" : s.is_office ? "Office" : "Teacher"}</td><td>${esc(s.session)}</td><td>${esc(s.expires_at)}</td>
+    <td><button class="btn bad sm" data-k="${esc(s.email)}">লগআউট করান</button></td></tr>`).join("") + "</table>" : '<div class="empty">কোনো সক্রিয় সেশন নেই</div>') + "</div>";
+}
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-k]"); if (!b || tab !== "sessions") return;
+  if (!confirm(b.dataset.k + " কে লগআউট করাবেন?")) return;
+  await run(b, async () => { await api("adminKickUser", TOKEN, b.dataset.k); toast("✅ লগআউট করানো হয়েছে"); go("sessions"); });
+});
+
+// ---------- ছুটির দিন ----------
+async function vHolidays() {
+  const list = await api("adminListHolidays", TOKEN);
+  $("main").innerHTML = `<div class="bar"><input class="f" type="date" id="hDate"><input class="f" id="hReason" placeholder="কারণ (যেমন: ঈদ)"><button class="btn" id="hAdd">+ যোগ করুন</button></div>
+  <p class="hint" style="margin:-4px 0 12px">সাপ্তাহিক ছুটি (শুক্র-শনি) সার্ভারে আগে থেকেই ধরা আছে; এখানে শুধু বিশেষ ছুটি যোগ করুন।</p>
+  <div class="tw">${list.length ? "<table><tr><th>তারিখ</th><th>কারণ</th><th>কাজ</th></tr>" +
+    list.map((h) => `<tr><td>${esc(h.att_date)}</td><td>${esc(h.reason)}</td><td><button class="btn bad sm" data-h="${esc(h.att_date)}">মুছুন</button></td></tr>`).join("") + "</table>" : '<div class="empty">কোনো ছুটি নেই</div>'}</div>`;
+  $("hAdd").onclick = () => run($("hAdd"), async () => {
+    if (!$("hDate").value) throw new Error("তারিখ বাছাই করুন।");
+    await api("adminAddHoliday", TOKEN, $("hDate").value, $("hReason").value || "ছুটি"); toast("✅ যোগ হয়েছে"); go("holidays");
+  });
+}
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-h]"); if (!b || tab !== "holidays") return;
+  if (!confirm(b.dataset.h + " এর ছুটি মুছবেন?")) return;
+  await run(b, async () => { await api("adminDeleteHoliday", TOKEN, b.dataset.h); toast("✅ মোছা হয়েছে"); go("holidays"); });
+});
+
+// ---------- হাজিরা আর্কাইভ ----------
+async function vArchive() {
+  $("main").innerHTML = `<div class="stat" style="max-width:480px"><b style="font-size:19px">হাজিরা আর্কাইভ</b>
+  <p class="hint">বর্তমান হাজিরা ডেটা আর্কাইভ টেবিলে সরানো হবে। লেবেল শুধু ইংরেজি অক্ষর/সংখ্যা (যেমন 2026)।</p>
+  <label class="lbl">আর্কাইভ লেবেল</label><input class="f" id="aLabel" placeholder="2026">
+  <button class="btn bad" id="aGo" style="margin-top:16px">আর্কাইভ করুন</button><div id="aOut" class="hint" style="margin-top:12px"></div></div>`;
+  $("aGo").onclick = () => run($("aGo"), async () => {
+    const l = $("aLabel").value.trim(); if (!l) throw new Error("লেবেল দিন।");
+    if (!confirm('"' + l + '" লেবেলে সব হাজিরা আর্কাইভ করবেন?')) return;
+    const r = await api("archiveAttendanceSheets", TOKEN, l);
+    $("aOut").innerHTML = r.archived.map(esc).join("<br>"); toast("✅ আর্কাইভ সম্পন্ন");
+  });
+}
+
+// ---------- শুরুতে: আগের সেশন থাকলে যাচাই ----------
+(async () => {
+  if (!TOKEN) return;
+  try {
+    const me = await api("whoAmI", TOKEN); ME = me;
+    if (!me.isAdmin) { showHub(me); return; }
+    const o = await api("adminOverview", TOKEN); META = { roles: o.roles, statuses: o.statuses };
+    $("who").textContent = me.name || me.email; showApp();
+  } catch { logout(true); }
+})();
+</script>
+</body>
+</html>
