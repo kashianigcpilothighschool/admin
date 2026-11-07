@@ -514,6 +514,7 @@ $("loginForm").addEventListener("submit", async (e) => {
     const email = $("lEmail").value.trim(), pass = $("lPass").value;
     const r = await api("loginStart", email, pass, getDev(email));        // পাসওয়ার্ড ঠিক হলে ইমেইলে OTP যায়
     if (r.token) { await completeLogin(r.token); }          // সার্ভারে OTP বন্ধ থাকলে (শুধু পরীক্ষার জন্য)
+    else if (r.pending) { throw new Error("এই ডিভাইস অ্যাডমিনের অনুমোদনের অপেক্ষায় আছে। অনুমোদন পেলে আবার লগইন করুন।"); }
     else {
       otpEmail = email; otpPass = pass; $("otpEmailDisplay").textContent = email;
       goToStep("otpStep"); document.querySelector(".otp-digit").focus(); startOtpTimer();
@@ -617,8 +618,12 @@ $("otpForm").addEventListener("submit", async (e) => {
   if (code.length !== 6) return showMsg("otpError", "৬ ডিজিটের কোডটি সম্পূর্ণ লিখুন।");
   const btn = $("otpBtn"); setBusy(btn, true);
   try {
-    const r = await api("loginVerify", otpEmail, code);
+    const r = await api("loginVerify", otpEmail, code, String(navigator.userAgent || "").substring(0, 120));   // ডিভাইসের নাম অ্যাডমিন তালিকায় দেখাতে
     if (r.deviceToken) setDev(otpEmail, r.deviceToken);   // এই ডিভাইস ৩০ দিনের জন্য নিবন্ধিত
+    if (r.pending) {   // ডিভাইস অনুমোদন চালু থাকলে অ্যাডমিন অনুমোদন না দেওয়া পর্যন্ত ঢোকা যাবে না
+      showMsg("otpError", "⏳ ডিভাইসটি অ্যাডমিনের অনুমোদনের অপেক্ষায় আছে। অনুমোদনের পর আবার লগইন করুন।");
+      setTimeout(backToLogin, 3500); return;
+    }
     await completeLogin(r.token);
   } catch (x) { showMsg("otpError", "❌ " + x.message); }
   finally { setBusy(btn, false); }
@@ -828,17 +833,110 @@ $("main").addEventListener("click", async (e) => {
 });
 
 // ---------- ছুটির দিন ----------
+// CSV পার্সার: কোটেশনের ভেতরের কমা/নতুন লাইন সামলায়; Excel/Sheets থেকে কপি করা (Tab-ভাগ) লেখাও বোঝে
+function parseCsv(text) {
+  text = String(text || "").replace(/^﻿/, "");
+  const firstLine = text.split(/\r?\n/)[0] || "", d = firstLine.includes("\t") && !firstLine.includes(",") ? "\t" : ",";
+  const rows = []; let row = [], cur = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === d) { row.push(cur); cur = ""; }
+    else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(cur); rows.push(row); row = []; cur = ""; }
+    else cur += c;
+  }
+  if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter((r) => r.some((x) => String(x).trim() !== ""));
+}
+// হেডার: Start Date, End Date, Event Name, Category, Status (বড়/ছোট হাতের বা _ থাকলেও চলবে)
+function csvToEvents(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error("হেডারসহ অন্তত একটি সারি থাকতে হবে।");
+  const H = rows[0].map((s) => String(s).trim().toLowerCase().replace(/[\s_]+/g, ""));
+  const col = (...n) => H.findIndex((h) => n.includes(h));
+  const iS = col("startdate", "start"), iE = col("enddate", "end"), iN = col("eventname", "name"), iC = col("category"), iT = col("status");
+  if (iS < 0 || iN < 0) throw new Error("হেডারে Start Date ও Event Name কলাম থাকতে হবে।");
+  const g = (r, i) => (i >= 0 ? String(r[i] || "").trim() : "");
+  return rows.slice(1).map((r) => ({ start: g(r, iS), end: g(r, iE), name: g(r, iN), category: g(r, iC), status: g(r, iT) }));
+}
+let evRows = [];   // প্রিভিউ করা সারি (ইমপোর্টের জন্য প্রস্তুত)
+
 async function vHolidays() {
-  const list = await api("adminListHolidays", TOKEN);
-  $("main").innerHTML = `<div class="bar"><input class="f" type="date" id="hDate"><input class="f" id="hReason" placeholder="কারণ (যেমন: ঈদ)"><button class="btn" id="hAdd">+ যোগ করুন</button></div>
-  <p class="hint" style="margin:-4px 0 12px">সাপ্তাহিক ছুটি (শুক্র-শনি) সার্ভারে আগে থেকেই ধরা আছে; এখানে শুধু বিশেষ ছুটি যোগ করুন।</p>
-  <div class="tw">${list.length ? "<table><tr><th>তারিখ</th><th>কারণ</th><th>কাজ</th></tr>" +
-    list.map((h) => `<tr><td>${esc(h.att_date)}</td><td>${esc(h.reason)}</td><td><button class="btn bad sm" data-h="${esc(h.att_date)}">মুছুন</button></td></tr>`).join("") + "</table>" : '<div class="empty">কোনো ছুটি নেই</div>'}</div>`;
+  const [list, events] = await Promise.all([api("adminListHolidays", TOKEN), api("adminListHolidayEvents", TOKEN)]);
+  evRows = [];
+  $("main").innerHTML = `
+  <div class="stat" style="margin-bottom:16px;border-top-color:var(--sage)">
+    <b style="font-size:17px">📥 ছুটির ইভেন্ট — বাল্ক ইমপোর্ট (CSV)</b>
+    <p class="hint">হেডার: Start Date, End Date, Event Name, Category, Status। তারিখ দিন-মাস-বছর (১৭-০১-২০২৬) বা বছর-মাস-দিন (২০২৬-০১-১৭), দুটোই চলবে। একই ছুটি আগে থাকলে আপডেট হবে, নতুন হলে যোগ হবে। ইমপোর্টের পর হাজিরার ছুটির তালিকা নিজে থেকেই সিঙ্ক হয়।</p>
+    <div class="bar" style="margin-top:10px"><input class="f" type="file" id="evFile" accept=".csv,.txt,text/csv"></div>
+    <textarea id="evPaste" rows="4" placeholder="অথবা CSV / Excel থেকে কপি করা লেখা এখানে paste করুন" style="width:100%;font-family:inherit;font-size:13px;padding:10px 14px;border:1.5px solid #E3E1D8;border-radius:11px;outline:none"></textarea>
+    <div class="bar" style="margin-top:10px"><button class="btn ghost" id="evPrev">প্রিভিউ দেখুন</button><button class="btn ok" id="evGo" disabled>ইমপোর্ট করুন</button><button class="btn ghost" id="evSync">🔄 সিঙ্ক করুন</button></div>
+    <div id="evOut" class="hint"></div>
+  </div>
+
+  <div class="stat" style="margin-bottom:16px">
+    <b style="font-size:17px">📅 ছুটির ইভেন্ট (${events.length}টি)</b>
+    <div class="bar" style="margin-top:10px"><input class="f" type="date" id="eStart" title="শুরু"><input class="f" type="date" id="eEnd" title="শেষ (এক দিনের হলে ফাঁকা রাখুন)"><input class="f" id="eName" placeholder="ছুটির নাম"><input class="f" id="eCat" placeholder="ধরন (ঐচ্ছিক)"><button class="btn" id="eAdd">+ ইভেন্ট যোগ</button></div>
+    <div class="tw" style="box-shadow:none">${events.length ? "<table><tr><th>তারিখ</th><th>নাম</th><th>ধরন</th><th>Status</th><th>কাজ</th></tr>" +
+      events.map((v) => `<tr><td style="white-space:nowrap">${esc(v.start)}${v.end !== v.start ? "<br>→ " + esc(v.end) : ""}</td><td style="max-width:320px;word-break:break-word">${esc(v.name)}</td><td>${esc(v.category)}</td><td><span class="tag ${v.status === "Active" ? "active" : "inactive"}">${esc(v.status)}</span></td><td><button class="btn bad sm" data-ev="${esc(v.id)}">মুছুন</button></td></tr>`).join("") + "</table>" : '<div class="empty">কোনো ইভেন্ট নেই। ওপরে CSV ইমপোর্ট করুন।</div>'}</div>
+  </div>
+
+  <div class="stat"><b style="font-size:17px">🗓️ হাজিরার ছুটির দিন (${list.length}টি)</b>
+    <p class="hint">ইভেন্ট থেকে আসা দিনগুলোও এখানে দেখা যায়। সাপ্তাহিক ছুটি (শুক্র-শনি) সার্ভারে আগে থেকেই ধরা আছে। এখানে শুধু বিশেষ ছুটি হাতে যোগ করুন।</p>
+    <div class="bar" style="margin-top:10px"><input class="f" type="date" id="hDate"><input class="f" id="hReason" placeholder="কারণ (যেমন: ঈদ)"><button class="btn" id="hAdd">+ যোগ করুন</button></div>
+    <div class="tw" style="box-shadow:none">${list.length ? "<table><tr><th>তারিখ</th><th>কারণ</th><th>কাজ</th></tr>" +
+      list.map((h) => `<tr><td>${esc(h.att_date)}</td><td>${esc(h.reason)}</td><td><button class="btn bad sm" data-h="${esc(h.att_date)}">মুছুন</button></td></tr>`).join("") + "</table>" : '<div class="empty">কোনো ছুটি নেই</div>'}</div>
+  </div>`;
+
+  // ফাইল বাছাই করলে লেখা paste-বক্সে বসে প্রিভিউ দেখায়
+  $("evFile").onchange = async () => {
+    const f = $("evFile").files[0]; if (!f) return;
+    $("evPaste").value = await f.text(); $("evPrev").click();
+  };
+  $("evPrev").onclick = () => {
+    $("evGo").disabled = true; evRows = [];
+    try {
+      const rows = csvToEvents($("evPaste").value), bad = rows.filter((r) => !r.start || !r.name).length;
+      if (!rows.length) throw new Error("কোনো সারি পাওয়া যায়নি।");
+      evRows = rows;
+      $("evOut").innerHTML = `<b style="color:var(--sage)">${rows.length}টি সারি পাওয়া গেছে</b>` + (bad ? ` <span style="color:var(--brick)">(${bad}টিতে তারিখ/নাম ফাঁকা, ইমপোর্টে error আসবে)</span>` : "") +
+        '<div class="tw" style="margin-top:8px;box-shadow:none"><table><tr><th>শুরু</th><th>শেষ</th><th>নাম</th><th>ধরন</th></tr>' +
+        rows.slice(0, 8).map((r) => `<tr><td>${esc(r.start)}</td><td>${esc(r.end || r.start)}</td><td style="max-width:300px;word-break:break-word">${esc(r.name.length > 60 ? r.name.slice(0, 60) + "…" : r.name)}</td><td>${esc(r.category)}</td></tr>`).join("") + "</table></div>" +
+        (rows.length > 8 ? `<div style="margin-top:4px">…আরও ${rows.length - 8}টি সারি</div>` : "");
+      $("evGo").disabled = false;
+    } catch (x) { $("evOut").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + "</span>"; }
+  };
+  $("evGo").onclick = () => run($("evGo"), async () => {
+    if (!evRows.length) throw new Error("আগে প্রিভিউ দেখুন।");
+    if (!confirm(evRows.length + "টি ছুটির সারি ইমপোর্ট করবেন?")) return;
+    let added = 0, updated = 0, days = 0;
+    for (let i = 0; i < evRows.length; i += 300) {   // সার্ভার একবারে সর্বোচ্চ ৩০০ সারি নেয়
+      const r = await api("adminImportHolidayEvents", TOKEN, evRows.slice(i, i + 300));
+      added += r.added; updated += r.updated; days = r.sync && r.sync.days;
+    }
+    toast(`✅ নতুন ${added}টি, আপডেট ${updated}টি। ছুটির দিন সিঙ্ক হয়েছে (${days} দিন)`); go("holidays");
+  });
+  $("evSync").onclick = () => run($("evSync"), async () => {
+    const r = await api("adminSyncHolidays", TOKEN); toast(`✅ সিঙ্ক হয়েছে (${r.sync.days} দিন)`); go("holidays");
+  });
+  $("eAdd").onclick = () => run($("eAdd"), async () => {
+    if (!$("eStart").value) throw new Error("শুরুর তারিখ বাছাই করুন।");
+    await api("adminSaveHolidayEvent", TOKEN, { start: $("eStart").value, end: $("eEnd").value, name: $("eName").value, category: $("eCat").value, status: "Active" });
+    toast("✅ ইভেন্ট যোগ হয়েছে"); go("holidays");
+  });
   $("hAdd").onclick = () => run($("hAdd"), async () => {
     if (!$("hDate").value) throw new Error("তারিখ বাছাই করুন।");
     await api("adminAddHoliday", TOKEN, $("hDate").value, $("hReason").value || "ছুটি"); toast("✅ যোগ হয়েছে"); go("holidays");
   });
 }
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-ev]"); if (!b || tab !== "holidays") return;
+  if (!confirm("এই ছুটির ইভেন্টটি মুছবেন?")) return;
+  await run(b, async () => { await api("adminDeleteHolidayEvent", TOKEN, b.dataset.ev); toast("✅ মোছা হয়েছে"); go("holidays"); });
+});
 $("main").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-h]"); if (!b || tab !== "holidays") return;
   if (!confirm(b.dataset.h + " এর ছুটি মুছবেন?")) return;
