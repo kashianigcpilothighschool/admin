@@ -481,9 +481,14 @@ function getDev(email) { try { return (JSON.parse(localStorage.getItem("trusted_
 function setDev(email, tok) { try { const m = JSON.parse(localStorage.getItem("trusted_devices") || "{}"); m[String(email).trim().toLowerCase()] = tok; localStorage.setItem("trusted_devices", JSON.stringify(m)); } catch (e) {} }
 async function api(fn, ...args) {
   const h = { "Content-Type": "application/json" };
-  if (ANON_KEY) { h.apikey = ANON_KEY; h.Authorization = "Bearer " + ANON_KEY; }
-  const r = await fetch(API_URL, { method: "POST", headers: h, body: JSON.stringify({ fn, args }) });
-  const j = await r.json();
+  if (ANON_KEY) { h.apikey = ANON_KEY; if (/^eyJ/.test(ANON_KEY)) h.Authorization = "Bearer " + ANON_KEY; }   // নতুন sb_publishable_ চাবি JWT নয়, তাই Authorization-এ যায় না
+  let r, j;
+  try {
+    r = await fetch(API_URL, { method: "POST", headers: h, body: JSON.stringify({ fn, args }) });
+    j = await r.json();
+  } catch (e) {
+    throw new Error("সার্ভারে পৌঁছানো যায়নি। ফাংশন চালু আছে কি এবং Verify JWT বন্ধ আছে কি দেখুন। (" + (e && e.message || e) + ")");
+  }
   if (!j.ok) {
     if (j.error === "SESSION_EXPIRED") { logout(true); throw new Error("সেশনের মেয়াদ শেষ। আবার লগইন করুন।"); }
     throw new Error(j.error || "অজানা সমস্যা।");
@@ -866,5 +871,6 @@ async function vArchive() {
 })();
 </script>
 <script src="admin-modules.js"></script>
+<script src="admin-upgrade.js"></script>
 </body>
 </html>
