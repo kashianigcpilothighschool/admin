@@ -77,7 +77,7 @@
     box.innerHTML = Object.keys(by).map(function (em) {
       var ds = by[em];
       return '<div class="ux-user"><div class="ux-uh"><div><b>' + esc(ds[0].name || em) + '</b> <small>' + esc(em) + ' · ' + ds.length + 'টি ডিভাইস</small></div>' +
-        '<button class="btn bad sm" data-all="' + esc(em) + '">সব ডিভাইস মুছে লগআউট</button></div>' +
+        '<button class="btn bad sm" data-all="' + esc(em) + '">সব ডিভাইসের নিবন্ধন মুছুন</button></div>' +
         ds.map(function (d) {
           return '<div class="ux-dev" data-id="' + esc(d.id) + '"><span class="ux-ic">' + icon(d.label) + '</span>' +
             '<div class="ux-info"><b>' + esc(d.label || "অজানা ডিভাইস") + '</b> <span class="tag ' + (TAG[d.status] || "") + '">' + esc(STL[d.status] || d.status) + '</span>' +
@@ -103,8 +103,8 @@
     box.querySelectorAll("[data-all]").forEach(function (b) {
       b.onclick = function () {
         var em = b.dataset.all;
-        if (!confirm(em + " এর সব ডিভাইসের নিবন্ধন মুছে সব সেশন থেকে লগআউট করবেন?")) return;
-        run(b, async function () { await api("adminKickUser", TOKEN, em); toast("✅ সব ডিভাইস মোছা হয়েছে"); go("devices"); });
+        if (!confirm(em + " এর সব ডিভাইসের নিবন্ধন মুছবেন? পরের লগইনে সব ডিভাইসে আবার OTP লাগবে।")) return;
+        run(b, async function () { var r = await api("adminUnregisterUserDevices", TOKEN, em); toast("✅ " + (r.removed || 0) + "টি ডিভাইসের নিবন্ধন মোছা হয়েছে"); go("devices"); });
       };
     });
   }
