@@ -140,7 +140,7 @@
 
   /* ---------- মডিউল হাব (লগইনের পর সব সিস্টেমের প্রবেশদ্বার) ---------- */
   #hubView { display: none; position: relative; z-index: 1; min-height: 100vh; padding: 24px; }
-  .hub-box { max-width: 760px; margin: 36px auto; animation: slideUp 0.5s ease; }
+  .hub-box { max-width: 980px; margin: 36px auto; animation: slideUp 0.5s ease; }
   .hub-box .header { margin-bottom: 26px; }
   .mod { cursor: pointer; text-align: left; transition: transform .25s, box-shadow .25s; }
   .mod:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(31,45,80,0.14); }
@@ -201,11 +201,148 @@
   #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--sage); color: #fff; padding: 11px 20px; border-radius: 11px; display: none; z-index: 1100; max-width: 90vw; font-weight: 500; box-shadow: 0 12px 26px rgba(31,45,80,0.25); }
   #toast.bad { background: var(--brick); }
 
+
+  /* ---------- ড্যাশবোর্ড সাজসজ্জা ---------- */
+  .dash-hero { position: relative; overflow: hidden; border-radius: 20px; padding: 26px 28px; margin-bottom: 18px; color: #fff;
+    background: linear-gradient(120deg, var(--ink) 0%, #2C3D6B 55%, #3F5C93 100%); box-shadow: 0 16px 34px rgba(31,45,80,0.22); }
+  .dash-hero::before, .dash-hero::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+  .dash-hero::before { width: 240px; height: 240px; right: -60px; top: -90px; background: radial-gradient(circle, rgba(199,154,71,0.55), transparent 70%); }
+  .dash-hero::after { width: 160px; height: 160px; right: 120px; bottom: -90px; border: 1.5px solid rgba(255,255,255,0.18); }
+  .dash-hero .hi { font-size: 13px; opacity: .8; letter-spacing: .04em; }
+  .dash-hero h2 { font-family: 'Noto Serif Bengali', serif; font-size: 26px; margin: 4px 0 6px; }
+  .dash-hero .dt { font-size: 13px; opacity: .85; }
+  .dash-alert { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: rgba(199,154,71,0.22); border: 1px solid rgba(255,255,255,0.28); cursor: pointer; transition: all .25s; }
+  .dash-alert:hover { background: rgba(199,154,71,0.38); }
+  .dash-alert i { width: 8px; height: 8px; border-radius: 50%; background: #FFD27A; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,210,122,.7); } 70% { box-shadow: 0 0 0 9px rgba(255,210,122,0); } 100% { box-shadow: 0 0 0 0 rgba(255,210,122,0); } }
+
+  .dcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
+  .dcard { --c: var(--gold); position: relative; display: flex; align-items: center; gap: 14px; background: var(--card); border-radius: 18px; padding: 18px;
+    border: 1px solid rgba(31,45,80,0.07); box-shadow: 0 8px 22px rgba(31,45,80,0.07); cursor: pointer; overflow: hidden;
+    transition: transform .25s, box-shadow .25s; animation: slideUp .5s ease both; }
+  .dcard::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
+  .dcard:hover { transform: translateY(-4px); box-shadow: 0 16px 30px rgba(31,45,80,0.14); }
+  .dcard .ico { flex-shrink: 0; width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; font-size: 25px;
+    background: color-mix(in srgb, var(--c) 16%, #fff); }
+  .dcard b { display: block; font-family: 'Noto Serif Bengali', serif; font-size: 32px; line-height: 1.1; color: var(--ink); }
+  .dcard span.l { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .dcard .go { margin-left: auto; color: #B7BCC9; font-size: 18px; transition: transform .25s, color .25s; }
+  .dcard:hover .go { transform: translateX(4px); color: var(--c); }
+  .dcard.warn { --c: var(--brick); }
+  .dcard.warn.has { animation: slideUp .5s ease both, glow 2.4s ease-in-out infinite; }
+  @keyframes glow { 0%,100% { box-shadow: 0 8px 22px rgba(31,45,80,0.07); } 50% { box-shadow: 0 8px 26px rgba(180,67,46,0.28); } }
+
+  .dsec { font-family: 'Noto Serif Bengali', serif; font-size: 16px; margin: 22px 2px 10px; color: var(--ink); }
+  .qacts { display: flex; flex-wrap: wrap; gap: 10px; }
+  .qact { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; font-weight: 600; font-size: 13.5px;
+    background: #fff; border: 1.5px solid #E3E1D8; color: var(--ink-soft); transition: all .25s; }
+  .qact:hover { border-color: var(--gold); color: var(--gold-deep); transform: translateY(-2px); box-shadow: 0 8px 18px rgba(31,45,80,0.10); }
+
+  /* মডিউল হাবের কার্ড */
+  .mod { position: relative; overflow: hidden; padding: 22px 20px; border-radius: 20px; }
+  .mod::before { content: ''; position: absolute; right: -30px; top: -30px; width: 110px; height: 110px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(199,154,71,0.22), transparent 70%); }
+  .mod .mi { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; font-size: 28px; margin-bottom: 14px;
+    background: linear-gradient(135deg, rgba(199,154,71,0.22), rgba(31,45,80,0.08)); }
+  @media (prefers-reduced-motion: reduce) { .dcard, .dash-alert i { animation: none !important; } }
+
   @media (max-width: 480px) {
     .login-container { padding: 30px 22px; margin: 8px; }
     .header h2 { font-size: 24px; }
     nav, main { padding-left: 14px; padding-right: 14px; }
   }
+
+  /* ================= আধুনিক লেআউট: সাইডবার + গ্লাস হেডার ================= */
+  body { background:
+      radial-gradient(circle at 10% 8%, rgba(199,154,71,0.14), transparent 42%),
+      radial-gradient(circle at 92% 90%, rgba(63,122,99,0.12), transparent 42%),
+      radial-gradient(rgba(31,45,80,0.045) 1px, transparent 1px) 0 0 / 22px 22px,
+      var(--paper); background-attachment: fixed; }
+  header.top { position: sticky; top: 0; z-index: 50; min-height: 60px; padding: 10px 24px; backdrop-filter: blur(10px);
+    background: linear-gradient(120deg, rgba(31,45,80,.97), rgba(44,61,107,.97)); }
+  header.top h1 { display: flex; align-items: center; gap: 10px; letter-spacing: -0.01em; }
+  header.top .who { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: rgba(255,255,255,.12); opacity: 1; }
+  header.top .who::before { content: attr(data-i); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #fff; font-weight: 700; font-size: 12px; }
+  #nav { position: fixed; top: 60px; left: 0; bottom: 0; width: 236px; z-index: 40; overflow-y: auto; flex-direction: column;
+    flex-wrap: nowrap !important; gap: 4px !important; padding: 18px 12px;
+    background: rgba(255,255,255,.74); backdrop-filter: blur(12px); border-right: 1px solid rgba(31,45,80,.08); }
+  #nav button { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 11px 14px; border: none !important;
+    border-radius: 12px !important; background: transparent; color: var(--ink-soft); font-size: 14px; font-weight: 600; transition: all .2s; }
+  #nav button::before { content: "▪"; flex-shrink: 0; width: 26px; height: 26px; display: grid; place-items: center; font-size: 15px;
+    border-radius: 8px; background: rgba(31,45,80,.06); transition: all .2s; }
+  #nav button[data-t=overview]::before { content: "📊"; } #nav button[data-t=users]::before { content: "👥"; }
+  #nav button[data-t=regs]::before { content: "🧾"; } #nav button[data-t=sessions]::before { content: "🟢"; }
+  #nav button[data-t=holidays]::before { content: "🗓️"; } #nav button[data-t=devapproval]::before { content: "📱"; }
+  #nav button[data-t=devices]::before { content: "🖥️"; } #nav button[data-t=archive]::before { content: "🗄️"; }
+  #nav button[data-t*=link]::before { content: "🔗"; } #nav button[data-t*=event]::before { content: "📅"; }
+  #nav button[data-t*=system]::before, #nav button[data-t*=module]::before { content: "🧩"; }
+  #nav button:hover { background: rgba(199,154,71,.12); color: var(--gold-deep); transform: translateX(3px); }
+  #nav button.on { color: #fff; background: linear-gradient(135deg, var(--ink), #3A4F86); box-shadow: 0 8px 18px rgba(31,45,80,.25); transform: none; }
+  #nav button.on::before { background: rgba(255,255,255,.18); }
+  main { margin: 0 0 0 236px; max-width: none; padding: 28px 32px 48px; }
+
+  /* কার্ড/টেবিল/ইনপুট আধুনিক ছোঁয়া */
+  .tw { border-radius: 16px; box-shadow: 0 10px 30px rgba(31,45,80,.07); }
+  th { text-transform: none; letter-spacing: .02em; background: linear-gradient(#FBF7EA, #F5EED8); }
+  tr:hover td { background: rgba(199,154,71,.06); }
+  .btn { border-radius: 10px; }
+  .tag { backdrop-filter: blur(2px); }
+  input.f:focus, select.f:focus { transform: translateY(-1px); }
+
+  /* অপেক্ষমাণ কাজের স্ট্যাকড বার */
+  .pbar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: rgba(31,45,80,.08); }
+  .pbar i { display: block; height: 100%; transition: width .8s cubic-bezier(.25,.46,.45,.94); }
+  .pleg { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 13px; color: var(--ink-soft); }
+  .pleg span { display: inline-flex; align-items: center; gap: 7px; }
+  .pleg em { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .pcard { background: var(--card); border-radius: 18px; padding: 20px 22px; border: 1px solid rgba(31,45,80,.07); box-shadow: 0 8px 22px rgba(31,45,80,.07); }
+
+  @media (max-width: 900px) {
+    #nav { position: static; width: auto; flex-direction: row; flex-wrap: nowrap !important; overflow-x: auto; padding: 10px 14px; gap: 6px !important; border-right: none; border-bottom: 1px solid rgba(31,45,80,.08); }
+    #nav button { width: auto; white-space: nowrap; padding: 8px 12px; }
+    #nav button:hover { transform: none; }
+    main { margin: 0; padding: 18px 14px 40px; }
+  }
+
+  /* ================= আধুনিক হাব ================= */
+  .hhero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; position: relative; overflow: hidden;
+    border-radius: 22px; padding: 28px 30px; margin-bottom: 22px; color: #fff; text-align: left;
+    background: linear-gradient(120deg, var(--ink) 0%, #2C3D6B 55%, #3F5C93 100%); box-shadow: 0 18px 38px rgba(31,45,80,.24); }
+  .hhero::before { content: ''; position: absolute; right: -70px; top: -100px; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(199,154,71,.55), transparent 70%); pointer-events: none; }
+  .hhero > div { position: relative; z-index: 1; }
+  .hhero .badge { color: #FFE2A8; background: rgba(255,255,255,.12); }
+  .hhero h2 { font-family: 'Noto Serif Bengali', serif; font-size: 28px; margin: 6px 0 4px; color: #fff; }
+  .hhero p { color: rgba(255,255,255,.82); font-size: 13.5px; margin: 0; }
+  .hhero .hdate { margin-top: 2px; font-size: 12.5px; opacity: .75; }
+  .hsearch { display: flex; align-items: center; gap: 10px; min-width: 260px; padding: 11px 14px; border-radius: 14px; background: rgba(255,255,255,.14);
+    border: 1px solid rgba(255,255,255,.22); backdrop-filter: blur(8px); transition: all .25s; }
+  .hsearch:focus-within { background: rgba(255,255,255,.24); box-shadow: 0 0 0 3px rgba(255,210,122,.35); }
+  .hsearch input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; color: #fff; font: inherit; font-size: 14px; }
+  .hsearch input::placeholder { color: rgba(255,255,255,.65); }
+  kbd { font-family: inherit; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: rgba(31,45,80,.10); color: var(--ink-soft); border: 1px solid rgba(31,45,80,.12); }
+  .hsearch kbd { background: rgba(255,255,255,.16); color: #fff; border-color: rgba(255,255,255,.25); }
+
+  .hgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .hcard { position: relative; display: flex; align-items: center; gap: 16px; padding: 20px; border-radius: 20px; background: var(--card); cursor: pointer; text-align: left; overflow: hidden;
+    border: 1px solid rgba(31,45,80,.07); box-shadow: 0 8px 22px rgba(31,45,80,.07); transition: transform .25s, box-shadow .25s, border-color .25s; animation: slideUp .5s ease both; outline: none; }
+  .hcard::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(135deg, rgba(199,154,71,.10), transparent 55%); opacity: 0; transition: opacity .25s; pointer-events: none; }
+  .hcard:hover, .hcard:focus-visible { transform: translateY(-5px); box-shadow: 0 18px 34px rgba(31,45,80,.16); border-color: rgba(199,154,71,.5); }
+  .hcard:hover::after, .hcard:focus-visible::after { opacity: 1; }
+  .hcard .hic { flex-shrink: 0; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 18px; font-size: 30px;
+    background: linear-gradient(135deg, rgba(199,154,71,.24), rgba(31,45,80,.08)); transition: transform .25s; }
+  .hcard:hover .hic { transform: scale(1.08) rotate(-4deg); }
+  .hcard .hbody { min-width: 0; flex: 1; }
+  .hcard .hbody b { display: block; font-size: 17px; color: var(--ink); }
+  .hcard .hbody span { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+  .hcard .hlast { display: inline-block; margin-top: 7px; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--sage-bg); color: var(--sage); }
+  .hcard .hside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .hpin { border: none; background: transparent; font-size: 19px; line-height: 1; color: #CBCFD9; padding: 2px; transition: transform .2s, color .2s; }
+  .hpin:hover { transform: scale(1.25); color: var(--gold); }
+  .hpin.on { color: var(--gold); }
+  .hcard.pinned { border-color: rgba(199,154,71,.45); }
+  .hhint { text-align: center; margin-top: 20px; font-size: 12px; color: var(--muted); }
+  @media (max-width: 600px) { .hhero { padding: 22px 20px; } .hsearch { min-width: 100%; } .hhint { display: none; } }
 </style>
 </head>
 <body>
@@ -377,12 +514,16 @@
   <!-- ===== মডিউল হাব: লগইনের পর সবাই (শিক্ষক/অফিস) এখান থেকে নিজের সিস্টেমে যাবে ===== -->
   <div id="hubView">
     <div class="hub-box">
-      <div class="header">
-        <span class="badge">স্কুল ম্যানেজমেন্ট সিস্টেম</span>
-        <h2>কোন সিস্টেমে যাবেন?</h2>
-        <p id="hubWho"></p>
+      <div class="hhero">
+        <div>
+          <span class="badge">স্কুল ম্যানেজমেন্ট সিস্টেম</span>
+          <h2 id="hubHi">কোন সিস্টেমে যাবেন?</h2>
+          <p id="hubWho"></p><p class="hdate" id="hubDate"></p>
+        </div>
+        <div class="hsearch"><span>🔍</span><input id="hubQ" type="search" placeholder="সিস্টেম খুঁজুন…  ( / চাপুন )" autocomplete="off"><kbd>/</kbd></div>
       </div>
-      <div class="cards" id="hubCards"></div>
+      <div class="hgrid" id="hubCards"></div>
+      <p class="hhint" id="hubHint">⌨️ কীবোর্ড শর্টকাট: সংখ্যা চাপলে সেই সিস্টেম খোলে · Enter চাপলে প্রথম ফলাফল · ★ দিয়ে প্রিয় সিস্টেম ওপরে রাখুন</p>
       <div class="hub-actions">
         <button class="btn ghost" id="hubBack" onclick="showApp()" style="display:none">← অ্যাডমিন প্যানেল</button>
         <button class="btn ghost" onclick="logout()">লগআউট</button>
@@ -402,6 +543,7 @@
       <button data-t="regs">নতুন নিবন্ধন</button>
       <button data-t="sessions">সক্রিয় সেশন</button>
       <button data-t="holidays">ছুটির দিন</button>
+      <button data-t="devapproval">ডিভাইস অনুমোদন</button>
       <button data-t="archive">হাজিরা আর্কাইভ</button>
     </nav>
     <main id="main"></main>
@@ -450,19 +592,50 @@ const MODULES = [
 ];
 let ME = null;   // বর্তমান ইউজার (whoAmI-এর ফল)
 
+let HUBLIST = null, HUBQ = "";   // সার্ভারের সিস্টেম তালিকা (না পেলে MODULES)
+const hubKey = (n) => "hub_" + n + "_" + ((ME && ME.email) || "");
+const hubGet = (n, d) => { try { return JSON.parse(localStorage.getItem(hubKey(n)) || "") ?? d; } catch (e) { return d; } };
+const hubSet = (n, v) => { try { localStorage.setItem(hubKey(n), JSON.stringify(v)); } catch (e) {} };
+let HUBVIEW = [];   // এখন যে ক্রমে দেখা যাচ্ছে (শর্টকাটের জন্য)
+
 function openModule(i) {
-  const u = MODULES[i].url;
+  const m = (HUBLIST || MODULES)[i]; if (!m) return;
+  hubSet("last", m.title);
+  const u = m.url;
   location.href = u + (u.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
 }
+function togglePin(title) {
+  const p = hubGet("pins", []), k = p.indexOf(title);
+  if (k >= 0) p.splice(k, 1); else p.push(title);
+  hubSet("pins", p); renderHub();
+}
+function renderHub() {
+  const me = ME; if (!me) return;
+  const list = HUBLIST || MODULES, pins = hubGet("pins", []), last = hubGet("last", "");
+  const q = HUBQ.trim().toLowerCase();
+  let items = list.map((m, i) => ({ m, i })).filter((x) => !me.isOffice || x.m.officeOk);
+  items.sort((a, b) => (pins.includes(b.m.title) ? 1 : 0) - (pins.includes(a.m.title) ? 1 : 0));   // প্রিয়গুলো ওপরে (ক্রম অক্ষত)
+  if (q) items = items.filter((x) => (x.m.title + " " + (x.m.desc || "")).toLowerCase().includes(q));
+  HUBVIEW = items;
+  $("hubCards").innerHTML = items.length ? items.map(({ m, i }, pos) => {
+    const pin = pins.includes(m.title);
+    return `<div class="hcard${pin ? " pinned" : ""}" tabindex="0" style="animation-delay:${pos * 50}ms" onclick="openModule(${i})" onkeydown="if(event.key==='Enter')openModule(${i})">
+      <div class="hic">${esc(m.icon)}</div>
+      <div class="hbody"><b>${esc(m.title)}</b><span>${esc(m.desc)}</span>${last === m.title ? '<span class="hlast">⏱ সর্বশেষ ব্যবহৃত</span>' : ""}</div>
+      <div class="hside"><button class="hpin${pin ? " on" : ""}" title="${pin ? "প্রিয় থেকে সরান" : "প্রিয় করুন"}" onclick="event.stopPropagation();togglePin(${esc(JSON.stringify(m.title)).replace(/"/g, "&quot;")})">${pin ? "★" : "☆"}</button>${pos < 9 ? `<kbd>${pos + 1}</kbd>` : ""}</div></div>`;
+  }).join("") : `<div class="empty" style="grid-column:1/-1">${q ? "কোনো সিস্টেম মেলেনি।" : "আপনার জন্য কোনো সিস্টেম নির্ধারিত নেই।"}</div>`;
+}
 function showHub(me) {
-  me = me || ME; if (!me) return;
+  me = me || ME; if (!me) return; ME = me;
   $("loginView").style.display = "none"; $("app").style.display = "none"; $("hubView").style.display = "block";
-  $("hubWho").textContent = (me.name || me.email) + (me.isAdmin ? " · অ্যাডমিন" : me.isOffice ? " · অফিস" : "");
+  const h = new Date().getHours(), gr = h < 5 ? "শুভ রাত্রি" : h < 12 ? "সুপ্রভাত" : h < 16 ? "শুভ দুপুর" : h < 19 ? "শুভ অপরাহ্ন" : "শুভ সন্ধ্যা";
+  $("hubHi").textContent = gr + ", " + (me.name || me.email || "");
+  $("hubWho").textContent = me.isAdmin ? "অ্যাডমিন · কোন সিস্টেমে যাবেন?" : me.isOffice ? "অফিস · কোন সিস্টেমে যাবেন?" : "শিক্ষক · কোন সিস্টেমে যাবেন?";
+  $("hubDate").textContent = new Date().toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   $("hubBack").style.display = me.isAdmin ? "inline-block" : "none";
-  const items = MODULES.map((m, i) => ({ m, i })).filter((x) => !me.isOffice || x.m.officeOk);
-  $("hubCards").innerHTML = items.length
-    ? items.map(({ m, i }) => `<div class="stat click mod" onclick="openModule(${i})"><span class="mi">${m.icon}</span><b>${esc(m.title)}</b><span>${esc(m.desc)}</span></div>`).join("")
-    : '<div class="empty">আপনার জন্য কোনো সিস্টেম নির্ধারিত নেই।</div>';
+  HUBQ = ""; $("hubQ").value = "";
+  renderHub();
+  if (!HUBLIST) api("getModules", TOKEN).then((l) => { if (Array.isArray(l) && l.length) { HUBLIST = l; renderHub(); } }).catch(() => {});   // অ্যাডমিনের সংরক্ষিত তালিকা
 }
 
 let TOKEN = sessionStorage.getItem("app_token") || "";   // লগইন টোকেন (সব ধরনের ইউজারের; ট্যাব বন্ধ হলে মুছে যায়)
@@ -471,6 +644,17 @@ let tab = "overview", usersCache = [], editingEmail = null;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ---------- হাব: সার্চ ও কীবোর্ড শর্টকাট ----------
+$("hubQ").addEventListener("input", (e) => { HUBQ = e.target.value; renderHub(); });
+document.addEventListener("keydown", (e) => {
+  if ($("hubView").style.display !== "block" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const typing = e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+  if (e.key === "/" && !typing) { e.preventDefault(); $("hubQ").focus(); return; }
+  if (e.key === "Escape") { HUBQ = ""; $("hubQ").value = ""; $("hubQ").blur(); renderHub(); return; }
+  if (e.key === "Enter" && e.target === $("hubQ") && HUBVIEW[0]) { openModule(HUBVIEW[0].i); return; }
+  if (!typing && /^[1-9]$/.test(e.key) && HUBVIEW[+e.key - 1]) openModule(HUBVIEW[+e.key - 1].i);
+});
 
 function togglePassword(id, el) {
   const i = $(id); const show = i.type === "password";
@@ -536,14 +720,14 @@ async function completeLogin(token) {
     backToLogin();                                        // লগইন কার্ড আগের অবস্থায় (পরে লগআউট করলে কাজে লাগে)
     if (!me.isAdmin) { showHub(me); return; }            // শিক্ষক/অফিস → সিস্টেম বাছাইয়ের হাব
     try { const o = await api("adminOverview", TOKEN); META = { roles: o.roles, statuses: o.statuses }; } catch (_) {}
-    $("who").textContent = me.name || me.email;
+    $("who").textContent = me.name || me.email; $("who").dataset.i = String(me.name || me.email || "?").trim().charAt(0).toUpperCase();
     showApp();
   }, 900);
 }
 function showApp() { $("loginView").style.display = "none"; $("hubView").style.display = "none"; $("app").style.display = "block"; go(tab); }
 async function logout(silent) {
   if (TOKEN && !silent) await api("logout", TOKEN).catch(() => {});
-  TOKEN = ""; ME = null; sessionStorage.removeItem("app_token");
+  TOKEN = ""; ME = null; HUBLIST = null; sessionStorage.removeItem("app_token");
   $("app").style.display = "none"; $("hubView").style.display = "none"; $("loginView").style.display = "flex"; $("lPass").value = "";
 }
 
@@ -640,7 +824,12 @@ function startOtpTimer() {
 }
 async function resendOtp() {
   if ($("resendLink").classList.contains("disabled")) return;
-  try { await api("loginStart", otpEmail, otpPass, getDev(otpEmail)); startOtpTimer(); }
+  try {
+    const r = await api("loginStart", otpEmail, otpPass, getDev(otpEmail));
+    if (r.token) { await completeLogin(r.token); return; }   // ইতিমধ্যে অনুমোদিত ডিভাইস
+    if (r.pending) { showMsg("otpError", "⏳ ডিভাইসটি অ্যাডমিনের অনুমোদনের অপেক্ষায় আছে।"); setTimeout(backToLogin, 3500); return; }
+    startOtpTimer();
+  }
   catch (x) { showMsg("otpError", "ত্রুটি: " + x.message); }
 }
 
@@ -712,18 +901,45 @@ function go(t) {
   tab = t;
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
   $("main").innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
-  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, archive: vArchive })[t]()
+  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, devapproval: vDevApproval, archive: vArchive })[t]()
     .catch((e) => { $("main").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
 }
 
 // ---------- সারসংক্ষেপ ----------
 async function vOverview() {
   const o = await api("adminOverview", TOKEN);
-  const card = (n, l, t) => `<div class="stat click" onclick="go('${t}')"><b>${n}</b><span>${l}</span></div>`;
-  $("main").innerHTML = '<div class="cards">' +
-    card(o.users, "মোট ইউজার", "users") + card(o.pendingUsers, "অনুমোদনের অপেক্ষায় ইউজার", "users") +
-    card(o.pendingStudents, "পেন্ডিং শিক্ষার্থী নিবন্ধন", "regs") + card(o.sessions, "এখন সক্রিয় সেশন", "sessions") +
-    card(o.holidays, "নির্ধারিত ছুটি", "holidays") + "</div>";
+  const nm = (ME && (ME.name || ME.email)) || "অ্যাডমিন";
+  const dt = new Date().toLocaleDateString("bn-BD", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const pend = (o.pendingUsers || 0) + (o.pendingStudents || 0) + (o.pendingDevices || 0);
+  const C = [
+    ["👥", "মোট ইউজার", o.users, "users", "var(--ink-soft)"],
+    ["⏳", "অনুমোদনের অপেক্ষায় ইউজার", o.pendingUsers, "users", "var(--brick)", 1],
+    ["🧾", "পেন্ডিং শিক্ষার্থী নিবন্ধন", o.pendingStudents, "regs", "var(--brick)", 1],
+    ["📱", "অনুমোদনের অপেক্ষায় ডিভাইস", o.pendingDevices || 0, "devapproval", "var(--brick)", 1],
+    ["🟢", "এখন সক্রিয় সেশন", o.sessions, "sessions", "var(--sage)"],
+    ["🗓️", "নির্ধারিত ছুটি", o.holidays, "holidays", "var(--gold)"],
+  ];
+  const card = (c, i) => `<div class="dcard${c[5] ? " warn" + (c[2] > 0 ? " has" : "") : ""}" style="--c:${c[4]};animation-delay:${i * 60}ms" onclick="go('${c[3]}')">
+      <div class="ico">${c[0]}</div><div><b data-n="${c[2] || 0}">0</b><span class="l">${esc(c[1])}</span></div><span class="go">›</span></div>`;
+  const qa = [["👤", "নতুন ইউজার", "users"], ["🧾", "নিবন্ধন দেখুন", "regs"], ["📱", "ডিভাইস অনুমোদন", "devapproval"], ["🗓️", "ছুটি ইমপোর্ট", "holidays"], ["🗄️", "আর্কাইভ", "archive"]];
+  $("main").innerHTML = `<div class="dash-hero">
+      <div class="hi">স্বাগতম 👋</div><h2>${esc(nm)}</h2><div class="dt">${esc(dt)}</div>
+      ${pend ? `<div class="dash-alert" onclick="go('${o.pendingUsers ? "users" : o.pendingStudents ? "regs" : "devapproval"}')"><i></i>${pend}টি বিষয় আপনার অনুমোদনের অপেক্ষায়</div>` : `<div class="dash-alert" style="cursor:default"><span>✅</span>সবকিছু হালনাগাদ — কোনো অপেক্ষমাণ কাজ নেই</div>`}
+    </div>
+    <div class="dcards">${C.map(card).join("")}</div>
+    ${pend ? (() => { const sg = [[o.pendingUsers || 0, "ইউজার অনুমোদন", "var(--gold)"], [o.pendingStudents || 0, "শিক্ষার্থী নিবন্ধন", "var(--brick)"], [o.pendingDevices || 0, "ডিভাইস অনুমোদন", "var(--ink-soft)"]];
+      return `<div class="dsec">অপেক্ষমাণ কাজের বিভাজন</div><div class="pcard"><div class="pbar">${sg.map((x) => `<i style="width:${(x[0] / pend * 100).toFixed(1)}%;background:${x[2]}"></i>`).join("")}</div>
+      <div class="pleg">${sg.map((x) => `<span><em style="background:${x[2]}"></em>${x[1]}: <b>${x[0].toLocaleString("bn-BD")}</b></span>`).join("")}</div></div>`; })() : ""}
+    <div class="dsec">দ্রুত কাজ</div>
+    <div class="qacts">${qa.map((q) => `<button class="qact" onclick="go('${q[2]}')"><span>${q[0]}</span>${esc(q[1])}</button>`).join("")}</div>`;
+  // সংখ্যা গোনার অ্যানিমেশন (ধীর করে দেওয়া ডিভাইসে সরাসরি বসে)
+  const still = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.querySelectorAll("#main [data-n]").forEach((el) => {
+    const n = +el.dataset.n, f = (v) => Math.round(v).toLocaleString("bn-BD");
+    if (still || !n) { el.textContent = f(n); return; }
+    const t0 = performance.now();
+    (function step(t) { const k = Math.min(1, (t - t0) / 700); el.textContent = f(n * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); })(t0);
+  });
 }
 
 // ---------- ইউজার ----------
@@ -943,6 +1159,54 @@ $("main").addEventListener("click", async (e) => {
   await run(b, async () => { await api("adminDeleteHoliday", TOKEN, b.dataset.h); toast("✅ মোছা হয়েছে"); go("holidays"); });
 });
 
+// ---------- ডিভাইস অনুমোদন (দ্রুত অনুমোদনের জন্য; "ডিভাইস" ট্যাব থেকে স্বতন্ত্র) ----------
+const DVA_LABEL = { pending: "অপেক্ষায়", approved: "অনুমোদিত", rejected: "বাতিল" };
+function dvaName(ua) {
+  ua = String(ua || ""); if (!ua) return "অজানা ডিভাইস";
+  const os = /Android/i.test(ua) ? "Android" : /iPhone|iPad|iOS/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac OS/i.test(ua) ? "Mac" : /Linux/i.test(ua) ? "Linux" : "";
+  const br = /Edg\//i.test(ua) ? "Edge" : /OPR\/|Opera/i.test(ua) ? "Opera" : /Chrome\//i.test(ua) ? "Chrome" : /Firefox\//i.test(ua) ? "Firefox" : /Safari\//i.test(ua) ? "Safari" : "";
+  return [br, os].filter(Boolean).join(" · ") || ua.slice(0, 40);
+}
+async function vDevApproval() {
+  $("main").innerHTML = `<div class="bar">
+    <select class="f" id="dvaSt"><option value="pending">অপেক্ষায়</option><option value="approved">অনুমোদিত</option><option value="rejected">বাতিল</option><option value="">সব</option></select>
+    <button class="btn ghost" id="dvaRef">🔄 রিফ্রেশ</button></div>
+    <p class="hint" style="margin:-4px 0 12px">নতুন ডিভাইস থেকে OTP দিয়ে ঢুকলে এখানে "অপেক্ষায়" দেখাবে (সার্ভারে DEVICE_APPROVAL=on থাকলে)। অনুমোদন দিলে ইউজার আবার লগইন করে ঢুকতে পারবেন; অনুমোদন ৩০ দিন চলে।</p>
+    <div class="tw" id="dvaTable"></div>`;
+  $("dvaSt").onchange = dvaLoad; $("dvaRef").onclick = dvaLoad;
+  await dvaLoad();
+}
+async function dvaLoad() {
+  const list = await api("adminListDevices", TOKEN, $("dvaSt").value);
+  if (!list.length) { $("dvaTable").innerHTML = '<div class="empty">কোনো ডিভাইস নেই</div>'; return; }
+  $("dvaTable").innerHTML = "<table><tr><th>ইউজার</th><th>ডিভাইস</th><th>নিবন্ধিত</th><th>শেষ ব্যবহার</th><th>Status</th><th>কাজ</th></tr>" +
+    list.map((d) => {
+      const tag = d.status === "approved" ? "active" : d.status === "pending" ? "pending" : "blocked";
+      return `<tr><td><b>${esc(d.name)}</b><br><span class="sub">${esc(d.email)}</span></td>
+        <td style="max-width:220px;word-break:break-word" title="${esc(d.label)}">${esc(dvaName(d.label))}</td>
+        <td style="white-space:nowrap">${esc(d.created)}</td><td style="white-space:nowrap">${esc(d.lastUsed) || "—"}</td>
+        <td><span class="tag ${tag}">${esc(DVA_LABEL[d.status] || d.status)}</span></td>
+        <td><div class="acts" data-d="${esc(d.id)}" data-m="${esc(d.email)}">
+          ${d.status !== "approved" ? '<button class="btn ok sm" data-dv="approved">অনুমোদন</button>' : ""}
+          ${d.status !== "rejected" ? '<button class="btn bad sm" data-dv="rejected">বাতিল</button>' : ""}
+          <button class="btn ghost sm" data-dv="del">মুছুন</button>
+          <button class="btn ghost sm" data-dv="all">ইউজারের সব মুছুন</button></div></td></tr>`;
+    }).join("") + "</table>";
+}
+$("main").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-dv]"); if (!b || tab !== "devapproval") return;
+  const box = b.closest("[data-d]"), id = box.dataset.d, email = box.dataset.m, a = b.dataset.dv;
+  await run(b, async () => {
+    if (a === "approved" || a === "rejected") await api("adminSetDeviceStatus", TOKEN, id, a);
+    else if (a === "del") { if (!confirm("এই ডিভাইসটি মুছবেন? পরেরবার OTP লাগবে।")) return; await api("adminDeleteDevice", TOKEN, id); }
+    else if (a === "all") {
+      if (!confirm(email + " এর সব ডিভাইস মুছবেন? পরেরবার সব ডিভাইসে OTP লাগবে।")) return;
+      const r = await api("adminUnregisterUserDevices", TOKEN, email); toast("✅ " + r.removed + "টি ডিভাইস মোছা হয়েছে"); await dvaLoad(); return;
+    }
+    toast("✅ সম্পন্ন হয়েছে"); await dvaLoad();
+  });
+});
+
 // ---------- হাজিরা আর্কাইভ ----------
 async function vArchive() {
   $("main").innerHTML = `<div class="stat" style="max-width:480px"><b style="font-size:19px">হাজিরা আর্কাইভ</b>
@@ -964,7 +1228,7 @@ async function vArchive() {
     const me = await api("whoAmI", TOKEN); ME = me;
     if (!me.isAdmin) { showHub(me); return; }
     const o = await api("adminOverview", TOKEN); META = { roles: o.roles, statuses: o.statuses };
-    $("who").textContent = me.name || me.email; showApp();
+    $("who").textContent = me.name || me.email; $("who").dataset.i = String(me.name || me.email || "?").trim().charAt(0).toUpperCase(); showApp();
   } catch { logout(true); }
 })();
 </script>
