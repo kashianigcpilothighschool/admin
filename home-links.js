@@ -1,57 +1,45 @@
-/* =====================================================================
-   home-links.js — স্কুলের হোম পেজের লিংক অ্যাডমিন প্যানেল থেকে নিয়ন্ত্রণ
-   হোম পেজের মূল কোড অপরিবর্তিত; </body>-এর আগে শুধু এই লাইন যোগ করুন:
-       <script src="home-links.js"></script>
-   অ্যাডমিন প্যানেলের "হোম পেজ লিংক" ট্যাবে বদলালে এখানে নিজে থেকেই প্রয়োগ হয়।
-   লিংক মেলানো হয় "জায়গা|লিংকের (বাংলা) লেখা" দিয়ে (মেনু, সাইডবার, মূল সেকশন, ফুটার)। সার্ভার না পেলে আগের সংরক্ষিত/মূল লিংকই থাকে।
-   ===================================================================== */
+/* home-links.js — অ্যাডমিনের সংরক্ষিত হোম পেজ লিংক প্রয়োগ করে।
+   হোম পেজে </body>-এর আগে দিন:  <script src="home-links.js"></script>
+   নিচের FN_URL বদলান (আপনার মূল Edge Function-এর URL)। */
 (function () {
-  var API_URL  = "https://xemvwhqqpbxsdkqcscrg.supabase.co/functions/v1/attendance";
-  var ANON_KEY = "sb_publishable_Ecayyqfsteeio6zjLzHAZw_F6I3h_F0";
-  var LS = "home_links_cache_v1";
+  var FN_URL = "https://YOUR-PROJECT.supabase.co/functions/v1/attendance";
+  var ANON = ""; // Function-এ JWT যাচাই চালু থাকলে anon key দিন
 
-  function safe(u) {  // বাড়তি সুরক্ষা: javascript: ইত্যাদি কখনো বসবে না
-    u = String(u || "").trim();
-    return /^(https?:\/\/|tel:|mailto:)/i.test(u) || (!/^[a-z][a-z0-9+.-]*:/i.test(u) && u.indexOf("//") !== 0 && !/[\s<>"']/.test(u));
+  // লিংক কোন জায়গার, তা কাছের ট্যাগ দেখে আন্দাজ করা (পেজের গঠন অনুযায়ী বদলাতে পারেন)
+  var AREAS = [["ফুটার", "footer"], ["সাইডবার", "aside,.sidebar,[class*=side]"], ["মেনু", "nav,header,.navbar,[class*=menu]"]];
+  function area(a) {
+    for (var i = 0; i < AREAS.length; i++) if (a.closest(AREAS[i][1])) return AREAS[i][0];
+    return "মূল সেকশন";
   }
-  function areaOf(a) {
-    if (a.closest("nav.main-nav")) return "মেনু";
-    if (a.closest("footer")) return "ফুটার";
-    if (a.closest("aside")) return "সাইডবার";
-    if (a.closest(".panel")) return "মূল সেকশন";
-    return "";
+  function safe(u) {
+    return /^https?:\/\/[^\s<>"']+$/i.test(u) || /^(tel|mailto):[^\s<>"']+$/i.test(u) ||
+      (!/^[a-z][a-z0-9+.-]*:/i.test(u) && u.indexOf("//") !== 0 && !/[\s<>"']/.test(u));
   }
-  function nameOf(a) {
-    var n = (a.getAttribute("data-bn") || "").trim();
-    if (!n) { var inner = a.querySelector("[data-bn]"); if (inner) n = (inner.getAttribute("data-bn") || "").trim(); }
-    if (!n) n = (a.textContent || "").trim();
-    return n.replace(/\s+/g, " ");
-  }
+  function txt(a) { return a.textContent.replace(/\s+/g, " ").trim(); }
+
   function apply(list) {
-    if (!Array.isArray(list) || !list.length) return;
-    var map = {};
-    list.forEach(function (m) { if (m && m.name && safe(m.url)) map[String(m.name).trim()] = String(m.url).trim(); });
-    var links = document.querySelectorAll("a[href]");
-    for (var i = 0; i < links.length; i++) {
-      var a = links[i];
-      if (a.classList.contains("notice-open") || a.classList.contains("notice-download")) continue;
-      if (a.id === "marqLink" || a.id === "lang-bn" || a.id === "lang-en") continue;
-      var area = areaOf(a), name = nameOf(a);
-      if (!area || !name) continue;
-      var u = map[area + "|" + name];
-      if (u && a.getAttribute("href") !== u) a.setAttribute("href", u);
-    }
+    var links = [].slice.call(document.querySelectorAll("a"));
+    list.forEach(function (m) {
+      if (!m || !m.name || !safe(String(m.url))) return;
+      var p = m.name.split("|"), ar = p[0], tx = p.slice(1).join("|").trim();
+      var hit = links.filter(function (a) { var t = txt(a); return t.indexOf(tx) >= 0 && t.length <= tx.length + 4; });
+      var exact = hit.filter(function (a) { return area(a) === ar; });
+      (exact.length ? exact : hit).forEach(function (a) {
+        a.setAttribute("href", m.url);
+        if (/^https?:/i.test(m.url)) { a.target = "_blank"; a.rel = "noopener"; } else a.removeAttribute("target");
+      });
+    });
   }
-  function run() {
-    try { apply(JSON.parse(localStorage.getItem(LS) || "null")); } catch (e) {}   // আগের সংরক্ষিত লিংক সঙ্গে সঙ্গে
-    var h = { "Content-Type": "application/json", apikey: ANON_KEY, Authorization: "Bearer " + ANON_KEY };
-    fetch(API_URL, { method: "POST", headers: h, body: JSON.stringify({ fn: "getHomeLinks", args: [] }) })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j || !j.ok || !Array.isArray(j.data)) return;
-        try { localStorage.setItem(LS, JSON.stringify(j.data)); } catch (e) {}
-        apply(j.data);
-      }).catch(function () {});
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+
+  var headers = { "Content-Type": "application/json" };
+  if (ANON) { headers.Authorization = "Bearer " + ANON; headers.apikey = ANON; }
+  fetch(FN_URL, { method: "POST", headers: headers, body: JSON.stringify({ fn: "getHomeLinks", args: [] }) })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j.ok || !Array.isArray(j.data) || !j.data.length) return;
+      var run = function () { apply(j.data); };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+      setTimeout(run, 1500); // পরে JS দিয়ে আঁকা লিংকের জন্য
+    })
+    .catch(function () { /* ব্যর্থ হলে মূল লিংকই থাকবে */ });
 })();
