@@ -29,6 +29,13 @@
   var TAG = { pending: "pending", approved: "active", rejected: "blocked" };
   var all = [], flt = "", q = "";
   var icon = function (l) { return /Android|iOS|iPhone/i.test(l) ? "📱" : "💻"; };
+  // userAgent থেকে সংক্ষিপ্ত নাম (পুরো লেখা হোভার করলে দেখা যায়)
+  var devName = function (ua) {
+    ua = String(ua || ""); if (!ua) return "অজানা ডিভাইস";
+    var os = /Android/i.test(ua) ? "Android" : /iPhone|iPad|iOS/i.test(ua) ? "iOS" : /Windows/i.test(ua) ? "Windows" : /Mac OS/i.test(ua) ? "Mac" : /Linux/i.test(ua) ? "Linux" : "";
+    var br = /Edg\//i.test(ua) ? "Edge" : /OPR\/|Opera/i.test(ua) ? "Opera" : /Chrome\//i.test(ua) ? "Chrome" : /Firefox\//i.test(ua) ? "Firefox" : /Safari\//i.test(ua) ? "Safari" : "";
+    return [br, os].filter(Boolean).join(" · ") || ua.slice(0, 40);
+  };
 
   var _go = window.go;
   window.go = function (t) {
@@ -80,7 +87,7 @@
         '<button class="btn bad sm" data-all="' + esc(em) + '">সব ডিভাইসের নিবন্ধন মুছুন</button></div>' +
         ds.map(function (d) {
           return '<div class="ux-dev" data-id="' + esc(d.id) + '"><span class="ux-ic">' + icon(d.label) + '</span>' +
-            '<div class="ux-info"><b>' + esc(d.label || "অজানা ডিভাইস") + '</b> <span class="tag ' + (TAG[d.status] || "") + '">' + esc(STL[d.status] || d.status) + '</span>' +
+            '<div class="ux-info"><b title="' + esc(d.label) + '">' + esc(devName(d.label)) + '</b> <span class="tag ' + (TAG[d.status] || "") + '">' + esc(STL[d.status] || d.status) + '</span>' +
             '<small>নিবন্ধন: ' + esc(d.created) + ' · শেষ ব্যবহার: ' + esc(d.lastUsed || "—") + ' · মেয়াদ: ' + esc(d.expires) + '</small></div>' +
             '<div class="ux-acts">' +
             (d.status !== "approved" ? '<button class="btn ok sm" data-a="approved">অনুমোদন</button>' : "") +
