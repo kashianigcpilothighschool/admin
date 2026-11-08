@@ -594,6 +594,7 @@ const MODULES = [
   { icon: "🗓️", title: "হাজিরা",           desc: "দৈনিক হাজিরা ও রিপোর্ট",           url: "attendance.html",    officeOk: true  },
   { icon: "📄", title: "ফরম ফিলাপ",        desc: "ফরম ফিলাপ, ফি ও জমা",              url: "formfillup.html",    officeOk: false },
   { icon: "🧾", title: "নতুন নিবন্ধন",     desc: "শিক্ষার্থী নিবন্ধন কনফার্ম",        url: "registrations.html", officeOk: false },
+  { icon: "🎓", title: "শিক্ষার্থী ইমপোর্ট", desc: "CSV থেকে একসাথে শিক্ষার্থী যোগ (অ্যাডমিন)", url: "", officeOk: false, adminOnly: true, adminTab: "studimp" },
 ];
 let ME = null;   // বর্তমান ইউজার (whoAmI-এর ফল)
 
@@ -615,6 +616,12 @@ function hubError(text) {
 }
 // সার্ভারে সংরক্ষিত তালিকায় system/embed থাকে না; মার্কস এন্ট্রি (dashboard.html বা একই নাম) চিনে এমবেড করা
 function fixEmbed(list) {
+  const out = fixEmbed0(list);
+  const own = MODULES.find((m) => m.adminTab === "studimp");
+  if (own && !out.some((m) => m.adminTab === "studimp")) out.push(own);
+  return out;
+}
+function fixEmbed0(list) {
   return list.map((m) => (/^dashboard\.html/i.test(String(m.url || "")) || String(m.title || "").trim() === "মার্কস এন্ট্রি")
     ? { ...m, url: "", system: "result", embed: true } : m);
 }
@@ -622,6 +629,10 @@ async function openModule(i) {
   const m = (HUBLIST || MODULES)[i]; if (!m) return;
   hubSet("last", m.title);
   hubError("");
+  if (m.adminTab) {   // অ্যাডমিন প্যানেলের ভেতরের ট্যাব (শুধু অ্যাডমিন)
+    if (!ME || !ME.isAdmin) { hubError("❌ এটি শুধু অ্যাডমিনের জন্য।"); return; }
+    tab = m.adminTab; showApp(); return;
+  }
   const u = m.url;
   if (m.system) {   // আলাদা Supabase সিস্টেম (যেমন রেজাল্ট): SSO দিয়ে প্রবেশ
     try {
@@ -634,9 +645,115 @@ async function openModule(i) {
   location.href = u + (u.indexOf("?") >= 0 ? "&" : "?") + "token=" + encodeURIComponent(TOKEN);
 }
 // ---------- মার্কস এন্ট্রি এই ফাইলের ভেতরেই (পূর্ণ-পর্দা, আলাদা স্তরে) ----------
+// ---------- Show results → প্রিন্ট ব্যবস্থা (মার্কস এন্ট্রি iframe-এর ভেতরে ঢোকানো হয়) ----------
+function resultPrintPatch() {
+  var $ = function (id) { return document.getElementById(id); };
+  var css = [
+    '#rPrintHead,#rPrintFoot{display:none}',
+    '@media print{',
+    'body.print-result{background:#fff!important;padding:0!important}',
+    'body.print-result .bg-shape{display:none!important}',
+    'body.print-result #boxWrap{display:block!important;border:0!important;margin:0!important;max-width:none!important;width:100%!important;background:#fff!important}',
+    'body.print-result #resultTab{display:block!important;padding:0!important}',
+    'body.print-result #resultTab .row{display:none!important}',
+    'body.print-result #resultTab .scroll{overflow:visible!important}',
+    'body.print-result #rPrintHead{display:flex!important;flex-direction:column;align-items:center;text-align:center;gap:3px;padding-bottom:8px;margin-bottom:10px;border-bottom:3px double #000;color:#000}',
+    'body.print-result #rpH1{margin:0;font:800 22pt "Noto Serif Bengali","Times New Roman",serif;color:#000}',
+    'body.print-result #rpH2{font-size:14pt;font-weight:800;text-transform:uppercase}',
+    'body.print-result #rpH3{font-size:12pt;font-weight:700}',
+    'body.print-result #resultTable table{width:100%;min-width:0;border-collapse:collapse;border:2px solid #000;margin:0}',
+    'body.print-result #resultTable th,body.print-result #resultTable td{border:1px solid #000!important;color:#000!important;background:#fff!important;font-size:11pt;padding:4px 3px;text-align:center;outline:0!important}',
+    'body.print-result #resultTable th{background:#e3e3e3!important;font-weight:800}',
+    'body.print-result #resultTable td.fail{font-weight:800;text-decoration:underline}',
+    'body.print-result #resultTable tr{page-break-inside:avoid;break-inside:avoid}',
+    'body.print-result #rPrintFoot{display:block!important;color:#000}',
+    'body.print-result .rpmeta{display:flex;justify-content:space-between;margin-top:8px;font-size:10pt;font-weight:600}',
+    'body.print-result .rsigs{display:flex;justify-content:space-between;gap:24px;margin-top:48px;padding:0 20px;page-break-inside:avoid;break-inside:avoid}',
+    'body.print-result .rsigs div{flex:1;max-width:24%;text-align:center;border-top:1.3px solid #000;padding-top:5px;font-size:11pt;font-weight:700}',
+    '}'
+  ].join('\n');
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+  var rt = $('resultTab');
+  var head = document.createElement('div'); head.id = 'rPrintHead';
+  head.innerHTML = '<h1 id="rpH1"></h1><div id="rpH2"></div><div id="rpH3"></div>';
+  rt.insertBefore(head, rt.querySelector('.scroll'));
+  var foot = document.createElement('div'); foot.id = 'rPrintFoot';
+  foot.innerHTML = '<div class="rpmeta"><span id="rpL"></span><span id="rpR"></span></div>' +
+    '<div class="rsigs"><div>Prepared by</div><div>Class Teacher</div><div>Exam Controller</div><div>Head Teacher</div></div>';
+  rt.appendChild(foot);
+
+  var btn = document.createElement('button');
+  btn.type = 'button'; btn.textContent = '🖨️ Print results';
+  btn.onclick = async function () {
+    if (!$('classSel').value) return msg('Select class/section.', false);
+    await loadResult();                                   // সবসময় সর্বশেষ ফল আনা হয়
+    if (!$('resultTable').querySelector('tr[data-sid]')) return;
+    window.print();
+  };
+  rt.querySelector('.row').appendChild(btn);
+
+  function fill() {
+    var ex = $('examSel').selectedOptions[0];
+    $('rpH1').textContent = ($('appHdr').querySelector('h1') || {}).textContent || '';
+    $('rpH2').textContent = 'Result Sheet — ' + (ex ? ex.text : '');
+    $('rpH3').textContent = classLabel($('classSel').value) + '   |   Session ' + $('yearSel').value;
+    $('rpL').textContent = 'Total students: ' + $('resultTable').querySelectorAll('tr[data-sid]').length;
+    $('rpR').textContent = 'Printed on: ' + new Date().toLocaleDateString('en-GB');
+  }
+  window.addEventListener('beforeprint', function () {
+    var on = !rt.classList.contains('hide');
+    document.body.classList.toggle('print-result', on);
+    if (!on) return;
+    fill();
+    var ps = $('pageStyle');                              // টেবুলেশনের legal/landscape বাদ: এখানে A4 portrait
+    if (ps) ps.textContent = "@page{size:A4 portrait;margin:14mm 10mm;@bottom-center{content:'Page ' counter(page) ' of ' counter(pages);font-size:9pt;font-family:serif}}";
+  });
+  window.addEventListener('afterprint', function () {
+    document.body.classList.remove('print-result');
+    if (typeof applyPrintPrefs === 'function') applyPrintPrefs();
+  });
+}
+// ---------- নম্বর এন্ট্রি: ২ ডিজিট (ইংরেজিতে ৩ ডিজিট) লিখলেই পরের ঘরে (CQ→MCQ→পরের শিক্ষার্থী) ----------
+function marksAutoJumpPatch() {
+  var $ = function (id) { return document.getElementById(id); };
+  var ENG = /english|ইংরেজি|ইংলিশ|(^|[^a-z])eng([^a-z]|$)/i;
+  function isEnglish() {
+    var k = $('subjSel').value;
+    var cfg = (subjects || []).filter(function (s) { return s.subject_key === k; })[0];
+    if (!cfg) return false;
+    var t = (typeof en === 'function' ? en(cfg.label || '') : '') + ' ' + k + ' ' + (cfg.result_subject || '') + ' ' + (cfg.label || '');
+    return ENG.test(t);
+  }
+  function first(tr) { return tr && tr.querySelector('input[type=number]:not(:disabled)'); }
+  function focusIt(el) { el.focus(); el.select(); }
+  $('entryTable').addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el.matches || !el.matches('input[type=number]')) return;
+    if (e.inputType !== 'insertText') return;            // শুধু কিবোর্ডে টাইপ করলে (paste/স্পিনার নয়)
+    var need = isEnglish() ? 3 : 2;                      // ইংরেজিতে ৩ ডিজিট, বাকি বিষয়ে ২ ডিজিট
+    var v = el.value;
+    if (!/^\d*\.?\d*$/.test(v) || v.replace('.', '').length < need) return;
+    var tr = el.closest('tr');
+    // ১) একই সারিতে পরের ঘর (যেমন CQ → MCQ → Practical)
+    var ins = [].slice.call(tr.querySelectorAll('input[type=number]')), i = ins.indexOf(el);
+    for (var j = i + 1; j < ins.length; j++) if (!ins[j].disabled) { focusIt(ins[j]); return; }
+    // ২) সারির শেষ ঘর হলে পরের শিক্ষার্থীর প্রথম ঘর
+    while ((tr = tr.nextElementSibling)) {
+      if (tr.style.display === 'none') continue;
+      var nx = first(tr); if (nx) { focusIt(nx); return; }
+    }
+    if (!$('nextBtn').disabled) {                        // পাতার শেষ হলে পরের পাতার প্রথম ঘরে
+      pageMove(1);
+      var r = [].slice.call(document.querySelectorAll('#entryTable tr[id^="tr_"]')).filter(function (x) { return x.style.display !== 'none'; })[0];
+      var n2 = first(r); if (n2) focusIt(n2);
+    }
+  });
+}
 function openMarks(tokenHash) {
   const boot = "<script>window.__SSO=" + JSON.stringify(tokenHash) + ";window.__CFG=" + JSON.stringify(RESULT_CFG) + ";<\/script>";
-  $("marksFrame").srcdoc = MARKS_SRC.replace("<head>", "<head>" + boot);
+  const pp = "<script>(" + resultPrintPatch.toString() + ")();(" + marksAutoJumpPatch.toString() + ")();<\/script>";
+  $("marksFrame").srcdoc = MARKS_SRC.replace("<head>", "<head>" + boot).replace("</body>", () => pp + "</body>");
   $("hubView").style.display = "none"; $("marksView").style.display = "block"; document.body.style.overflow = "hidden";
 }
 function closeMarks() {
@@ -654,7 +771,7 @@ function renderHub() {
   const me = ME; if (!me) return;
   const list = HUBLIST || MODULES, pins = hubGet("pins", []), last = hubGet("last", "");
   const q = HUBQ.trim().toLowerCase();
-  let items = list.map((m, i) => ({ m, i })).filter((x) => !me.isOffice || x.m.officeOk);
+  let items = list.map((m, i) => ({ m, i })).filter((x) => (!me.isOffice || x.m.officeOk) && (!x.m.adminOnly || me.isAdmin));
   items.sort((a, b) => (pins.includes(b.m.title) ? 1 : 0) - (pins.includes(a.m.title) ? 1 : 0));   // প্রিয়গুলো ওপরে (ক্রম অক্ষত)
   if (q) items = items.filter((x) => (x.m.title + " " + (x.m.desc || "")).toLowerCase().includes(q));
   HUBVIEW = items;
@@ -942,7 +1059,7 @@ function go(t) {
   tab = t;
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
   $("main").innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
-  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, devapproval: vDevApproval, archive: vArchive })[t]()
+  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, devapproval: vDevApproval, archive: vArchive, studimp: vStudImport })[t]()
     .catch((e) => { $("main").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
 }
 
@@ -1247,6 +1364,91 @@ $("main").addEventListener("click", async (e) => {
     toast("✅ সম্পন্ন হয়েছে"); await dvaLoad();
   });
 });
+
+// ---------- শিক্ষার্থী CSV বাল্ক ইমপোর্ট ----------
+const STU_COLS = ["student_id","class_base","session","grp","roll","section","name_en","name_bn","birth_cert","dob","gender","mobile","email","father_name","father_mobile","mother_name","mother_mobile"];
+let stuRows = [];
+function csvToStudents(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error("হেডারসহ অন্তত একটি সারি থাকতে হবে।");
+  const H = rows[0].map((s) => String(s).trim().toLowerCase().replace(/[\s\-]+/g, "_"));
+  ["class_base", "session", "roll", "name_en"].forEach((c) => { if (!H.includes(c)) throw new Error("হেডারে '" + c + "' কলাম নেই।"); });
+  const idx = {}; STU_COLS.forEach((c) => (idx[c] = H.indexOf(c)));
+  return rows.slice(1).map((r, n) => {
+    const o = { _line: n + 2 };
+    STU_COLS.forEach((c) => (o[c] = idx[c] >= 0 ? String(r[idx[c]] == null ? "" : r[idx[c]]).trim() : ""));
+    return o;
+  });
+}
+function stuCheck(rows) {
+  const seen = new Map();
+  rows.forEach((r) => {
+    const e = [];
+    if (!r.class_base) e.push("class_base ফাঁকা");
+    if (!r.session) e.push("session ফাঁকা");
+    if (!r.roll) e.push("roll ফাঁকা");
+    if (!r.name_en && !r.name_bn) e.push("নাম ফাঁকা");
+    if (/e\+/i.test(r.birth_cert)) e.push("birth_cert Excel-এ সংখ্যায় বদলে গেছে");
+    const k = [r.session, r.class_base, r.grp, r.section, r.roll].join("|").toLowerCase();
+    if (seen.has(k)) e.push("রোল ডুপ্লিকেট (লাইন " + seen.get(k) + ")"); else seen.set(k, r._line);
+    r._err = e.join("; ");
+  });
+}
+async function vStudImport() {
+  stuRows = [];
+  $("main").innerHTML = `<div class="stat" style="border-top-color:var(--sage)">
+    <b style="font-size:17px">🎓 শিক্ষার্থী — বাল্ক ইমপোর্ট (CSV)</b>
+    <p class="hint">আবশ্যক হেডার: class_base, session, roll, name_en। ঐচ্ছিক: student_id, grp, section, name_bn, birth_cert, dob, gender, mobile, email, father_name, father_mobile, mother_name, mother_mobile। cls কলাম দেবেন না, সার্ভার নিজে বানায়। একই session + ক্লাস + রোল আগে থাকলে নিচের নির্বাচন অনুযায়ী আপডেট বা বাদ যাবে।</p>
+    <div class="bar" style="margin-top:10px"><input class="f" type="file" id="stuFile" accept=".csv,.txt,text/csv">
+      <select class="f" id="stuMode"><option value="update">আগে থাকলে আপডেট করুন</option><option value="skip">আগে থাকলে বাদ দিন</option></select></div>
+    <textarea id="stuPaste" rows="4" placeholder="অথবা CSV / Excel থেকে কপি করা লেখা এখানে paste করুন" style="width:100%;font-family:inherit;font-size:13px;padding:10px 14px;border:1.5px solid #E3E1D8;border-radius:11px;outline:none"></textarea>
+    <div class="bar" style="margin-top:10px"><button class="btn ghost" id="stuSample">⬇ নমুনা CSV</button><button class="btn ghost" id="stuPrev">প্রিভিউ দেখুন</button><button class="btn ok" id="stuGo" disabled>ইমপোর্ট করুন</button></div>
+    <div id="stuOut" class="hint"></div></div>`;
+  $("stuSample").onclick = () => {
+    const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+    const rows = [STU_COLS.filter((c) => c !== "student_id"),
+      ["6", "2026", "", "1", "A", "RAHIM UDDIN", "রহিম উদ্দিন", "20142910384109926", "2014-10-16", "male", "01700000000", "", "KARIM UDDIN", "01711111111", "RAHIMA BEGUM", "01722222222"],
+      ["9", "2026", "SCI", "2", "", "FATEMA KHATUN", "ফাতেমা খাতুন", "", "2011-03-05", "female", "", "", "ABDUL MANNAN", "", "SALMA KHATUN", ""]];
+    const csv = "\uFEFF" + rows.map((r) => r.map(q).join(",")).join("\r\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = "students_sample.csv"; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  $("stuFile").onchange = async () => { const f = $("stuFile").files[0]; if (!f) return; $("stuPaste").value = await f.text(); $("stuPrev").click(); };
+  $("stuPrev").onclick = () => {
+    $("stuGo").disabled = true; stuRows = [];
+    try {
+      const rows = csvToStudents($("stuPaste").value);
+      if (!rows.length) throw new Error("কোনো সারি পাওয়া যায়নি।");
+      stuCheck(rows); stuRows = rows;
+      const bad = rows.filter((r) => r._err), grp = {};
+      rows.forEach((r) => { const k = [r.session, "শ্রেণি " + r.class_base, r.grp, r.section && "শাখা " + r.section].filter(Boolean).join(" · "); grp[k] = (grp[k] || 0) + 1; });
+      $("stuOut").innerHTML = `<b style="color:var(--sage)">${rows.length} জন শিক্ষার্থী পাওয়া গেছে</b><br>` +
+        Object.keys(grp).map((k) => esc(k) + ": <b>" + grp[k] + "</b>").join("<br>") +
+        (bad.length ? `<div style="color:var(--brick);margin-top:8px"><b>❌ ${bad.length}টি সারিতে সমস্যা (ঠিক না করলে ইমপোর্ট হবে না):</b><br>` +
+          bad.slice(0, 10).map((r) => "লাইন " + r._line + ": " + esc(r._err)).join("<br>") + (bad.length > 10 ? "<br>…আরও " + (bad.length - 10) + "টি" : "") + "</div>" : "") +
+        '<div class="tw" style="margin-top:8px;box-shadow:none"><table><tr><th>রোল</th><th>নাম</th><th>ক্লাস/শাখা</th><th>পিতা</th><th>মাতা</th></tr>' +
+        rows.slice(0, 8).map((r) => `<tr><td>${esc(r.roll)}</td><td>${esc(r.name_en || r.name_bn)}</td><td>${esc(r.class_base + (r.grp ? " " + r.grp : "") + (r.section ? " " + r.section : ""))}</td><td>${esc(r.father_name)}</td><td>${esc(r.mother_name)}</td></tr>`).join("") + "</table></div>" +
+        (rows.length > 8 ? `<div style="margin-top:4px">…আরও ${rows.length - 8}টি সারি</div>` : "");
+      $("stuGo").disabled = bad.length > 0;
+    } catch (x) { $("stuOut").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + "</span>"; }
+  };
+  $("stuGo").onclick = () => run($("stuGo"), async () => {
+    if (!stuRows.length) throw new Error("আগে প্রিভিউ দেখুন।");
+    const mode = $("stuMode").value;
+    if (!confirm(stuRows.length + " জন শিক্ষার্থী ইমপোর্ট করবেন? (" + (mode === "skip" ? "আগে থাকলে বাদ যাবে" : "আগে থাকলে আপডেট হবে") + ")")) return;
+    let saved = 0, skipped = 0;
+    for (let i = 0; i < stuRows.length; i += 200) {
+      const chunk = stuRows.slice(i, i + 200).map((r) => { const o = {}; STU_COLS.forEach((c) => (o[c] = r[c])); return o; });
+      let r;
+      try { r = await api("adminImportStudents", TOKEN, chunk, mode); }
+      catch (x) { throw new Error(x.message + " (সার্ভারে adminImportStudents ফাংশন যোগ হয়েছে কি দেখুন; " + saved + " জন আগেই সংরক্ষিত)"); }
+      saved += r.saved || 0; skipped += r.skipped || 0;
+    }
+    toast("✅ সংরক্ষিত " + saved + " জন" + (skipped ? ", বাদ " + skipped + " জন" : "")); go("studimp");
+  });
+}
 
 // ---------- হাজিরা আর্কাইভ ----------
 async function vArchive() {
