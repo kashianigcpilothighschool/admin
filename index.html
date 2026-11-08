@@ -594,8 +594,11 @@ const MODULES = [
   { icon: "🗓️", title: "হাজিরা",           desc: "দৈনিক হাজিরা ও রিপোর্ট",           url: "attendance.html",    officeOk: true  },
   { icon: "📄", title: "ফরম ফিলাপ",        desc: "ফরম ফিলাপ, ফি ও জমা",              url: "formfillup.html",    officeOk: false },
   { icon: "🧾", title: "নতুন নিবন্ধন",     desc: "শিক্ষার্থী নিবন্ধন কনফার্ম",        url: "registrations.html", officeOk: false },
-  { icon: "🎓", title: "শিক্ষার্থী ইমপোর্ট", desc: "CSV থেকে একসাথে শিক্ষার্থী যোগ (অ্যাডমিন)", url: "", officeOk: false, adminOnly: true, adminTab: "studimp" },
+  { icon: "🎓", title: "শিক্ষার্থী ইমপোর্ট", desc: "CSV থেকে একসাথে শিক্ষার্থী যোগ", url: "", officeOk: false, adminOnly: false, adminTab: "studimp" },
+  { icon: "🪑", title: "ক্লাস অনুযায়ী সিট প্ল্যান", desc: "শ্রেণি/শাখা মিশিয়ে আসন বিন্যাস ও প্রিন্ট (অ্যাডমিন)", url: "", officeOk: false, adminOnly: true, adminTab: "seatplan" },
+  { icon: "🪑", title: "পরীক্ষা কেন্দ্র সিট প্ল্যান", desc: "কক্ষ ও সিট বিন্যাস, প্রিন্ট ও এডিট (অ্যাডমিন)", url: "seat-plan.html", officeOk: false, adminOnly: true, forceAdd: true },
 ];
+const TEACHER_TABS = ["studimp"];   // অ্যাডমিন ছাড়া যে ট্যাবগুলো শিক্ষকও ব্যবহার করতে পারবেন
 let ME = null;   // বর্তমান ইউজার (whoAmI-এর ফল)
 
 let HUBLIST = null, HUBQ = "";   // সার্ভারের সিস্টেম তালিকা (না পেলে MODULES)
@@ -617,8 +620,8 @@ function hubError(text) {
 // সার্ভারে সংরক্ষিত তালিকায় system/embed থাকে না; মার্কস এন্ট্রি (dashboard.html বা একই নাম) চিনে এমবেড করা
 function fixEmbed(list) {
   const out = fixEmbed0(list);
-  const own = MODULES.find((m) => m.adminTab === "studimp");
-  if (own && !out.some((m) => m.adminTab === "studimp")) out.push(own);
+  MODULES.filter((m) => m.adminTab).forEach((own) => { if (!out.some((m) => m.adminTab === own.adminTab)) out.push(own); });
+  MODULES.filter((m) => m.forceAdd).forEach((own) => { if (!out.some((m) => m.url === own.url)) out.push(own); });
   return out;
 }
 function fixEmbed0(list) {
@@ -630,7 +633,7 @@ async function openModule(i) {
   hubSet("last", m.title);
   hubError("");
   if (m.adminTab) {   // অ্যাডমিন প্যানেলের ভেতরের ট্যাব (শুধু অ্যাডমিন)
-    if (!ME || !ME.isAdmin) { hubError("❌ এটি শুধু অ্যাডমিনের জন্য।"); return; }
+    if (!ME || (!ME.isAdmin && !TEACHER_TABS.includes(m.adminTab))) { hubError("❌ এটি শুধু অ্যাডমিনের জন্য।"); return; }
     tab = m.adminTab; showApp(); return;
   }
   const u = m.url;
@@ -882,7 +885,15 @@ async function completeLogin(token) {
     showApp();
   }, 900);
 }
-function showApp() { $("loginView").style.display = "none"; $("hubView").style.display = "none"; $("app").style.display = "block"; go(tab); }
+function showApp() {
+  const adm = !!(ME && ME.isAdmin);
+  if (!adm && !TEACHER_TABS.includes(tab)) { if (ME) showHub(ME); return; }   // শিক্ষক শুধু অনুমোদিত ট্যাবে যেতে পারবেন
+  $("loginView").style.display = "none"; $("hubView").style.display = "none"; $("app").style.display = "block";
+  $("nav").style.display = adm ? "" : "none";
+  document.querySelector("#app .top h1").textContent = adm ? "🛡️ অ্যাডমিন প্যানেল" : "🎓 শিক্ষার্থী ইমপোর্ট";
+  if (!adm && ME) { $("who").textContent = ME.name || ME.email || ""; $("who").dataset.i = String(ME.name || ME.email || "?").trim().charAt(0).toUpperCase(); }
+  go(tab);
+}
 async function logout(silent) {
   if (TOKEN && !silent) await api("logout", TOKEN).catch(() => {});
   TOKEN = ""; ME = null; HUBLIST = null; sessionStorage.removeItem("app_token");
@@ -1056,10 +1067,11 @@ async function resendResetOtp() {
 // ---------- ট্যাব ----------
 $("nav").addEventListener("click", (e) => { const b = e.target.closest("button[data-t]"); if (b) go(b.dataset.t); });
 function go(t) {
+  if (ME && !ME.isAdmin && !TEACHER_TABS.includes(t)) { showHub(ME); return; }
   tab = t;
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.t === t));
   $("main").innerHTML = '<div class="empty">লোড হচ্ছে...</div>';
-  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, devapproval: vDevApproval, archive: vArchive, studimp: vStudImport })[t]()
+  ({ overview: vOverview, users: vUsers, regs: vRegs, sessions: vSessions, holidays: vHolidays, devapproval: vDevApproval, archive: vArchive, studimp: vStudImport, seatplan: vSeatPlan })[t]()
     .catch((e) => { $("main").innerHTML = '<div class="empty">' + esc(e.message) + "</div>"; });
 }
 
@@ -1448,6 +1460,181 @@ async function vStudImport() {
     }
     toast("✅ সংরক্ষিত " + saved + " জন" + (skipped ? ", বাদ " + skipped + " জন" : "")); go("studimp");
   });
+}
+
+// ---------- সিট প্ল্যান (ব্রাউজারেই তৈরি, সার্ভার লাগে না) ----------
+const SP_KEY = "seatplan_v1";
+let spPlan = null;
+const spLoad = () => { try { return JSON.parse(localStorage.getItem(SP_KEY) || "") || {}; } catch (e) { return {}; } };
+const spSave = (o) => { try { localStorage.setItem(SP_KEY, JSON.stringify(o)); } catch (e) {} };
+const spGroup = (r) => ["শ্রেণি " + r.class_base, r.grp, r.section && "শাখা " + r.section].filter(Boolean).join(" ");
+const spShort = (r) => [r.class_base, r.grp, r.section].filter(Boolean).join("-");
+function spParse(text) {
+  const rows = parseCsv(text);
+  if (rows.length < 2) throw new Error("হেডারসহ অন্তত একটি সারি থাকতে হবে।");
+  const H = rows[0].map((s) => String(s).trim().toLowerCase().replace(/[\s\-]+/g, "_"));
+  ["class_base", "roll"].forEach((c) => { if (!H.includes(c)) throw new Error("হেডারে '" + c + "' কলাম নেই।"); });
+  if (!H.includes("name_en") && !H.includes("name_bn")) throw new Error("হেডারে name_en বা name_bn কলাম লাগবে।");
+  const g = (r, c) => { const i = H.indexOf(c); return i >= 0 ? String(r[i] == null ? "" : r[i]).trim() : ""; };
+  const out = [], seen = new Set();
+  rows.slice(1).forEach((r) => {
+    const o = { class_base: g(r, "class_base"), grp: g(r, "grp"), section: g(r, "section"), roll: g(r, "roll"), name: g(r, "name_bn") || g(r, "name_en") };
+    if (!o.class_base && !o.roll && !o.name) return;
+    const k = [o.class_base, o.grp, o.section, o.roll].join("|").toLowerCase();
+    if (seen.has(k)) return; seen.add(k); out.push(o);
+  });
+  return out;
+}
+const spNum = (a, b) => { const x = parseFloat(a), y = parseFloat(b); return (isNaN(x) || isNaN(y)) ? String(a).localeCompare(String(b)) : x - y; };
+function spBuild(students, rooms, mode) {
+  const groups = new Map();
+  students.forEach((s) => { const k = spGroup(s); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); });
+  const keys = [...groups.keys()].sort((a, b) => spNum(groups.get(a)[0].class_base, groups.get(b)[0].class_base) || a.localeCompare(b));
+  keys.forEach((k) => groups.get(k).sort((a, b) => spNum(a.roll, b.roll)));
+  const cap = rooms.reduce((n, r) => n + r.rows * r.cols * r.per, 0);
+  if (students.length > cap) throw new Error("আসন কম পড়ছে: শিক্ষার্থী " + students.length + " জন, কিন্তু মোট আসন " + cap + "টি। কক্ষ বা বেঞ্চ বাড়ান।");
+  const q = new Map(keys.map((k) => [k, groups.get(k).slice()]));
+  const left = () => [...q.values()].reduce((n, a) => n + a.length, 0);
+  const res = [];
+  rooms.forEach((rm) => {
+    const W = rm.cols * rm.per, grid = Array.from({ length: rm.rows }, () => Array(W).fill(null));
+    for (let r = 0; r < rm.rows; r++) for (let c = 0; c < W; c++) {
+      if (!left()) break;
+      let pick;
+      if (mode === "sep") pick = keys.find((k) => q.get(k).length);
+      else {
+        const lg = c > 0 && grid[r][c - 1] ? spGroup(grid[r][c - 1]) : null, fg = r > 0 && grid[r - 1][c] ? spGroup(grid[r - 1][c]) : null;
+        const av = keys.filter((k) => q.get(k).length), by = (f) => av.filter(f).sort((a, b) => q.get(b).length - q.get(a).length)[0];
+        pick = by((k) => k !== lg && k !== fg) || by((k) => k !== lg) || by(() => true);
+      }
+      grid[r][c] = q.get(pick).shift();
+    }
+    res.push({ room: rm, grid, W, count: grid.flat().filter(Boolean).length });
+  });
+  return res;
+}
+const SP_CSS = `.sp-room{margin:0 0 22px;page-break-after:always;break-after:page}.sp-room:last-child{page-break-after:auto}
+.sp-h{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #1F2D50;padding-bottom:6px;margin-bottom:10px}.sp-h b{font-size:20px}.sp-h span{font-size:13px;color:#47537A}
+.sp-t{border-collapse:separate;border-spacing:0;margin:0 auto}.sp-t td{border:1px solid #cfc8b2;min-width:74px;height:56px;text-align:center;vertical-align:middle;padding:3px 5px;background:#fff;line-height:1.25}
+.sp-t td.gap{border-left:3px solid #1F2D50}.sp-t td.e{background:#f4f2ea;color:#bbb}.sp-t .r{font-size:17px;font-weight:700}.sp-t .c{font-size:10.5px;color:#7A5A1F;font-weight:600}.sp-t .n{font-size:10px;color:#47537A;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+.sp-front{text-align:center;font-size:12px;font-weight:700;letter-spacing:.2em;color:#fff;background:#1F2D50;border-radius:6px;padding:5px;margin:0 auto 10px;max-width:420px}
+.sp-list{border-collapse:collapse;width:100%;font-size:12.5px}.sp-list th,.sp-list td{border:1px solid #cfc8b2;padding:5px 8px;text-align:left}.sp-list th{background:#EEE7D2}`;
+function spRoomHtml(p, meta) {
+  const rm = p.room;
+  let t = "<table class='sp-t'>";
+  p.grid.forEach((row) => {
+    t += "<tr>";
+    row.forEach((s, c) => {
+      const gap = c > 0 && c % rm.per === 0 ? " gap" : "";
+      t += s ? `<td class='${gap.trim()}'><div class='r'>${esc(s.roll)}</div><div class='c'>${esc(spShort(s))}</div>${meta.names ? `<div class='n'>${esc(s.name)}</div>` : ""}</td>` : `<td class='e ${gap.trim()}'>—</td>`;
+    });
+    t += "</tr>";
+  });
+  return `<div class='sp-room'><div class='sp-h'><b>কক্ষ: ${esc(rm.name)}</b><span>${esc(meta.title)} · শিক্ষার্থী ${p.count} জন · বেঞ্চ ${rm.rows}×${rm.cols}</span></div><div class='sp-front'>শিক্ষকের টেবিল / বোর্ড</div>${t}</table></div>`;
+}
+function spListRows(plan) {
+  const out = [];
+  plan.forEach((p) => { let n = 0; p.grid.forEach((row, r) => row.forEach((s, c) => { if (s) out.push({ s, room: p.room.name, seat: ++n, pos: (r + 1) + "-" + (c + 1) }); })); });
+  return out.sort((a, b) => spNum(a.s.class_base, b.s.class_base) || spGroup(a.s).localeCompare(spGroup(b.s)) || spNum(a.s.roll, b.s.roll));
+}
+function spListHtml(plan, meta) {
+  return `<div class='sp-room'><div class='sp-h'><b>শিক্ষার্থী অনুযায়ী আসন তালিকা</b><span>${esc(meta.title)}</span></div><table class='sp-list'><tr><th>শ্রেণি/শাখা</th><th>রোল</th><th>নাম</th><th>কক্ষ</th><th>আসন নং</th></tr>` +
+    spListRows(plan).map((x) => `<tr><td>${esc(spGroup(x.s))}</td><td>${esc(x.s.roll)}</td><td>${esc(x.s.name)}</td><td>${esc(x.room)}</td><td>${x.seat}</td></tr>`).join("") + "</table></div>";
+}
+const spMeta = () => ({ title: ($("spTitle").value.trim() || "পরীক্ষা") + ($("spDate").value.trim() ? " · " + $("spDate").value.trim() : ""), names: $("spNames").checked });
+function spPrint() {
+  if (!spPlan) return;
+  const m = spMeta(), sch = $("spSchool").value.trim();
+  const w = window.open("", "_blank"); if (!w) { toast("পপ-আপ ব্লক করা আছে, অনুমতি দিন।", true); return; }
+  w.document.write(`<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><title>সিট প্ল্যান</title><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet"><style>body{font-family:'Noto Sans Bengali',sans-serif;margin:0;color:#1F2D50}@page{size:A4 landscape;margin:12mm}.sch{text-align:center;font-weight:700;font-size:18px;margin-bottom:10px}${SP_CSS}</style></head><body>` +
+    spPlan.map((p) => `<div>${sch ? `<div class='sch'>${esc(sch)}</div>` : ""}${spRoomHtml(p, m)}</div>`).join("") +
+    `<div>${sch ? `<div class='sch'>${esc(sch)}</div>` : ""}${spListHtml(spPlan, m)}</div><script>window.onload=function(){setTimeout(function(){window.print()},600)}<\/script></body></html>`);
+  w.document.close();
+}
+function spCsv() {
+  if (!spPlan) return;
+  const q = (v) => '"' + String(v).replace(/"/g, '""') + '"';
+  const rows = [["class", "group", "section", "roll", "name", "room", "seat_no", "row_col"], ...spListRows(spPlan).map((x) => [x.s.class_base, x.s.grp, x.s.section, x.s.roll, x.s.name, x.room, x.seat, x.pos])];
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + rows.map((r) => r.map(q).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
+  a.download = "seat_plan.csv"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+async function vSeatPlan() {
+  const sv = spLoad(); spPlan = null;
+  let rooms = Array.isArray(sv.rooms) && sv.rooms.length ? sv.rooms : [{ name: "১০১", rows: 6, cols: 4, per: 2 }];
+  let students = Array.isArray(sv.students) ? sv.students : [];
+  const roomRow = (r, i) => `<div class="bar" data-i="${i}" style="margin-top:8px"><input class="f" data-k="name" value="${esc(r.name)}" placeholder="কক্ষের নাম" style="min-width:120px"><input class="f" data-k="rows" type="number" min="1" max="30" value="${r.rows}" title="সারি" style="min-width:80px;width:90px"><input class="f" data-k="cols" type="number" min="1" max="12" value="${r.cols}" title="বেঞ্চ (পাশাপাশি)" style="min-width:80px;width:90px"><input class="f" data-k="per" type="number" min="1" max="4" value="${r.per}" title="প্রতি বেঞ্চে কতজন" style="min-width:80px;width:90px"><button class="btn bad sm" data-del="${i}">মুছুন</button></div>`;
+  $("main").innerHTML = `<style>${SP_CSS}#spOut{background:#fff;border-radius:16px;padding:18px;margin-top:14px;border:1px solid rgba(31,45,80,.08)}#spOut .sp-room{page-break-after:auto}.sp-col{display:flex;gap:6px;color:var(--muted);font-size:12px;margin-top:10px}.sp-col span{min-width:90px}</style>
+  <div class="stat" style="border-top-color:var(--gold)"><b style="font-size:17px">🪑 সিট প্ল্যান তৈরি</b>
+    <p class="hint">শিক্ষার্থীর তালিকা দিন (CSV: class_base, roll, name_en বা name_bn আবশ্যক; grp, section ঐচ্ছিক। শিক্ষার্থী ইমপোর্টের একই ফাইল চলবে)। তারপর কক্ষ ঠিক করে "তৈরি করুন" চাপুন। তথ্য এই ব্রাউজারে সংরক্ষিত থাকে, সার্ভারে যায় না।</p>
+    <div class="bar" style="margin-top:10px"><input class="f" id="spSess" value="${esc(sv.sess || new Date().getFullYear())}" placeholder="Session (যেমন 2026)" style="min-width:140px;width:150px"><button class="btn ok" id="spDb">🔄 students টেবিল থেকে শ্রেণি অনুযায়ী লোড</button></div>
+    <p class="hint" style="margin-top:6px">অথবা নিচে CSV দিন:</p>
+    <div class="bar" style="margin-top:4px"><input class="f" type="file" id="spFile" accept=".csv,.txt,text/csv"><span id="spCnt" class="hint"></span></div>
+    <textarea id="spPaste" rows="3" placeholder="অথবা CSV / Excel থেকে কপি করা লেখা এখানে paste করুন" style="width:100%;font-family:inherit;font-size:13px;padding:10px 14px;border:1.5px solid #E3E1D8;border-radius:11px;outline:none;margin-top:8px"></textarea>
+    <div class="bar" style="margin-top:8px"><button class="btn ghost" id="spLoad">শিক্ষার্থী লোড করুন</button><button class="btn ghost" id="spClr">তালিকা মুছুন</button></div>
+    <div id="spGrp" style="margin-top:10px"></div>
+    <label class="lbl">কক্ষ সমূহ</label>
+    <div class="sp-col"><span style="min-width:120px">কক্ষের নাম</span><span style="width:90px;min-width:80px">সারি</span><span style="width:90px;min-width:80px">বেঞ্চ</span><span style="width:90px;min-width:80px">প্রতি বেঞ্চে</span></div>
+    <div id="spRooms">${rooms.map(roomRow).join("")}</div>
+    <div class="bar" style="margin-top:10px"><button class="btn ghost" id="spAddRoom">+ কক্ষ যোগ</button><span id="spCap" class="hint"></span></div>
+    <div class="bar" style="margin-top:6px"><div style="flex:1;min-width:200px"><label class="lbl">প্রতিষ্ঠানের নাম</label><input class="f" id="spSchool" value="${esc(sv.school || "Kashiani Girish Chandra Pilot High School")}"></div>
+      <div style="flex:1;min-width:180px"><label class="lbl">পরীক্ষার নাম</label><input class="f" id="spTitle" value="${esc(sv.title || "")}" placeholder="যেমন: বার্ষিক পরীক্ষা ২০২৬"></div>
+      <div style="flex:1;min-width:160px"><label class="lbl">তারিখ/সময় (ঐচ্ছিক)</label><input class="f" id="spDate" value="${esc(sv.date || "")}"></div></div>
+    <div class="bar" style="margin-top:10px"><select class="f" id="spMode"><option value="mix">ক্লাস মিশিয়ে বসান (পাশের ও সামনের জন ভিন্ন ক্লাসের)</option><option value="sep">ক্লাস অনুযায়ী পর পর বসান</option></select>
+      <label style="font-size:13px"><input type="checkbox" id="spNames" ${sv.names === false ? "" : "checked"}> চার্টে নাম দেখান</label></div>
+    <div class="bar" style="margin-top:12px"><button class="btn ok" id="spGo">🪑 সিট প্ল্যান তৈরি করুন</button><button class="btn ghost" id="spPrint" disabled>🖨 প্রিন্ট</button><button class="btn ghost" id="spCsvBtn" disabled>⬇ CSV</button></div>
+    <div id="spMsg" class="hint"></div></div><div id="spOut" style="display:none"></div>`;
+  $("spMode").value = sv.mode || "mix";
+  const readRooms = () => { rooms = [...$("spRooms").querySelectorAll("[data-i]")].map((d) => { const g = (k) => d.querySelector(`[data-k=${k}]`).value; const n = (k, mx) => Math.max(1, Math.min(mx, parseInt(g(k), 10) || 1)); return { name: g("name").trim() || "কক্ষ", rows: n("rows", 30), cols: n("cols", 12), per: n("per", 4) }; }); return rooms; };
+  const selKeys = () => [...document.querySelectorAll("#spGrp input:checked")].map((c) => c.value);
+  const info = () => {
+    const rs = readRooms(), cap = rs.reduce((n, r) => n + r.rows * r.cols * r.per, 0), keys = selKeys();
+    const cnt = students.filter((s) => !keys.length || keys.includes(spGroup(s))).length;
+    $("spCap").innerHTML = "মোট আসন: <b>" + cap + "</b> · নির্বাচিত শিক্ষার্থী: <b style='color:" + (cnt > cap ? "var(--brick)" : "var(--sage)") + "'>" + cnt + "</b>";
+    $("spCnt").textContent = students.length ? "লোড করা: " + students.length + " জন" : "";
+  };
+  const grpBox = () => {
+    const m = new Map(); students.forEach((s) => m.set(spGroup(s), (m.get(spGroup(s)) || 0) + 1));
+    const old = new Set(sv.keys || []), first = !sv.keys;
+    $("spGrp").innerHTML = m.size ? '<label class="lbl" style="margin-top:0">যেসব ক্লাস/শাখা বসাবেন</label>' + [...m].sort((a, b) => a[0].localeCompare(b[0], "bn")).map(([k, n]) => `<label style="display:inline-flex;gap:6px;align-items:center;margin:3px 14px 3px 0;font-size:13px"><input type="checkbox" value="${esc(k)}" ${first || old.has(k) ? "checked" : ""}> ${esc(k)} (${n})</label>`).join("") : "";
+    info();
+  };
+  const store = () => spSave({ students, rooms: readRooms(), school: $("spSchool").value, title: $("spTitle").value, date: $("spDate").value, mode: $("spMode").value, names: $("spNames").checked, keys: selKeys(), sess: $("spSess").value });
+  const loadText = (t) => { try { students = spParse(t); if (!students.length) throw new Error("কোনো শিক্ষার্থী পাওয়া যায়নি।"); sv.keys = null; grpBox(); store(); $("spMsg").innerHTML = '<span style="color:var(--sage)">✅ ' + students.length + " জন শিক্ষার্থী লোড হয়েছে।</span>"; } catch (x) { $("spMsg").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + "</span>"; } };
+  $("spFile").onchange = async () => { const f = $("spFile").files[0]; if (f) { $("spPaste").value = await f.text(); loadText($("spPaste").value); } };
+  $("spLoad").onclick = () => loadText($("spPaste").value);
+  $("spDb").onclick = () => run($("spDb"), async () => {
+    const sess = $("spSess").value.trim();
+    if (!sess) throw new Error("Session লিখুন।");
+    let list;
+    try { list = await api("listStudents", TOKEN, { session: sess }); }
+    catch (x) { $("spMsg").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + " (সার্ভারে listStudents ফাংশন যোগ হয়েছে কি দেখুন; না হলে নিচের CSV ব্যবহার করুন)</span>"; return; }
+    if (!Array.isArray(list) || !list.length) { $("spMsg").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(sess) + " session-এ কোনো শিক্ষার্থী পাওয়া যায়নি।</span>"; return; }
+    students = list.map((r) => ({ class_base: String(r.class_base ?? "").trim(), grp: String(r.grp ?? "").trim(), section: String(r.section ?? "").trim(), roll: String(r.roll ?? "").trim(), name: String(r.name_bn || r.name_en || "").trim() })).filter((r) => r.roll && r.class_base);
+    sv.keys = null; grpBox(); store();
+    $("spMsg").innerHTML = '<span style="color:var(--sage)">✅ students টেবিল থেকে ' + students.length + " জন শিক্ষার্থী লোড হয়েছে। এবার ক্লাস বেছে কক্ষ ঠিক করুন।</span>";
+  });
+  $("spClr").onclick = () => { if (!confirm("লোড করা শিক্ষার্থীর তালিকা মুছবেন?")) return; students = []; sv.keys = null; grpBox(); store(); $("spOut").style.display = "none"; };
+  $("spAddRoom").onclick = () => { readRooms(); rooms.push({ name: String(rooms.length ? "কক্ষ " + (rooms.length + 1) : "১০১"), rows: 6, cols: 4, per: 2 }); $("spRooms").innerHTML = rooms.map(roomRow).join(""); info(); store(); };
+  $("spRooms").addEventListener("click", (e) => { const b = e.target.closest("[data-del]"); if (!b) return; readRooms(); if (rooms.length < 2) return toast("অন্তত একটি কক্ষ লাগবে।", true); rooms.splice(+b.dataset.del, 1); $("spRooms").innerHTML = rooms.map(roomRow).join(""); info(); store(); });
+  $("spRooms").addEventListener("input", () => { info(); store(); });
+  $("spGrp").addEventListener("change", () => { info(); store(); });
+  ["spSchool", "spTitle", "spDate", "spMode", "spNames", "spSess"].forEach((id) => $(id).addEventListener("change", store));
+  $("spGo").onclick = () => {
+    try {
+      const keys = selKeys(), list = students.filter((s) => !keys.length || keys.includes(spGroup(s)));
+      if (!list.length) throw new Error("আগে শিক্ষার্থীর তালিকা লোড করুন।");
+      spPlan = spBuild(list, readRooms(), $("spMode").value); store();
+      const m = spMeta();
+      $("spOut").style.display = "block";
+      $("spOut").innerHTML = spPlan.map((p) => spRoomHtml(p, m)).join("") + spListHtml(spPlan, m);
+      $("spPrint").disabled = $("spCsvBtn").disabled = false;
+      $("spMsg").innerHTML = '<span style="color:var(--sage)">✅ ' + list.length + " জনকে " + spPlan.length + "টি কক্ষে বসানো হয়েছে।</span>";
+      $("spOut").scrollIntoView({ behavior: "smooth" });
+    } catch (x) { $("spMsg").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + "</span>"; }
+  };
+  $("spPrint").onclick = spPrint; $("spCsvBtn").onclick = spCsv;
+  grpBox();
 }
 
 // ---------- হাজিরা আর্কাইভ ----------
