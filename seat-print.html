@@ -444,6 +444,174 @@
   @media (max-width:720px) { .toolbar { margin:6px; top:6px; border-radius:16px; } .search:focus-within { width:100%; } }
 }
 </style>
+<style id="modernUI2">
+/* =====================================================
+   আরও আধুনিক UI (v2) — শুধু পর্দা; প্রিন্ট অপরিবর্তিত
+   ===================================================== */
+@media screen {
+  :root {
+    --a1:#4F46E5; --a2:#7C3AED; --a3:#0EA5E9; --gold2:#F2B84B;
+    --accent:#2B2F77; --accent-2:#5B5BD6; --accent-hover:#4A4AC4;
+    --grad:linear-gradient(135deg,#4F46E5 0%,#7C3AED 55%,#A855F7 100%);
+    --grad-soft:linear-gradient(135deg,rgba(79,70,229,.10),rgba(168,85,247,.10));
+    --focus:#6366F1; --line:#E6E8F2; --line-strong:#CDD1E6;
+    --r-sm:12px; --r-md:16px; --r-lg:26px;
+    --glass:rgba(255,255,255,.72);
+  }
+
+  /* ---- জীবন্ত মেশ-গ্রেডিয়েন্ট ব্যাকগ্রাউন্ড ---- */
+  body {
+    background:
+      radial-gradient(620px 420px at 8% 4%, rgba(99,102,241,.28), transparent 65%),
+      radial-gradient(560px 420px at 92% 8%, rgba(236,72,153,.18), transparent 65%),
+      radial-gradient(700px 520px at 60% 105%, rgba(14,165,233,.20), transparent 65%),
+      radial-gradient(circle at 1px 1px, rgba(43,47,119,.07) 1px, transparent 0) 0 0/24px 24px,
+      #F1F2FA;
+    background-attachment:fixed;
+  }
+
+  /* ---- ডক-স্টাইল ভাসমান টুলবার ---- */
+  .toolbar {
+    top:12px; margin:12px auto 0; width:fit-content; max-width:calc(100% - 24px);
+    padding:8px 10px; gap:8px; border-radius:22px;
+    background:rgba(255,255,255,.66); border:1px solid rgba(255,255,255,.85);
+    -webkit-backdrop-filter:saturate(200%) blur(24px); backdrop-filter:saturate(200%) blur(24px);
+    box-shadow:0 1px 0 rgba(255,255,255,.9) inset, 0 8px 24px rgba(43,47,119,.12), 0 24px 60px rgba(43,47,119,.14);
+  }
+  .brand .mark { background:var(--grad); border-radius:14px; width:38px; height:38px;
+    box-shadow:0 8px 20px rgba(99,102,241,.5), inset 0 1px 0 rgba(255,255,255,.35); }
+  .toolbar > .group, .toolbar > .search { position:relative; }
+  .toolbar > .group.nav::before, .toolbar > .search::before, .toolbar > .group.actions::before {
+    content:""; position:absolute; left:-5px; top:20%; height:60%; width:1px; background:var(--line);
+  }
+  .toolbar select, .toolbar button, .zoom, .seg, .search-wrap { border-radius:14px; }
+  .toolbar select { background-color:rgba(255,255,255,.85); box-shadow:none; border-color:transparent; font-weight:500; }
+  .toolbar select:hover { background-color:#fff; border-color:var(--line); }
+  .toolbar select:focus-visible { border-color:var(--focus); box-shadow:0 0 0 4px rgba(99,102,241,.2); }
+  .toolbar button { background:rgba(255,255,255,.85); border-color:transparent; box-shadow:none; }
+  .toolbar button:hover:not(:disabled) { background:#fff; border-color:var(--line); box-shadow:0 6px 16px rgba(43,47,119,.12); transform:translateY(-1px); }
+  .toolbar button.primary { background:var(--grad); box-shadow:0 8px 22px rgba(124,58,237,.42), inset 0 1px 0 rgba(255,255,255,.3); }
+  .toolbar button.primary:hover:not(:disabled) { background:var(--grad); filter:brightness(1.08) saturate(1.1); box-shadow:0 12px 28px rgba(124,58,237,.5); }
+  .zoom, .seg { border-color:transparent; background:rgba(255,255,255,.7); box-shadow:inset 0 0 0 1px var(--line); }
+  .zoom button, .seg button { background:transparent !important; }
+  .zoom button:hover:not(:disabled), .seg button:hover:not(:disabled) { background:rgba(99,102,241,.1) !important; }
+  .counter { background:var(--grad-soft); color:var(--a1); font-weight:700; border-radius:999px; }
+  .badge { background:var(--grad); color:#fff; box-shadow:0 3px 8px rgba(124,58,237,.35); }
+  .search-wrap { background:rgba(255,255,255,.85); border-color:transparent; box-shadow:inset 0 0 0 1px var(--line); }
+  .search-wrap:hover { box-shadow:inset 0 0 0 1px var(--line-strong); }
+  .search-wrap:focus-within { box-shadow:0 0 0 4px rgba(99,102,241,.2), inset 0 0 0 1px var(--focus); background:#fff; }
+  .search:focus-within { width:250px; }
+
+  /* ---- সার্চ ফলাফল: স্পটলাইট-ধাঁচ ---- */
+  .search-results { border:none; border-radius:20px; padding:8px; background:rgba(255,255,255,.92);
+    -webkit-backdrop-filter:blur(24px); backdrop-filter:blur(24px);
+    box-shadow:0 30px 70px rgba(43,47,119,.28), 0 0 0 1px rgba(43,47,119,.06); }
+  .sr-item { border-radius:14px; padding:9px 11px; }
+  .sr-item:hover, .sr-item.active { background:var(--grad-soft); }
+  .sr-num { background:var(--grad); border-radius:12px; box-shadow:0 4px 10px rgba(99,102,241,.35); }
+  .sr-item.current .sr-num { background:linear-gradient(135deg,#059669,#34D399); box-shadow:0 4px 10px rgba(5,150,105,.35); }
+  .sr-tag { background:#DCFCE7; color:#047857; font-weight:600; }
+
+  /* ---- স্ট্যাটাস চিপ ---- */
+  .statusbar { padding-top:20px; gap:10px; }
+  .chip { padding:7px 16px; font-weight:600; font-size:13px; color:#2B2F77; border:none;
+    background:rgba(255,255,255,.75); box-shadow:inset 0 0 0 1px rgba(43,47,119,.08), 0 4px 12px rgba(43,47,119,.07); }
+  .chip:not(.accent)::before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:8px; vertical-align:middle;
+    background:var(--grad); box-shadow:0 0 0 3px rgba(124,58,237,.15); }
+  .chip.accent { background:var(--grad); box-shadow:0 8px 20px rgba(124,58,237,.38); }
+
+  /* ---- পাতা ---- */
+  .page { margin:26px auto 34px; border-radius:8px;
+    box-shadow:0 2px 4px rgba(43,47,119,.05), 0 12px 24px rgba(43,47,119,.08), 0 40px 80px rgba(43,47,119,.18);
+    outline:none; }
+
+  /* ---- মেসেজ কার্ড ---- */
+  #msg { border:none; border-radius:var(--r-lg); background:rgba(255,255,255,.8);
+    box-shadow:0 30px 70px rgba(43,47,119,.2), 0 0 0 1px rgba(43,47,119,.06); }
+  #msg.loading::before { border-color:#E4E6F7; border-top-color:var(--a2); }
+  #msg .msg-btn { background:var(--grad); border-radius:14px; box-shadow:0 8px 22px rgba(124,58,237,.4); }
+
+  /* ---- টোস্ট ---- */
+  .toast { background:rgba(24,24,60,.9); border-radius:16px; padding:13px 24px; border:1px solid rgba(255,255,255,.12);
+    box-shadow:0 20px 50px rgba(24,24,60,.4); }
+
+  /* ---- ডায়ালগ ---- */
+  dialog.dlg { border-radius:var(--r-lg); background:rgba(255,255,255,.96);
+    box-shadow:0 40px 100px rgba(24,24,60,.4), 0 0 0 1px rgba(43,47,119,.07); }
+  dialog.dlg::backdrop { background:radial-gradient(circle at 50% 30%, rgba(79,70,229,.35), rgba(15,15,45,.6)); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+  .dlg-head { background:linear-gradient(180deg,rgba(99,102,241,.09),rgba(255,255,255,0)); padding:24px 28px 12px; }
+  .dlg-head h2 { font-size:21px; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+  .tabs { margin:0 28px 0; padding:5px; gap:4px; border:none; border-radius:16px; background:#EEF0FA; width:fit-content; max-width:calc(100% - 56px); }
+  .tabs button { border-radius:12px; padding:8px 18px; }
+  .tabs button:hover { background:rgba(255,255,255,.7); }
+  .tabs button[aria-selected="true"] { background:#fff; color:var(--a1); font-weight:700; box-shadow:0 4px 12px rgba(43,47,119,.15); }
+  .dlg-body { padding:22px 28px; }
+  .dlg input, .dlg select { border-radius:14px; height:42px; background:#F7F8FD; border-color:transparent; box-shadow:inset 0 0 0 1px var(--line); }
+  .dlg input:hover, .dlg select:hover { box-shadow:inset 0 0 0 1px var(--line-strong); border-color:transparent; }
+  .dlg input:focus-visible, .dlg select:focus-visible { background:#fff; border-color:transparent; box-shadow:0 0 0 4px rgba(99,102,241,.2), inset 0 0 0 1px var(--focus); }
+  .fl { color:#4B5270; font-weight:600; }
+  .col { border:none; border-radius:18px; background:#fff; box-shadow:inset 0 0 0 1px var(--line), 0 8px 20px rgba(43,47,119,.07); }
+  .col-h .pill { background:var(--grad); color:#fff; }
+  .ix { border-color:transparent; background:#FFF1F2; border-radius:12px; }
+  .ix:hover { background:#FFE0E3; border-color:transparent; }
+  .btn { border-radius:14px; border-color:transparent; background:#fff; box-shadow:inset 0 0 0 1px var(--line), 0 2px 6px rgba(43,47,119,.06); }
+  .btn:hover:not(:disabled) { box-shadow:inset 0 0 0 1px var(--line-strong), 0 8px 18px rgba(43,47,119,.12); }
+  .btn.primary { background:var(--grad); box-shadow:0 8px 22px rgba(124,58,237,.42); color:#fff; }
+  .btn.primary:hover:not(:disabled) { filter:brightness(1.08); box-shadow:0 12px 28px rgba(124,58,237,.5); }
+  .btn.ghost { background:var(--grad-soft); color:var(--a1); box-shadow:inset 0 0 0 1px rgba(99,102,241,.3); border-style:solid; }
+  .dlg-foot { background:rgba(244,245,252,.9); border-top:1px solid var(--line); padding:16px 28px; }
+  .dlg-err:not(:empty) { margin:12px 28px 0; }
+
+  /* ---- স্ক্রলবার ---- */
+  ::-webkit-scrollbar-thumb { background:linear-gradient(180deg,#A5A8F0,#C4A6F2); background-clip:content-box; }
+  ::selection { background:rgba(124,58,237,.25); }
+
+  /* ---- ডার্ক মোড (সিস্টেম সেটিং অনুযায়ী; কাগজ সাদাই থাকে) ---- */
+  @media (prefers-color-scheme:dark) {
+    :root { --ink:#ECEEFA; --ink-soft:#9AA1C2; --line:#2C3052; --line-strong:#3E4373; --glass:rgba(30,32,64,.7); }
+    body { background:
+      radial-gradient(620px 420px at 8% 4%, rgba(99,102,241,.35), transparent 65%),
+      radial-gradient(560px 420px at 92% 8%, rgba(236,72,153,.22), transparent 65%),
+      radial-gradient(700px 520px at 60% 105%, rgba(14,165,233,.2), transparent 65%),
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0) 0 0/24px 24px, #0E0F26; background-attachment:fixed; }
+    .toolbar { background:rgba(24,26,58,.7); border-color:rgba(255,255,255,.08); color:var(--ink);
+      box-shadow:0 1px 0 rgba(255,255,255,.06) inset, 0 12px 30px rgba(0,0,0,.45); }
+    .toolbar select, .toolbar button, .search-wrap, .zoom, .seg { background-color:rgba(255,255,255,.07); color:var(--ink); }
+    .toolbar button:hover:not(:disabled), .toolbar select:hover { background:rgba(255,255,255,.14); border-color:transparent; }
+    .toolbar button.primary { color:#fff; background:var(--grad); }
+    .toolbar button.primary:hover:not(:disabled) { background:var(--grad); }
+    .zoom button:hover:not(:disabled), .seg button:hover:not(:disabled) { background:rgba(255,255,255,.12) !important; }
+    .toolbar select option { color:#111; }
+    .search-wrap input { color:var(--ink); } .search-wrap:focus-within { background:rgba(255,255,255,.12); }
+    .search-kbd, .toolbar button.search-clear { background:rgba(255,255,255,.1); color:var(--ink-soft); }
+    .counter { background:rgba(255,255,255,.08); color:#C7C9FF; }
+    .chip { background:rgba(255,255,255,.08); color:#E3E5FF; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+    .chip.accent { color:#fff; }
+    .search-results, #msg { background:rgba(24,26,58,.94); color:var(--ink); }
+    .sr-title { color:var(--ink); } .sr-item:hover, .sr-item.active { background:rgba(255,255,255,.08); }
+    #msg .msg-title { color:var(--ink); }
+    dialog.dlg { background:rgba(24,26,58,.97); color:var(--ink); }
+    .dlg-head h2 { background:linear-gradient(135deg,#A5B4FC,#E9D5FF); -webkit-background-clip:text; background-clip:text; }
+    .tabs { background:rgba(255,255,255,.07); } .tabs button { color:var(--ink-soft); }
+    .tabs button:hover { background:rgba(255,255,255,.1); }
+    .tabs button[aria-selected="true"] { background:rgba(255,255,255,.16); color:#fff; }
+    .dlg input, .dlg select { background:rgba(255,255,255,.07); color:var(--ink); }
+    .dlg input:focus-visible, .dlg select:focus-visible { background:rgba(255,255,255,.12); }
+    .dlg select option { color:#111; }
+    .fl { color:#B9BEE0; } .col { background:rgba(255,255,255,.05); }
+    .btn { background:rgba(255,255,255,.07); color:var(--ink); } .btn.primary { color:#fff; background:var(--grad); }
+    .btn.ghost { color:#C7C9FF; } .ix { background:rgba(244,63,94,.15); }
+    .dlg-foot { background:rgba(255,255,255,.04); } .dlg-x { background:rgba(255,255,255,.1); color:var(--ink-soft); }
+    .page { box-shadow:0 2px 4px rgba(0,0,0,.3), 0 20px 50px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06); }
+  }
+
+  @media (max-width:1230px) { .toolbar { width:auto; } }
+  @media (max-width:720px) {
+    .toolbar { border-radius:18px; margin:6px; } .toolbar > .group::before, .toolbar > .search::before { display:none; }
+    .tabs { max-width:calc(100% - 28px); margin:0 14px; } .dlg-head, .dlg-body, .dlg-foot { padding-left:16px; padding-right:16px; }
+  }
+}
+</style>
 </head>
 <body>
 
