@@ -712,6 +712,61 @@
   }
 }
 </style>
+<style id="modernPlan">
+/* =====================================================
+   আসন পরিকল্পনা অংশ (শিরোনাম + তথ্য-ছক + ভবন-ফিতা) — পর্দা ও প্রিন্ট দুটিতেই
+   ===================================================== */
+:root { --navy2:#2E4580; --gold-bright:#D6A24E; --gold-soft:#F1E2C3; --gold-deep:#B9822E; --ice:#F4F7FC; --rule:#D5DCEC; }
+
+/* ---- শিরোনাম-ট্যাব ---- */
+.page .plan-title {
+  width:46%; margin:4pt auto 0; padding:1pt 0 2pt; letter-spacing:1.2pt;
+  background:linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+  border:1.6pt solid var(--navy); border-bottom:2.6pt solid var(--gold-bright);
+  border-radius:14px 14px 0 0; text-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.page .plan-title::before, .page .plan-title::after { width:6pt; height:6pt; background:var(--gold-bright); box-shadow:0 0 0 2pt rgba(214,162,78,.28); }
+.page .plan-title::before { left:16pt; }
+.page .plan-title::after  { right:16pt; }
+
+/* ---- তথ্য-ছক ---- */
+.page table.info { border:1.6pt solid var(--navy); border-top:none; border-radius:0; background:#fff; }
+.page table.info td { padding:1pt 12pt; }
+.page table.info td.side { width:35%; background:linear-gradient(180deg,#FFFFFF 0%, var(--ice) 100%); }
+.page table.info tr:first-child td.side { border-bottom:1pt solid var(--rule); }
+.page table.info td.side:first-child { border-right:1pt solid var(--rule); }
+.page table.info td.side:last-child  { border-left:1pt solid var(--rule); }
+.page table.info .kv { gap:8pt; }
+.page table.info .k { font-size:15pt; font-weight:500; color:#5A6685; position:relative; padding-left:11pt; }
+.page table.info .k::before { content:""; position:absolute; left:0; top:50%; width:5pt; height:5pt; background:var(--gold-bright); transform:translateY(-50%) rotate(45deg); }
+.page table.info .v { font-size:21pt; font-weight:700; color:var(--navy); }
+.page table.info .v em { font-size:14pt; font-weight:700; color:var(--navy); background:#E4EAF7; border:.8pt solid #C3CEE6; border-radius:999px; padding:0 7pt; margin-left:2pt; vertical-align:2pt; }
+
+/* ---- মাঝের দিক-ঘর ---- */
+.page table.info td.mid {
+  width:30%; padding:2pt 6pt; position:relative;
+  background:radial-gradient(120% 140% at 50% 0%, #3A5199 0%, var(--navy) 62%);
+  border-left:1.2pt solid var(--gold-bright); border-right:1.2pt solid var(--gold-bright);
+}
+.page table.info td.mid::before { content:"বসার দিক"; display:block; font-size:12.5pt; font-weight:500; letter-spacing:.8pt; color:var(--gold-soft); }
+.page table.info td.mid .dir { font-size:27pt; font-weight:700; color:#fff; line-height:1.05; text-shadow:0 1px 2px rgba(0,0,0,.3); }
+.page table.info td.mid .dir::after { content:""; display:block; width:46%; height:1.6pt; margin:1pt auto 0; background:linear-gradient(90deg, transparent, var(--gold-bright), transparent); }
+
+/* ---- ভবন-ফিতা ---- */
+.page .building {
+  width:60%; margin:0 auto; padding:1pt 18pt 2pt; position:relative; font-size:20pt; font-weight:700; letter-spacing:.3pt; color:var(--navy);
+  background:linear-gradient(180deg, #F7EBCF 0%, var(--gold-soft) 100%);
+  border:1.6pt solid var(--navy); border-top:2.6pt solid var(--gold-bright); border-radius:0 0 14px 14px;
+}
+.page .building::before, .page .building::after { content:""; position:absolute; top:50%; width:6pt; height:6pt; background:var(--gold-deep); transform:translateY(-50%) rotate(45deg); }
+.page .building::before { left:14pt; }
+.page .building::after  { right:14pt; }
+
+@media screen {
+  .page .plan-title, .page table.info, .page .building { box-shadow:0 6px 16px rgba(29,43,79,.12); }
+  .page table.info { box-shadow:0 6px 16px rgba(29,43,79,.10); }
+}
+</style>
 </head>
 <body>
 
