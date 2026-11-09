@@ -362,6 +362,9 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>
       প্রিন্ট করুন
     </button>
+    <button id="btnExam" title="পরীক্ষার নাম, সাল ও শুরুর সময় বদলান (সব কক্ষের প্রিন্টে বসবে)">
+      📅 পরীক্ষার নাম ও সময়
+    </button>
     <button id="btnEdit" disabled title="কেন্দ্র, কক্ষ, স্কুল ও সিটের তথ্য এডিট করুন">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       এডিট
@@ -442,7 +445,7 @@ const CENTER = {
   place: 'কাশিয়ানী, গোপালগঞ্জ।',
   code: '৩৩৩',
   mobile: '০১৭১৫২২২৫৮৬',
-  venue: 'কাশিয়ানী গিরীশ চন্দ্র পাইলট উচ্চ বিদ্যালয়'
+  time: 'সকাল ১০:০০টা, বিকাল ২:০০টা'
 };
 
 // এডিট করা কেন্দ্রের তথ্য (এই ব্রাউজারে সংরক্ষিত) থাকলে সেটি ডিফল্টের উপর বসবে
@@ -576,7 +579,13 @@ function showMsg(kind, title, text, btnHtml) {
 
 async function loadPlans() {
   const rows = await api('seatPlanList', TOKEN);
-  plans = (Array.isArray(rows) ? rows : []).map(r => ({ ...(r.data || {}), id: r.id, updatedAt: r.updatedAt || null }));
+  const allRows = Array.isArray(rows) ? rows : [];
+  const cRow = allRows.find(r => r.id === '__center__');   // সার্ভারে সংরক্ষিত কেন্দ্রের তথ্য (পরীক্ষার নাম ইত্যাদি)
+  if (cRow && cRow.data && cRow.data.center) {
+    Object.keys(CENTER_DEFAULT).forEach(k => { if (typeof cRow.data.center[k] === 'string') CENTER[k] = cRow.data.center[k]; });
+    try { localStorage.setItem('centerInfo', JSON.stringify(CENTER)); } catch (_) {}
+  }
+  plans = allRows.filter(r => r.id !== '__center__').map(r => ({ ...(r.data || {}), id: r.id, updatedAt: r.updatedAt || null }));
 
   if (plans.length === 0) {
     showMsg('', 'কোনো সিট প্লান পাওয়া যায়নি', 'সিট প্লান পেজে গিয়ে আগে সাবমিট করুন।',
@@ -773,7 +782,7 @@ document.addEventListener('keydown', e => {
 const editDlg = $('editDlg'), editForm = $('editForm'), editBody = $('editBody');
 const CENTER_FIELDS = [
   ['exam', 'পরীক্ষার নাম'], ['name', 'কেন্দ্রের নাম'], ['school', 'স্কুলের নাম (বন্ধনীসহ)'], ['place', 'স্থান'],
-  ['code', 'কেন্দ্র কোড'], ['mobile', 'মোবাইল নম্বর'], ['venue', 'ভেন্যু']
+  ['code', 'কেন্দ্র কোড'], ['mobile', 'মোবাইল নম্বর'], ['time', 'পরীক্ষা শুরুর সময়']
 ];
 const ROOM_FIELDS = [
   ['roomNumber', 'কক্ষ নং'], ['gender', 'বালক / বালিকা'], ['direction', 'বসার দিক'], ['department', 'বিভাগ'],
@@ -958,6 +967,20 @@ $('editTabs').addEventListener('click', e => {
   if (b) switchTab(b.dataset.tab);
 });
 $('btnEdit').addEventListener('click', () => openEdit('room'));
+$('btnExam').addEventListener('click', async () => {
+  const v = prompt('পরীক্ষার নাম ও সাল লিখুন (সব কক্ষের প্রিন্টে বসবে):', CENTER.exam);
+  if (v === null) return;
+  const w = prompt('পরীক্ষা শুরুর সময় লিখুন (যেমন: সকাল ১০:০০টা, বিকাল ২:০০টা):', CENTER.time);
+  if (w === null) return;
+  const t = v.trim(), tm = w.trim();
+  if (!t || !tm) { toast('নাম ও সময় ফাঁকা রাখা যাবে না।'); return; }
+  if (t === CENTER.exam && tm === CENTER.time) return;
+  CENTER.exam = t; CENTER.time = tm;
+  try { localStorage.setItem('centerInfo', JSON.stringify(CENTER)); } catch (_) {}
+  try { await api('seatPlanSave', TOKEN, '__center__', { center: { ...CENTER } }); toast('সংরক্ষিত হয়েছে।'); }
+  catch (e) { toast('এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + e.message); }
+  if (plans.length) rebuildAll(roomSel.value);
+});
 $('editClose').addEventListener('click', requestClose);
 $('editCancel').addEventListener('click', requestClose);
 editDlg.addEventListener('cancel', e => {
@@ -1064,6 +1087,7 @@ async function saveEdit() {
     if (centerChanged) {
       Object.assign(CENTER, cNew);
       try { localStorage.setItem('centerInfo', JSON.stringify(cNew)); } catch (_) {}
+      try { await api('seatPlanSave', TOKEN, '__center__', { center: { ...CENTER } }); } catch (e) { console.error(e); toast('কেন্দ্রের তথ্য এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + e.message); }
     }
     editDirty = false;
     editDlg.close();
@@ -1145,7 +1169,7 @@ function renderPlan(p) {
   }
 
   const schoolRows = schools.map((s, i) =>
-    `<tr class="${i % 2 ? 'alt' : ''}"><td class="name">${esc(s.name)}ঃ</td><td class="roll">${s.startRoll}-${s.endRoll}</td><td class="cnt">মোট ${s.studentCount} জন</td></tr>`
+    `<tr class="${i % 2 ? 'alt' : ''}"><td class="name">${esc(s.name)}${/^শ্রেণি/.test(String(s.name)) ? '' : 'ঃ'}</td><td class="roll">${s.startRoll}-${s.endRoll}</td><td class="cnt">মোট ${s.studentCount} জন</td></tr>`
   ).join('');
 
 
@@ -1156,7 +1180,7 @@ function renderPlan(p) {
     <div class="h2">${CENTER.school}</div>
     <div class="h2">${CENTER.place}</div>
     <div class="row-between"><span>কেন্দ্র কোডঃ ${CENTER.code}</span><span>মোবাইল নম্বরঃ ${CENTER.mobile}</span></div>
-    <div class="venue">ভেন্যুঃ ${CENTER.venue}</div>
+    <div class="venue">পরীক্ষা শুরুর সময়ঃ ${CENTER.time}</div>
 
     <div class="plan-title">আসন পরিকল্পনা</div>
     <table class="info">
