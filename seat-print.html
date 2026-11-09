@@ -413,6 +413,29 @@
   </form>
 </dialog>
 
+<dialog class="dlg" id="examDlg" aria-labelledby="examTitle" style="width:min(520px, calc(100% - 24px))">
+  <form id="examForm" novalidate>
+    <div class="dlg-head"><div><h2 id="examTitle">পরীক্ষার নাম ও সময়</h2><p>সব কক্ষের প্রিন্টে বসবে</p></div>
+      <button type="button" class="dlg-x" id="examClose" aria-label="বন্ধ করুন"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="dlg-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <label style="display:flex;flex-direction:column;gap:6px;font-weight:600">পরীক্ষার নাম
+          <select id="examType"></select></label>
+        <input type="text" id="examName" placeholder="পরীক্ষার পূর্ণ নাম লিখুন" style="display:none">
+        <label id="examYearWrap" style="display:flex;flex-direction:column;gap:6px;font-weight:600">সাল
+          <input type="text" id="examYear" inputmode="numeric" maxlength="4" placeholder="যেমন: 2026"></label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-weight:600">পরীক্ষা শুরুর সময়
+          <select id="examTime"></select></label>
+        <input type="text" id="examTimeOther" placeholder="সময় নিজে লিখুন" style="display:none">
+      </div>
+    </div>
+    <p class="dlg-err" id="examErr" role="alert"></p>
+    <div class="dlg-foot"><span class="dlg-note">সার্ভারে সংরক্ষিত হয়, সব ডিভাইসে একই দেখাবে।</span>
+      <button type="button" class="btn" id="examCancel">বাতিল</button>
+      <button type="submit" class="btn primary">সংরক্ষণ</button></div>
+  </form>
+</dialog>
+
 <script type="module">
 // ===== Supabase (হাবের একই সার্ভার ফাংশন) =====
 const API_URL  = "https://xemvwhqqpbxsdkqcscrg.supabase.co/functions/v1/attendance";
@@ -577,6 +600,46 @@ function showMsg(kind, title, text, btnHtml) {
   }
 })();
 
+// প্রতিটি শ্রেণি/শাখা/গ্রুপের "মোট … জন" = শুরু-শেষ রোলের মধ্যে Students-এ আসলে যতজন আছে (শেষ − শুরু + ১ নয়)
+const BN_ORD = { 1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম',11:'১১শ',12:'১২শ' };
+const bnGroup = g => { const t = String(g || '').trim(), l = t.toLowerCase();
+  if (!t) return ''; if (/^sci|বিজ্ঞান/.test(l)) return 'বিজ্ঞান'; if (/^hum|মানবিক/.test(l)) return 'মানবিক';
+  if (/^bus|^com|ব্যবসায়/.test(l)) return 'ব্যবসায় শিক্ষা'; return t; };
+const bnSection = s => { const t = String(s || '').trim(), l = t.toLowerCase();
+  if (!t) return ''; if (/^(boys?|male|বালক)$/.test(l)) return 'বালক'; if (/^(girls?|female|বালিকা)$/.test(l)) return 'বালিকা'; return t; };
+// লেবেল: শ্রেণি: ৯ম (বিজ্ঞান- বালক) | শ্রেণি: ৬ষ্ঠ (B) | শ্রেণি: ৭ম
+const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b;
+  const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
+  return 'শ্রেণি: ' + n + (parts.length ? ' (' + parts.join('- ') + ')' : ''); };
+async function refreshCounts() {
+  try {
+    const cur = String(new Date().getFullYear());
+    const sessions = [...new Set(plans.map(p => String(p.session || cur)))];
+    const maps = {};
+    for (const s of sessions) {
+      const list = await api('listStudents', TOKEN, { session: s }), m = {};
+      (Array.isArray(list) ? list : []).forEach(r => {
+        const roll = parseInt(String(r.roll).replace(/\D/g, ''), 10); if (isNaN(roll)) return;
+        const label = labelBn(r);
+        const label2 = 'শ্রেণি: ' + String(r.class_base).trim() + (([r.grp && 'গ্রুপ -' + String(r.grp).trim(), r.section && 'শাখা -' + String(r.section).trim()].filter(Boolean)).length ? ' ( ' + [r.grp && 'গ্রুপ -' + String(r.grp).trim(), r.section && 'শাখা -' + String(r.section).trim()].filter(Boolean).join(', ') + ')' : '');   // আগের ফরম্যাট
+        const oldLabel = ['শ্রেণি ' + String(r.class_base).trim(), r.section && 'শাখা ' + String(r.section).trim(), r.grp && 'গ্রুপ ' + String(r.grp).trim()].filter(Boolean).join(' · ');   // আগের সংরক্ষিত কক্ষের পুরোনো লেবেলও মেলে
+        [label, label2, oldLabel].forEach(lb => (m[lb] = m[lb] || new Set()).add(roll));
+      });
+      maps[s] = m;
+    }
+    plans.forEach(p => {
+      const m = maps[String(p.session || cur)]; if (!m) return;
+      let changed = false;
+      (p.schools || []).forEach(sc => {
+        const set = m[sc.name]; if (!set) return;
+        const a = Number(sc.startRoll), b = Number(sc.endRoll);
+        sc.studentCount = [...set].filter(r => r >= a && r <= b).length; changed = true;
+      });
+      if (changed) p.totals = { ...(p.totals || {}), totalStudents: (p.schools || []).reduce((x, y) => x + (Number(y.studentCount) || 0), 0) };
+    });
+  } catch (e) { console.warn('Students থেকে সংখ্যা গোনা যায়নি; সংরক্ষিত সংখ্যাই থাকবে:', e.message); }
+}
+
 async function loadPlans() {
   const rows = await api('seatPlanList', TOKEN);
   const allRows = Array.isArray(rows) ? rows : [];
@@ -586,6 +649,7 @@ async function loadPlans() {
     try { localStorage.setItem('centerInfo', JSON.stringify(CENTER)); } catch (_) {}
   }
   plans = allRows.filter(r => r.id !== '__center__').map(r => ({ ...(r.data || {}), id: r.id, updatedAt: r.updatedAt || null }));
+  await refreshCounts();   // শ্রেণির সংখ্যা Students টেবিল থেকে গুনে প্রকৃত সংখ্যা বসানো
 
   if (plans.length === 0) {
     showMsg('', 'কোনো সিট প্লান পাওয়া যায়নি', 'সিট প্লান পেজে গিয়ে আগে সাবমিট করুন।',
@@ -967,18 +1031,59 @@ $('editTabs').addEventListener('click', e => {
   if (b) switchTab(b.dataset.tab);
 });
 $('btnEdit').addEventListener('click', () => openEdit('room'));
-$('btnExam').addEventListener('click', async () => {
-  const v = prompt('পরীক্ষার নাম ও সাল লিখুন (সব কক্ষের প্রিন্টে বসবে):', CENTER.exam);
-  if (v === null) return;
-  const w = prompt('পরীক্ষা শুরুর সময় লিখুন (যেমন: সকাল ১০:০০টা, বিকাল ২:০০টা):', CENTER.time);
-  if (w === null) return;
-  const t = v.trim(), tm = w.trim();
-  if (!t || !tm) { toast('নাম ও সময় ফাঁকা রাখা যাবে না।'); return; }
-  if (t === CENTER.exam && tm === CENTER.time) return;
+const EXAM_TYPES = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
+const TIME_OPTIONS = ['সকাল ১০:০০টা', 'বিকাল ২:০০টা', 'সকাল ৯:০০টা', 'সকাল ১১:০০টা'];
+const examDlg = $('examDlg'), examTime = $('examTime'), examOther = $('examTimeOther');
+const examType = $('examType'), examName = $('examName'), examYear = $('examYear');
+const toEnDigits = s => String(s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+function fillExamTime(cur) {
+  const list = TIME_OPTIONS.includes(cur) || !cur ? TIME_OPTIONS : [cur, ...TIME_OPTIONS];
+  examTime.innerHTML = list.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('') + '<option value="__other">অন্য সময় (নিজে লিখুন)</option>';
+  examTime.value = cur || TIME_OPTIONS[0];
+  examOther.style.display = 'none'; examOther.value = '';
+}
+// বর্তমান নাম থেকে ধরন ও সাল আলাদা করা (যেমন "বার্ষিক পরীক্ষা ২০২৬")
+function fillExamType(cur) {
+  const m = String(cur || '').trim().match(/^(.*?)[\s\-]*([০-৯0-9]{4})$/);
+  const base = m ? m[1].trim() : '', yr = m ? toEnDigits(m[2]) : String(new Date().getFullYear());
+  const known = EXAM_TYPES.includes(base);
+  examType.innerHTML = EXAM_TYPES.map(t => '<option value="' + esc(t) + '">' + esc(t) + '</option>').join('') +
+    (!known && cur ? '<option value="__cur">' + esc(cur) + '</option>' : '') + '<option value="__other">অন্য নাম (নিজে লিখুন)</option>';
+  examType.value = known ? base : (cur ? '__cur' : EXAM_TYPES[0]);
+  examYear.value = yr; examName.value = ''; syncExamUi();
+}
+function syncExamUi() {
+  const v = examType.value;
+  examName.style.display = v === '__other' ? '' : 'none';
+  $('examYearWrap').style.display = (v === '__other' || v === '__cur') ? 'none' : '';
+}
+examType.addEventListener('change', () => { syncExamUi(); if (examType.value === '__other') examName.focus(); });
+examTime.addEventListener('change', () => { const o = examTime.value === '__other'; examOther.style.display = o ? '' : 'none'; if (o) examOther.focus(); });
+$('btnExam').addEventListener('click', () => {
+  fillExamType(CENTER.exam); fillExamTime(CENTER.time); $('examErr').textContent = '';
+  examDlg.showModal();
+});
+$('examClose').addEventListener('click', () => examDlg.close());
+$('examCancel').addEventListener('click', () => examDlg.close());
+$('examForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  let t;
+  if (examType.value === '__other') t = examName.value.trim();
+  else if (examType.value === '__cur') t = CENTER.exam;
+  else {
+    const y = toEnDigits(examYear.value.trim());
+    if (!/^\d{4}$/.test(y)) { $('examErr').textContent = 'সাল ৪ অঙ্কে লিখুন (যেমন 2026)।'; return; }
+    t = examType.value + ' ' + y.replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+  }
+  const tm = (examTime.value === '__other' ? examOther.value : examTime.value).trim();
+  if (!t) { $('examErr').textContent = 'পরীক্ষার নাম লিখুন।'; return; }
+  if (!tm) { $('examErr').textContent = 'পরীক্ষা শুরুর সময় লিখুন।'; return; }
+  if (t === CENTER.exam && tm === CENTER.time) { examDlg.close(); return; }
   CENTER.exam = t; CENTER.time = tm;
   try { localStorage.setItem('centerInfo', JSON.stringify(CENTER)); } catch (_) {}
+  examDlg.close();
   try { await api('seatPlanSave', TOKEN, '__center__', { center: { ...CENTER } }); toast('সংরক্ষিত হয়েছে।'); }
-  catch (e) { toast('এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + e.message); }
+  catch (err) { toast('এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + err.message); }
   if (plans.length) rebuildAll(roomSel.value);
 });
 $('editClose').addEventListener('click', requestClose);
