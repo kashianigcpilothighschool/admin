@@ -296,6 +296,7 @@
   table.seat td.door { vertical-align:middle; padding:0; background:var(--navy) !important; color:#fff; font-family:'Times New Roman',Times,serif; font-size:19pt; text-align:center; letter-spacing:.5pt; border:none; border-radius:7px; box-shadow:none; }
   table.seat td.door::after { display:none; }
   table.seat.two td.door { font-size:26pt; }
+  table.seat td.door.one, table.seat.two td.door.one { font-size:13pt; }
 
   /* কাগজের মাপ টুলবারের ড্রপডাউন থেকে JS দিয়ে বসে (উপরের #pageSize স্টাইল) */
   @media print {
@@ -1382,7 +1383,7 @@ function renderEdit() {
     '<label class="fl total-fl">মোট পরীক্ষার্থী' + fld('total', d.total, 'id="totalInp" inputmode="numeric"') + '</label>' +
     '<p class="hint">শুরু ও শেষ রোল লিখলে সংখ্যা এবং মোট নিজে থেকে হিসাব হয়। রোল ধারাবাহিক না হলে সংখ্যা হাতে ঠিক করুন।</p>';
 
-  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুধু D লিখলে সিটে DOOR বসে (শেষ জোড়ার উপরের সারিতে)। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
+  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুরু রোলে শুধু D লিখলে ওই সিটে DOOR বসে। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
     COLUMNS.map((c, ci) => {
       const sum = d.cols[ci].reduce((a, rg) => a + (toNum(rg.count) || 0), 0);
       return '<div class="col"><div class="col-h"><strong>কলাম ' + c + '</strong><span>' + (ci % 2 ? 'ডান' : 'বাঁ') + ' · জোড়া ' + bn(Math.floor(ci / 2) + 1) +
@@ -1699,23 +1700,34 @@ function renderPlan(p) {
   // প্রতি কলাম নিচ থেকে মেলানো: কম সিটের কলামের উপরে ফাঁকা সারি বসবে
   seatsByCol.forEach(col => { while (col.length < rows) col.unshift(null); });
   // মাঝের জোড়ায় (F, G) কোনো রোল না থাকলে ২ কলাম, থাকলে ৩ কলাম
-  const two = !seatsByCol[2].some(v => v && v !== 'DOOR') && !seatsByCol[3].some(v => v && v !== 'DOOR');
+  const two = !seatsByCol[2].some(v => v) && !seatsByCol[3].some(v => v);
   const use = two ? [0, 1, 4, 5] : [0, 1, 2, 3, 4, 5];
 
-  // DOOR: শুধু শেষ জোড়ার (I, J) প্রথম সারিতে D লেখা থাকলে দরজা দেখাবে (নিজে থেকে আর আসবে না)
-  const doorRow0 = seatsByCol[4][0] === 'DOOR' || seatsByCol[5][0] === 'DOOR';
-
+  // DOOR: যে সিটের শুরু রোলে D লেখা, সেই সিটেই DOOR বসে। পাশাপাশি দুই সিট DOOR হলে একসাথে মিলে এক ঘর হয়।
+  // (শেষ জোড়ার উপরের সারিতে একটিতে D দিলেও আগের মতো পুরো জোড়া জুড়ে DOOR দেখায়)
+  const isD = (ci, i) => seatsByCol[ci][i] === 'DOOR';
   let body = '';
   for (let i = 0; i < rows; i++) {
     let tr = `<tr class="${i % 2 === 0 ? 'odd' : 'even'}">`;
+    const skip = new Set();
     use.forEach((ci) => {
       if ((!two && ci === 2) || ci === 4) tr += '<td class="g"></td>';
-      if (i === 0 && doorRow0 && ci === 4) {
+      if (skip.has(ci)) return;
+      if (ci === 4 && i === 0 && (isD(4, i) || isD(5, i))) {
         tr += '<td class="door" colspan="2">DOOR</td>';
+        skip.add(5);
         return;
       }
-      if (i === 0 && doorRow0 && ci === 5) return;
-      const roll = seatsByCol[ci][i] === 'DOOR' ? null : seatsByCol[ci][i];
+      if (isD(ci, i)) {
+        if (ci % 2 === 0 && use.includes(ci + 1) && isD(ci + 1, i)) {
+          tr += '<td class="door" colspan="2">DOOR</td>';
+          skip.add(ci + 1);
+        } else {
+          tr += '<td class="door one">DOOR</td>';
+        }
+        return;
+      }
+      const roll = seatsByCol[ci][i];
       const cls = (ci % 2 === 0) ? 'l' : 'rt';
       tr += roll ? `<td class="${cls}">${roll}</td>` : `<td class="blank ${cls}"></td>`;
     });
