@@ -241,11 +241,11 @@
 
   table.sch { width:100%; border-collapse:collapse; margin-top:3pt; }
   table.sch th { font-size:24pt; font-weight:700; padding:1pt 4pt; line-height:1.05; border-bottom:2.5pt solid #000; }
-  table.sch td { font-size:18pt; padding:0 4pt; height:7.5mm; line-height:1.05; border-bottom:1px solid #000; }
+  table.sch td { font-size:23pt; padding:0 4pt; height:9mm; line-height:1.05; border-bottom:1px solid #000; }
   table.sch tr.alt td { background:#F2F2F2; }
   table.sch td.name { text-align:left; }
-  table.sch td.roll { text-align:center; font-weight:700; font-size:21pt; font-family:'Times New Roman',Times,serif; }
-  table.sch td.cnt { text-align:right; font-weight:600; font-size:19pt; }
+  table.sch td.roll { text-align:center; font-weight:700; font-size:26pt; font-family:'Times New Roman',Times,serif; white-space:nowrap; }
+  table.sch td.cnt { text-align:right; font-weight:600; font-size:23pt; white-space:nowrap; }
   table.sch tr { page-break-inside:avoid; }
   table.sch th:nth-child(1) { text-align:left; }
   table.sch th:nth-child(2) { text-align:center; }
@@ -362,9 +362,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>
       প্রিন্ট করুন
     </button>
+    <button id="btnEdit" disabled title="কেন্দ্র, কক্ষ, স্কুল ও সিটের তথ্য এডিট করুন">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      এডিট
+    </button>
     <div class="seg" role="group" aria-label="একসাথে অনেক কক্ষ প্রিন্ট">
-      <button id="btnTwo" onclick="printType('two')">২ কলাম <span class="badge" id="cntTwo">০</span></button>
-      <button id="btnThree" onclick="printType('three')">৩ কলাম <span class="badge" id="cntThree">০</span></button>
       <button id="btnAll" onclick="printAll()">সব কক্ষ <span class="badge" id="cntAll">০</span></button>
     </div>
     <button class="icon" onclick="window.location.href='seat-plan.html'" title="ফিরে যান" aria-label="ফিরে যান">
@@ -663,11 +665,10 @@ async function loadPlans() {
   roomSel.addEventListener('change', () => showOne(roomSel.value));
 
   $('sheets').innerHTML = plans.map(renderPlan).join('');
-  $('cntTwo').textContent = bn(document.querySelectorAll('.page.two').length);
-  $('cntThree').textContent = bn(document.querySelectorAll('.page.three').length);
   $('cntAll').textContent = bn(plans.length);
   sInput.disabled = false;
   sInput.placeholder = 'কক্ষ, রোল বা স্কুল';
+  $('btnEdit').disabled = false;
 
   const wanted = new URLSearchParams(location.search).get('room');
   const start = plans.find(p => p.id === wanted) ? wanted : latestId;
@@ -874,8 +875,6 @@ function rebuildAll(keepId) {
     return `<option value="${esc(p.id)}">কক্ষ ${esc(r.roomNumber)} — ${esc(r.building)} (${esc(floorText(r.floor))})</option>`;
   }).join('');
   $('sheets').innerHTML = plans.map(renderPlan).join('');
-  $('cntTwo').textContent = bn(document.querySelectorAll('.page.two').length);
-  $('cntThree').textContent = bn(document.querySelectorAll('.page.three').length);
   $('cntAll').textContent = bn(plans.length);
   closeList();
   showOne(plans.find(p => p.id === keepId) ? keepId : plans[0].id);
@@ -890,7 +889,7 @@ function makeDraft(p) {
     center: { ...CENTER },
     room,
     schools: (p.schools || []).map((s, i) => ({ _o: i, name: s.name ?? '', startRoll: s.startRoll ?? '', endRoll: s.endRoll ?? '', studentCount: s.studentCount ?? '' })),
-    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: rg.startRoll ?? 0, count: rg.count ?? 0 }))),
+    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: rg.door ? 'D' : (rg.startRoll ?? 0), count: rg.count ?? 0 }))),
     total: p.totals?.totalStudents ?? 0
   };
 }
@@ -924,7 +923,7 @@ function renderEdit() {
     '<label class="fl total-fl">মোট পরীক্ষার্থী' + fld('total', d.total, 'id="totalInp" inputmode="numeric"') + '</label>' +
     '<p class="hint">শুরু ও শেষ রোল লিখলে সংখ্যা এবং মোট নিজে থেকে হিসাব হয়। রোল ধারাবাহিক না হলে সংখ্যা হাতে ঠিক করুন।</p>';
 
-  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
+  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুধু D লিখলে সিটে DOOR বসে (শেষ জোড়ার উপরের সারিতে)। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
     COLUMNS.map((c, ci) => {
       const sum = d.cols[ci].reduce((a, rg) => a + (toNum(rg.count) || 0), 0);
       return '<div class="col"><div class="col-h"><strong>কলাম ' + c + '</strong><span>' + (ci % 2 ? 'ডান' : 'বাঁ') + ' · জোড়া ' + bn(Math.floor(ci / 2) + 1) +
@@ -1022,6 +1021,7 @@ $('editTabs').addEventListener('click', e => {
   const b = e.target.closest('button[data-tab]');
   if (b) switchTab(b.dataset.tab);
 });
+$('btnEdit').addEventListener('click', () => openEdit('room'));
 const EXAM_TYPES = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
 const TIME_OPTIONS = ['সকাল ১০:০০টা', 'বিকাল ২:০০টা', 'সকাল ৯:০০টা', 'সকাল ১১:০০টা'];
 const examDlg = $('examDlg'), examTime = $('examTime'), examOther = $('examTimeOther');
@@ -1115,11 +1115,12 @@ async function saveEdit() {
     const rs = [];
     for (let ri = 0; ri < d.cols[ci].length; ri++) {
       const rg = d.cols[ci][ri];
-      const a = toNum(rg.startRoll), n = toNum(rg.count);
+      const isDoor = /^d$/i.test(String(rg.startRoll ?? '').trim());
+      const a = isDoor ? 0 : toNum(rg.startRoll), n = toNum(rg.count);
       const row = ' (কলাম ' + COLUMNS[ci] + ', সারি ' + bn(ri + 1) + ')';
-      if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০ দিন' + row + '।');
+      if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০, দরজার জন্য D দিন' + row + '।');
       if (isNaN(n) || n < 1) return fail('seats', 'সিট সংখ্যা ১ বা তার বেশি হতে হবে' + row + '।');
-      rs.push({ _o: rg._o, startRoll: a, count: n });
+      rs.push({ _o: rg._o, startRoll: a, count: n, door: isDoor });
       if (a > 0) for (let k = 0; k < n; k++) seatRolls.push(a + k);
     }
     cols.push(rs);
@@ -1144,7 +1145,7 @@ async function saveEdit() {
   if (totalSeats !== (orig.totals?.totalSeats ?? 0)) updates['totals.totalSeats'] = totalSeats;
   const newCols = COLUMNS.map((_, ci) => {
     const oc = (orig.columnData || [])[ci] || {};
-    return { ...oc, ranges: cols[ci].map(rg => { const o0 = (oc.ranges || [])[rg._o] || {}; const n0 = { ...o0, startRoll: rg.startRoll, count: rg.count }; if (o0.startRoll !== rg.startRoll || o0.count !== rg.count) { delete n0.rolls; delete n0.classKey; } return n0; }) };
+    return { ...oc, ranges: cols[ci].map(rg => { const o0 = (oc.ranges || [])[rg._o] || {}; const n0 = { ...o0, startRoll: rg.startRoll, count: rg.count }; if (rg.door) n0.door = true; else delete n0.door; if (o0.startRoll !== rg.startRoll || o0.count !== rg.count || !!o0.door !== rg.door) { delete n0.rolls; delete n0.classKey; } return n0; }) };
   });
   if (stable(newCols) !== stable(orig.columnData || [])) updates.columnData = newCols;
 
@@ -1226,7 +1227,9 @@ function renderPlan(p) {
   const seatsByCol = COLUMNS.map((_, i) => {
     const seats = [];
     ((p.columnData || [])[i]?.ranges || []).forEach(rg => {
-      if (Array.isArray(rg.rolls)) {   // Students থেকে বাছা রোল: ক্রমানুসারে পরবর্তী বিদ্যমান রোল বসে (যেমন VI-001); কম পড়লে বাকি সিট ফাঁকা
+      if (rg.door) {   // শুরু রোলে D লেখা: প্রতিটি সিট DOOR চিহ্নিত
+        for (let k = 0; k < rg.count; k++) seats.push('DOOR');
+      } else if (Array.isArray(rg.rolls)) {   // Students থেকে বাছা রোল: ক্রমানুসারে পরবর্তী বিদ্যমান রোল বসে (যেমন VI-001); কম পড়লে বাকি সিট ফাঁকা
         for (let k = 0; k < rg.count; k++) { const rl = rg.rolls[k]; seats.push(rl ? (rg.prefix ? rg.prefix + '-' + String(rl).padStart(3, '0') : rl) : null); }
       } else { for (let k = 0; k < rg.count; k++) seats.push(rg.startRoll > 0 ? rg.startRoll + k : null); }
     });
@@ -1237,11 +1240,11 @@ function renderPlan(p) {
   // প্রতি কলাম নিচ থেকে মেলানো: কম সিটের কলামের উপরে ফাঁকা সারি বসবে
   seatsByCol.forEach(col => { while (col.length < rows) col.unshift(null); });
   // মাঝের জোড়ায় (F, G) কোনো রোল না থাকলে ২ কলাম, থাকলে ৩ কলাম
-  const two = !seatsByCol[2].some(Boolean) && !seatsByCol[3].some(Boolean);
+  const two = !seatsByCol[2].some(v => v && v !== 'DOOR') && !seatsByCol[3].some(v => v && v !== 'DOOR');
   const use = two ? [0, 1, 4, 5] : [0, 1, 2, 3, 4, 5];
 
-  // DOOR: শেষ জোড়ার (I, J) প্রথম সারি ফাঁকা হলে সেখানে দরজা দেখাবে
-  const doorRow0 = !seatsByCol[4][0] && !seatsByCol[5][0];
+  // DOOR: শুধু শেষ জোড়ার (I, J) প্রথম সারিতে D লেখা থাকলে দরজা দেখাবে (নিজে থেকে আর আসবে না)
+  const doorRow0 = seatsByCol[4][0] === 'DOOR' || seatsByCol[5][0] === 'DOOR';
 
   let body = '';
   for (let i = 0; i < rows; i++) {
@@ -1253,7 +1256,7 @@ function renderPlan(p) {
         return;
       }
       if (i === 0 && doorRow0 && ci === 5) return;
-      const roll = seatsByCol[ci][i];
+      const roll = seatsByCol[ci][i] === 'DOOR' ? null : seatsByCol[ci][i];
       const cls = (ci % 2 === 0) ? 'l' : 'rt';
       tr += roll ? `<td class="${cls}">${roll}</td>` : `<td class="blank ${cls}"></td>`;
     });
