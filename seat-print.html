@@ -307,6 +307,143 @@
     * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   }
 </style>
+<style id="modernUI">
+/* =====================================================
+   আধুনিক UI — শুধু পর্দার জন্য (প্রিন্ট ও ছাপার পাতা অপরিবর্তিত)
+   ===================================================== */
+@media screen {
+  :root {
+    --ink:#0F1A33; --ink-soft:#64708A; --line:#E2E7F0; --line-strong:#CBD3E2;
+    --accent:#1D2B4F; --accent-2:#3A4FA0; --accent-hover:#2A3F7C;
+    --focus:#4C7DF0; --glass:rgba(255,255,255,.78);
+    --r-sm:10px; --r-md:14px; --r-lg:22px;
+    --sh-sm:0 1px 2px rgba(15,26,51,.06), 0 2px 6px rgba(15,26,51,.05);
+    --sh-md:0 4px 14px rgba(15,26,51,.08), 0 1px 3px rgba(15,26,51,.06);
+    --sh-lg:0 24px 60px rgba(15,26,51,.22);
+  }
+  html { scroll-behavior:smooth; }
+  body {
+    background:
+      radial-gradient(1000px 520px at 15% -10%, rgba(76,125,240,.16), transparent 60%),
+      radial-gradient(900px 480px at 90% -5%, rgba(185,130,46,.14), transparent 55%),
+      radial-gradient(circle at 1px 1px, rgba(29,43,79,.09) 1px, transparent 0) 0 0/22px 22px,
+      #EDF0F7;
+    background-attachment:fixed;
+  }
+  .toolbar, .statusbar, dialog.dlg, .toast, #msg, .search-results {
+    font-family:'SolaimanLipi','Kalpurush','Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',sans-serif;
+  }
+
+  /* ---- টুলবার: ভাসমান কাচের পট্টি ---- */
+  .toolbar {
+    top:10px; margin:10px 12px 0; padding:8px 12px; border:1px solid rgba(255,255,255,.7);
+    border-radius:18px; background:var(--glass);
+    -webkit-backdrop-filter:saturate(180%) blur(18px); backdrop-filter:saturate(180%) blur(18px);
+    box-shadow:var(--sh-md), 0 12px 32px rgba(15,26,51,.08), inset 0 1px 0 rgba(255,255,255,.9);
+  }
+  .brand .mark {
+    border-radius:12px; background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%);
+    box-shadow:0 4px 12px rgba(29,43,79,.35), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .toolbar select, .toolbar button, .search-wrap, .zoom, .seg { border-radius:12px; }
+  .toolbar select {
+    appearance:none; -webkit-appearance:none; border-color:var(--line);
+    background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364708A' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 9px center;
+    box-shadow:var(--sh-sm); transition:border-color .15s, box-shadow .15s;
+  }
+  .toolbar select:hover { border-color:var(--line-strong); }
+  .toolbar select:focus-visible { outline:none; border-color:var(--focus); box-shadow:0 0 0 3px rgba(76,125,240,.22); }
+  .toolbar button { box-shadow:var(--sh-sm); font-weight:500; }
+  .toolbar button:hover:not(:disabled) { background:#F4F7FD; border-color:var(--line-strong); box-shadow:var(--sh-md); transform:translateY(-1px); }
+  .toolbar button:active:not(:disabled) { transform:translateY(0); box-shadow:var(--sh-sm); }
+  .toolbar button.primary {
+    background:linear-gradient(135deg,var(--accent) 0%,var(--accent-2) 100%); border-color:transparent;
+    box-shadow:0 6px 16px rgba(42,63,124,.38), inset 0 1px 0 rgba(255,255,255,.2);
+  }
+  .toolbar button.primary:hover:not(:disabled) { background:linear-gradient(135deg,#25396C 0%,#4A62BE 100%); border-color:transparent; box-shadow:0 10px 22px rgba(42,63,124,.45); }
+  .toolbar button.icon { border-radius:12px; }
+  .zoom, .seg { box-shadow:var(--sh-sm); border-color:var(--line); }
+  .zoom button, .seg button { box-shadow:none !important; transform:none !important; }
+  .zoom button:hover:not(:disabled), .seg button:hover:not(:disabled) { background:#F1F4FB !important; }
+  .counter { background:#F1F4FA; border-radius:999px; padding:0 10px; font-weight:600; color:var(--accent); }
+  .badge { background:linear-gradient(135deg,#E7ECFA,#F3E9D3); color:var(--accent); }
+
+  /* ---- খোঁজার ঘর ---- */
+  .search-wrap { box-shadow:var(--sh-sm); background:#fff; }
+  .search-wrap:focus-within { box-shadow:0 0 0 3px rgba(76,125,240,.22), var(--sh-sm); }
+  .search { transition:width .2s ease; }
+  .search:focus-within { width:230px; }
+  .search-results { border-radius:var(--r-md); border-color:var(--line); box-shadow:var(--sh-lg); animation:popIn .14s ease-out; }
+  .sr-item { border-radius:12px; transition:background .12s; }
+  .sr-num { border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); }
+  .sr-item.current .sr-num { background:linear-gradient(135deg,#1F7A4D,#2FA36B); }
+
+  /* ---- তথ্য-পট্টির চিপ ---- */
+  .statusbar { padding-top:16px; gap:8px; }
+  .chip { padding:6px 14px; border-radius:999px; border:1px solid var(--line); background:var(--glass); box-shadow:var(--sh-sm);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); font-weight:500; }
+  .chip.accent { background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent; box-shadow:0 4px 12px rgba(42,63,124,.3); }
+
+  /* ---- ছাপার পাতা: কাগজের মতো ভাসমান ---- */
+  .page {
+    margin:22px auto; border-radius:6px;
+    box-shadow:0 1px 1px rgba(15,26,51,.06), 0 6px 12px rgba(15,26,51,.07), 0 22px 50px rgba(15,26,51,.16);
+    outline:1px solid rgba(15,26,51,.05);
+    animation:pageIn .28s ease-out;
+  }
+
+  /* ---- লোড / ত্রুটি কার্ড ---- */
+  #msg { border-radius:var(--r-lg); border:1px solid var(--line); background:var(--glass); box-shadow:var(--sh-lg);
+    -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px); }
+  #msg.loading::before { border-top-color:var(--accent-2); }
+  #msg .msg-btn { border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent-2)); box-shadow:0 6px 16px rgba(42,63,124,.35); }
+
+  /* ---- টোস্ট ---- */
+  .toast { border-radius:14px; padding:12px 22px; background:rgba(15,26,51,.92); box-shadow:var(--sh-lg);
+    -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); font-weight:500; }
+
+  /* ---- এডিট / পরীক্ষা ডায়ালগ ---- */
+  dialog.dlg { border-radius:var(--r-lg); box-shadow:var(--sh-lg), 0 0 0 1px rgba(15,26,51,.06); }
+  dialog.dlg[open] { animation:dlgIn .2s cubic-bezier(.2,.8,.2,1); }
+  dialog.dlg::backdrop { background:rgba(15,26,51,.45); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+  .dlg-head { padding:22px 26px 12px; background:linear-gradient(180deg,#F7F9FE,#fff); }
+  .dlg-head h2 { font-size:20px; letter-spacing:.1px; color:var(--accent); }
+  .dlg-x { transition:background .15s, transform .15s; }
+  .dlg-x:hover { background:#E1E6F0; transform:rotate(90deg); }
+  .tabs { padding:0 26px 14px; gap:4px; border-bottom:1px solid var(--line); }
+  .tabs button { border:none; background:transparent; color:var(--ink-soft); font-weight:500; padding:8px 16px; transition:background .15s, color .15s; }
+  .tabs button:hover { background:#EEF2FA; color:var(--ink); }
+  .tabs button[aria-selected="true"] { background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:#fff; box-shadow:0 4px 12px rgba(42,63,124,.3); }
+  .dlg-body { padding:20px 26px; }
+  .pane { animation:pageIn .2s ease-out; }
+  .dlg input, .dlg select { border-radius:12px; background:#FBFCFE; transition:border-color .15s, box-shadow .15s, background .15s; }
+  .dlg input:focus-visible, .dlg select:focus-visible { background:#fff; box-shadow:0 0 0 3px rgba(76,125,240,.2); }
+  .fl { font-weight:600; letter-spacing:.1px; }
+  .col { border-radius:var(--r-md); background:linear-gradient(180deg,#FAFBFE,#F4F7FC); box-shadow:var(--sh-sm); }
+  .col-h .pill { background:linear-gradient(135deg,#E7ECFA,#F3E9D3); }
+  .ix { border-radius:11px; transition:background .15s, transform .1s; }
+  .ix:active { transform:scale(.94); }
+  .btn { border-radius:12px; box-shadow:var(--sh-sm); transition:background .15s, border-color .15s, box-shadow .15s, transform .1s; }
+  .btn:hover:not(:disabled) { box-shadow:var(--sh-md); transform:translateY(-1px); }
+  .btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent; box-shadow:0 6px 16px rgba(42,63,124,.35); }
+  .btn.primary:hover:not(:disabled) { background:linear-gradient(135deg,#25396C,#4A62BE); border-color:transparent; }
+  .btn.ghost { box-shadow:none; background:#fff; border-color:var(--line-strong); }
+  .dlg-foot { padding:16px 26px; background:linear-gradient(180deg,#FAFBFE,#F3F6FB); }
+  .dlg-err:not(:empty) { margin:12px 26px 0; padding:10px 14px; border-radius:12px; background:#FFF1F0; border:1px solid #F4C7C3; }
+
+  /* ---- স্ক্রলবার ---- */
+  * { scrollbar-width:thin; scrollbar-color:#B9C2D6 transparent; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb { background:#C3CBDC; border-radius:999px; border:2px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-thumb:hover { background:#A9B4CB; background-clip:content-box; border:2px solid transparent; }
+
+  @keyframes pageIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes popIn  { from { opacity:0; transform:translateY(-4px) scale(.98); } to { opacity:1; transform:none; } }
+  @keyframes dlgIn  { from { opacity:0; transform:translateY(14px) scale(.97); } to { opacity:1; transform:none; } }
+  @media (prefers-reduced-motion:reduce) { .page, .pane, dialog.dlg[open], .search-results { animation:none; } html { scroll-behavior:auto; } }
+  @media (max-width:720px) { .toolbar { margin:6px; top:6px; border-radius:16px; } .search:focus-within { width:100%; } }
+}
+</style>
 </head>
 <body>
 
