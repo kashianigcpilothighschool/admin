@@ -612,6 +612,106 @@
   }
 }
 </style>
+<style id="modernUI3">
+/* =====================================================
+   গোছানো বাটন (v3) — সমান মাপ, গ্রুপ-পিল, স্পষ্ট ক্রম
+   ===================================================== */
+@media screen {
+  :root { --pill:#EBEDF9; --btn-h:40px; --in-h:34px; }
+
+  .toolbar { align-items:center; gap:12px; padding:8px 12px; }
+  .toolbar > .group::before, .toolbar > .search::before, .toolbar > .group.actions::before { display:none; }
+  .toolbar .group, .toolbar .search { align-items:center; }
+
+  /* ---- সব বাটনের একই ভিত্তি ---- */
+  .toolbar button { height:var(--btn-h); min-height:var(--btn-h); padding:0 16px; gap:8px; font-size:14px; font-weight:600; letter-spacing:.1px; line-height:1; }
+  .toolbar button.icon { width:var(--btn-h); padding:0; }
+  .toolbar button svg { width:18px; height:18px; stroke-width:2.1; }
+  .toolbar button:disabled { opacity:.35; filter:grayscale(.4); box-shadow:none; transform:none; }
+
+  /* ---- গ্রুপ-পিল: কক্ষ বাছাই / কাগজ+জুম ---- */
+  .group.nav, .group:not(.nav):not(.actions) {
+    gap:2px; padding:3px; border-radius:17px; background:var(--pill); box-shadow:inset 0 0 0 1px rgba(43,47,119,.06);
+  }
+  .group.nav button, .group:not(.nav):not(.actions) button,
+  .group.nav select, .group:not(.nav):not(.actions) select {
+    height:var(--in-h); min-height:var(--in-h); border-radius:13px; background-color:transparent; box-shadow:none; border-color:transparent;
+  }
+  .group.nav button.icon { width:var(--in-h); }
+  .group.nav button:hover:not(:disabled), .zoom button:hover:not(:disabled), .group:not(.nav):not(.actions) select:hover {
+    background:#fff !important; box-shadow:0 3px 10px rgba(43,47,119,.12); transform:none;
+  }
+  .toolbar select.room-sel { width:190px; font-weight:600; }
+  .counter { height:var(--in-h); min-width:54px; padding:0 10px; background:#fff; color:var(--a1); font-size:12.5px; font-weight:700; box-shadow:0 1px 3px rgba(43,47,119,.1); }
+  .toolbar #paperSelect { width:92px; font-weight:600; }
+  .zoom { display:inline-flex; align-items:center; gap:0; padding:0; border:none; background:transparent; box-shadow:none; border-radius:13px; }
+  .zoom button { border-radius:11px !important; }
+  .zoom button.icon { width:var(--in-h); }
+  .zoom button.zoom-label { min-width:78px; padding:0 8px; font-size:12.5px; font-weight:700; color:var(--a1); }
+  .zoom button + button { border-left:none !important; }
+  .group:not(.nav):not(.actions) select + .zoom { margin-left:2px; position:relative; }
+  .group:not(.nav):not(.actions) select + .zoom::before { content:""; position:absolute; left:-2px; top:22%; height:56%; width:1px; background:rgba(43,47,119,.15); }
+
+  /* ---- অ্যাকশন বাটন: প্রধান + গৌণ + আইকন ---- */
+  .group.actions { gap:8px; margin-left:auto; padding-left:12px; border-left:1px solid rgba(43,47,119,.12); }
+  .group.actions .primary { padding:0 20px; flex:none; }
+  .group.actions > button:not(.primary):not(.icon), .seg button {
+    background:var(--pill); box-shadow:none; color:var(--a1); border:none !important; border-radius:14px !important;
+  }
+  .group.actions > button:not(.primary):not(.icon):hover:not(:disabled), .seg button:hover:not(:disabled) {
+    background:#DFE2F6 !important; box-shadow:none; transform:none;
+  }
+  .group.actions > button.icon:not(.primary) { background:var(--pill); box-shadow:none; color:var(--ink-soft); }
+  .group.actions > button.icon:not(.primary):hover { background:#DFE2F6; color:var(--a1); }
+  .seg { padding:0; background:transparent; box-shadow:none; border-radius:14px; }
+  .seg button { height:var(--btn-h) !important; min-height:var(--btn-h) !important; padding:0 8px 0 16px !important; gap:10px !important; }
+  .badge { min-width:24px; height:24px; font-size:12px; }
+
+  /* ---- ফোকাস ও প্রেস ---- */
+  .toolbar button:focus-visible, .toolbar select:focus-visible { outline:none; box-shadow:0 0 0 3px #fff, 0 0 0 5px var(--focus); }
+  .toolbar button:active:not(:disabled) { transform:scale(.97); }
+
+  /* ---- ডায়ালগের বাটন ---- */
+  .dlg-foot { gap:10px; }
+  .dlg-foot .btn { height:42px; min-height:42px; padding:0 20px; font-weight:600; }
+  .dlg-foot .btn:not(.primary) { background:var(--pill); box-shadow:none; color:var(--a1); }
+  .dlg-foot .btn:not(.primary):hover:not(:disabled) { background:#DFE2F6; box-shadow:none; transform:none; }
+  .dlg-foot #editLink { margin-left:auto; }
+  .dlg-foot .dlg-note { flex:1 1 100%; order:-1; padding-bottom:4px; }
+  .btn.sm { height:34px; min-height:34px; padding:0 14px; font-weight:600; }
+  .ix { width:36px; height:36px; }
+  .dlg-x { width:36px; height:36px; }
+
+  /* ---- ডার্ক মোড ---- */
+  @media (prefers-color-scheme:dark) {
+    :root { --pill:rgba(255,255,255,.08); }
+    .group.nav, .group:not(.nav):not(.actions) { box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); }
+    .group.nav button:hover:not(:disabled), .zoom button:hover:not(:disabled), .group:not(.nav):not(.actions) select:hover { background:rgba(255,255,255,.16) !important; box-shadow:none; }
+    .counter { background:rgba(255,255,255,.14); color:#DCDEFF; box-shadow:none; }
+    .zoom button.zoom-label { color:#C7C9FF; }
+    .group.actions { border-left-color:rgba(255,255,255,.12); }
+    .group.actions > button:not(.primary):not(.icon), .seg button, .group.actions > button.icon:not(.primary) { color:#DCDEFF; background:var(--pill); }
+    .group.actions > button:not(.primary):not(.icon):hover:not(:disabled), .seg button:hover:not(:disabled), .group.actions > button.icon:not(.primary):hover { background:rgba(255,255,255,.16) !important; color:#fff; }
+    .dlg-foot .btn:not(.primary) { color:#DCDEFF; } .dlg-foot .btn:not(.primary):hover:not(:disabled) { background:rgba(255,255,255,.16); }
+    .toolbar button:focus-visible, .toolbar select:focus-visible { box-shadow:0 0 0 3px #0E0F26, 0 0 0 5px var(--focus); }
+  }
+
+  /* ---- ছোট পর্দা: দুই সারিতে সাজানো ---- */
+  @media (max-width:1330px) {
+    .toolbar { flex-wrap:wrap; justify-content:center; width:auto; }
+    .group.actions { margin-left:0; border-left:none; padding-left:0; }
+  }
+  @media (max-width:720px) {
+    .toolbar { gap:8px; }
+    .group.nav { width:100%; } .toolbar select.room-sel { flex:1; width:auto; min-width:0; }
+    .group:not(.nav):not(.actions) { width:100%; justify-content:space-between; }
+    .group.actions { width:100%; flex-wrap:nowrap; gap:6px; }
+    .group.actions .primary { flex:1; padding:0 12px; }
+    .group.actions > button:not(.primary):not(.icon) { padding:0 12px; }
+    .dlg-foot #editLink { margin-left:0; }
+  }
+}
+</style>
 </head>
 <body>
 
