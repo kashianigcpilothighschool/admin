@@ -395,7 +395,7 @@
     </div>
     <div class="tabs" id="editTabs" role="tablist">
       <button type="button" role="tab" data-tab="room" aria-selected="true">কক্ষ</button>
-      <button type="button" role="tab" data-tab="schools" aria-selected="false">স্কুল ও রোল</button>
+      <button type="button" role="tab" data-tab="schools" aria-selected="false">শ্রেণি ও রোল</button>
       <button type="button" role="tab" data-tab="seats" aria-selected="false">সিট (কলাম)</button>
       <button type="button" role="tab" data-tab="center" aria-selected="false">কেন্দ্র</button>
     </div>
@@ -684,7 +684,7 @@ function searchPlans(raw) {
     } else {
       [['ভবন', r.building], ['তলা', floorText(r.floor)], ['বিভাগ', r.department], ['দিক', r.direction], ['ধরন', r.gender]]
         .forEach(([label, val]) => { if (val && normQ(val).includes(q)) best(60, label + ': ' + val); });
-      (p.schools || []).forEach(s => { if (s.name && normQ(s.name).includes(q)) best(55, 'স্কুল: ' + s.name); });
+      (p.schools || []).forEach(s => { if (s.name && normQ(s.name).includes(q)) best(55, 'শ্রেণি: ' + s.name); });
     }
     if (score) hits.push({ p, idx, score, reason });
   });
@@ -848,9 +848,9 @@ function renderEdit() {
     '<p class="hint">বেঞ্চের সংখ্যা শুধু পাতার তথ্য-ঘরে ছাপা হয়। সিটের সারি তৈরি হয় "সিট (কলাম)" ট্যাবের সংখ্যা থেকে।<br>' +
     'সতর্কতা: কক্ষ নং, ভবন বা তলা বদলালে সিট প্লান পেজ থেকে একই কক্ষ আবার সাবমিট করলে আলাদা নতুন কক্ষ তৈরি হবে, কারণ কক্ষের আইডি এই তিনটি থেকে তৈরি হয়।</p>';
 
-  const schools = '<div class="rows"><div class="rh sch"><span>স্কুলের নাম</span><span>শুরু রোল</span><span>শেষ রোল</span><span>সংখ্যা</span><span></span></div>' +
+  const schools = '<div class="rows"><div class="rh sch"><span>শ্রেণি / শাখা / গ্রুপ</span><span>শুরু রোল</span><span>শেষ রোল</span><span>সংখ্যা</span><span></span></div>' +
     d.schools.map((s, i) => '<div class="rw sch">' +
-      fld('schools.' + i + '.name', s.name, 'placeholder="স্কুলের নাম" aria-label="স্কুলের নাম"') +
+      fld('schools.' + i + '.name', s.name, 'placeholder="শ্রেণি / শাখা / গ্রুপ" aria-label="শ্রেণি, শাখা, গ্রুপ"') +
       fld('schools.' + i + '.startRoll', s.startRoll, 'inputmode="numeric" placeholder="শুরু" aria-label="শুরু রোল"') +
       fld('schools.' + i + '.endRoll', s.endRoll, 'inputmode="numeric" placeholder="শেষ" aria-label="শেষ রোল"') +
       fld('schools.' + i + '.studentCount', s.studentCount, 'inputmode="numeric" placeholder="সংখ্যা" aria-label="পরীক্ষার্থীর সংখ্যা"') +
@@ -986,7 +986,7 @@ async function saveEdit() {
     const name = String(s.name ?? '').trim();
     const a = toNum(s.startRoll), b = toNum(s.endRoll), n = toNum(s.studentCount);
     const row = ' (স্কুল সারি ' + bn(i + 1) + ')';
-    if (!name) return fail('schools', 'স্কুলের নাম লিখুন' + row + '।');
+    if (!name) return fail('schools', 'শ্রেণি / শাখা / গ্রুপ লিখুন' + row + '।');
     if (isNaN(a) || isNaN(b) || a > b) return fail('schools', 'শুরু ও শেষ রোল ঠিকভাবে লিখুন; শুরু শেষের চেয়ে বড় হবে না' + row + '।');
     if (isNaN(n)) return fail('schools', 'পরীক্ষার্থীর সংখ্যা সংখ্যায় লিখুন' + row + '।');
     schools.push({ _o: s._o, name, startRoll: a, endRoll: b, studentCount: n });
@@ -1110,7 +1110,9 @@ function renderPlan(p) {
   const seatsByCol = COLUMNS.map((_, i) => {
     const seats = [];
     ((p.columnData || [])[i]?.ranges || []).forEach(rg => {
-      for (let k = 0; k < rg.count; k++) { const rl = rg.startRoll > 0 ? rg.startRoll + k : null; seats.push(rl && Array.isArray(rg.rolls) && !rg.rolls.includes(rl) ? null : rl); }   // rolls থাকলে শুধু Students-এ থাকা রোল বসে
+      if (Array.isArray(rg.rolls)) {   // Students থেকে বাছা রোল: ক্রমানুসারে পরবর্তী বিদ্যমান রোল বসে (যেমন VI-001); কম পড়লে বাকি সিট ফাঁকা
+        for (let k = 0; k < rg.count; k++) { const rl = rg.rolls[k]; seats.push(rl ? (rg.prefix ? rg.prefix + '-' + String(rl).padStart(3, '0') : rl) : null); }
+      } else { for (let k = 0; k < rg.count; k++) seats.push(rg.startRoll > 0 ? rg.startRoll + k : null); }
     });
     return seats;
   });
@@ -1171,7 +1173,7 @@ function renderPlan(p) {
     <div class="building">${esc(r.building)} (${esc(floorText(r.floor))})</div>
 
     <table class="sch">
-      <tr><th>বিদ্যালয়ের নাম</th><th>রোল নম্বর</th><th>সংখ্যা</th></tr>
+      <tr><th>শ্রেণি / শাখা / গ্রুপ</th><th>রোল নম্বর</th><th>সংখ্যা</th></tr>
       ${schoolRows}
     </table>
     <div class="total">মোট: ${totalStu} জন</div>
