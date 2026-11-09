@@ -1388,7 +1388,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                             startRoll: isNaN(startRoll) ? 0 : startRoll,
                             count: seatCount
                         };
-                        if (isDoor) { rangeObj.startRoll = 0; rangeObj.door = true; }
+                        if (isDoor) { rangeObj.startRoll = 'DOOR'; rangeObj.door = true; }
                         colRanges.push(rangeObj);
                         log(`কলাম ${col} রেঞ্জ ${j + 1}: ${startRoll} থেকে ${seatCount} টি সিট`);
                     }
