@@ -1349,7 +1349,7 @@ function makeDraft(p) {
     center: { ...CENTER },
     room,
     schools: (p.schools || []).map((s, i) => ({ _o: i, name: s.name ?? '', startRoll: s.startRoll ?? '', endRoll: s.endRoll ?? '', studentCount: s.studentCount ?? '' })),
-    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: rg.door ? 'D' : (rg.startRoll ?? 0), count: rg.count ?? 0 }))),
+    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: (rg.door || /^door$/i.test(String(rg.startRoll ?? '').trim())) ? 'D' : (rg.startRoll ?? 0), count: rg.count ?? 0 }))),
     total: p.totals?.totalStudents ?? 0
   };
 }
@@ -1575,12 +1575,12 @@ async function saveEdit() {
     const rs = [];
     for (let ri = 0; ri < d.cols[ci].length; ri++) {
       const rg = d.cols[ci][ri];
-      const isDoor = /^d$/i.test(String(rg.startRoll ?? '').trim());
+      const isDoor = /^d(oor)?$/i.test(String(rg.startRoll ?? '').trim());
       const a = isDoor ? 0 : toNum(rg.startRoll), n = toNum(rg.count);
       const row = ' (কলাম ' + COLUMNS[ci] + ', সারি ' + bn(ri + 1) + ')';
       if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০, দরজার জন্য D দিন' + row + '।');
       if (isNaN(n) || n < 1) return fail('seats', 'সিট সংখ্যা ১ বা তার বেশি হতে হবে' + row + '।');
-      rs.push({ _o: rg._o, startRoll: a, count: n, door: isDoor });
+      rs.push({ _o: rg._o, startRoll: isDoor ? 'DOOR' : a, count: n, door: isDoor });
       if (a > 0) for (let k = 0; k < n; k++) seatRolls.push(a + k);
     }
     cols.push(rs);
@@ -1687,7 +1687,7 @@ function renderPlan(p) {
   const seatsByCol = COLUMNS.map((_, i) => {
     const seats = [];
     ((p.columnData || [])[i]?.ranges || []).forEach(rg => {
-      if (rg.door) {   // শুরু রোলে D লেখা: প্রতিটি সিট DOOR চিহ্নিত
+      if (rg.door || /^door$/i.test(String(rg.startRoll ?? ''))) {   // শুরু রোলে D লেখা: প্রতিটি সিট DOOR চিহ্নিত
         for (let k = 0; k < rg.count; k++) seats.push('DOOR');
       } else if (Array.isArray(rg.rolls)) {   // Students থেকে বাছা রোল: ক্রমানুসারে পরবর্তী বিদ্যমান রোল বসে (যেমন VI-001); কম পড়লে বাকি সিট ফাঁকা
         for (let k = 0; k < rg.count; k++) { const rl = rg.rolls[k]; seats.push(rl ? (rg.prefix ? rg.prefix + '-' + String(rl).padStart(3, '0') : rl) : null); }
