@@ -1471,6 +1471,17 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 
         const ROMAN = { 1:'I',2:'II',3:'III',4:'IV',5:'V',6:'VI',7:'VII',8:'VIII',9:'IX',10:'X',11:'XI',12:'XII' };
         const prefixOf = k => { const b = parseInt(String(k).trim(), 10); return ROMAN[b] || String(k).split(' ')[0]; };
+        const BN_ORD = { 1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম',11:'১১শ',12:'১২শ' };
+        const bnGroup = g => { const t = String(g || '').trim(), l = t.toLowerCase();
+          if (!t) return ''; if (/^sci|বিজ্ঞান/.test(l)) return 'বিজ্ঞান'; if (/^hum|মানবিক/.test(l)) return 'মানবিক';
+          if (/^bus|^com|ব্যবসায়/.test(l)) return 'ব্যবসায় শিক্ষা'; return t; };
+        const bnSection = s => { const t = String(s || '').trim(), l = t.toLowerCase();
+          if (!t) return ''; if (/^(boys?|male|বালক)$/.test(l)) return 'বালক'; if (/^(girls?|female|বালিকা)$/.test(l)) return 'বালিকা'; return t; };
+        // লেবেল: শ্রেণি: ৯ম (বিজ্ঞান- বালক) | শ্রেণি: ৬ষ্ঠ (B) | শ্রেণি: ৭ম
+        const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b;
+          const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
+          return 'শ্রেণি: ' + n + (parts.length ? ' (' + parts.join('- ') + ')' : ''); };
+        const labelFor = labelBn;
         const keyOf = r => [r.class_base, r.grp, r.section].map(x => String(x ?? '').trim()).filter(Boolean).join(' ');
         const labelOf = k => (st.map[k] && st.map[k].label) || ('শ্রেণি ' + k);
 
@@ -1514,7 +1525,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             div.addEventListener('input', () => refresh(div));
         }
         // ---- বিদ্যালয়ের নামের জায়গায় শ্রেণি / শাখা / গ্রুপ ----
-        const FALLBACK = ['শ্রেণি 6','শ্রেণি 7','শ্রেণি 8','শ্রেণি 9 · গ্রুপ SCI','শ্রেণি 9 · গ্রুপ HUM','শ্রেণি 9 · গ্রুপ BUS','শ্রেণি 10 · গ্রুপ SCI','শ্রেণি 10 · গ্রুপ HUM','শ্রেণি 10 · গ্রুপ BUS'];
+        const FALLBACK = ['শ্রেণি: ৬ষ্ঠ','শ্রেণি: ৭ম','শ্রেণি: ৮ম','শ্রেণি: ৯ম (বিজ্ঞান)','শ্রেণি: ৯ম (মানবিক)','শ্রেণি: ৯ম (ব্যবসায় শিক্ষা)','শ্রেণি: ১০ম (বিজ্ঞান)','শ্রেণি: ১০ম (মানবিক)','শ্রেণি: ১০ম (ব্যবসায় শিক্ষা)'];
         function schoolOptions() { return st.loaded ? st.keys.map(k => ({ v: labelOf(k), k })) : FALLBACK.map(v => ({ v, k: '' })); }
         function fillSchoolSelect(sel) {
             const cur = sel.value, opts = schoolOptions();
@@ -1538,6 +1549,42 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         addNewRow = function () { _addNewRow(); fillAllSchoolSelects(); };
         fillAllSchoolSelects();
 
+
+        // ---- সংখ্যা: Students-এ আসলে যতজন আছে (শুরু-শেষ রোলের মধ্যে), শুধু শেষ-শুরু+১ নয় ----
+        function rowCount(row) {
+            const sel = row.querySelector('.school-select'), o = sel && sel.selectedOptions[0], k = o && o.dataset.k;
+            const a = parseInt(row.querySelector('.start-roll').value), b = parseInt(row.querySelector('.end-roll').value);
+            if (k && st.loaded && st.map[k] && !isNaN(a) && !isNaN(b)) return [...st.map[k].rolls].filter(r => r >= a && r <= b).length;
+            return calculateStudents(row.querySelector('.start-roll').value, row.querySelector('.end-roll').value);
+        }
+        updateStudentCount = function (row) { row.querySelector('.student-count').textContent = rowCount(row); updateTotal(); };
+        updateTotal = function () {
+            let total = 0;
+            document.querySelectorAll('#schoolForms .form-row').forEach(row => {
+                if (row.querySelector('.school-select').value && row.querySelector('.start-roll').value && row.querySelector('.end-roll').value) total += rowCount(row);
+            });
+            document.getElementById('totalStudents').textContent = `মোট পরীক্ষার্থী: ${total} জন`;
+            document.getElementById('totalStudentsInfo').textContent = `${total} জন`;
+        };
+        document.getElementById('schoolForms').addEventListener('change', e => {
+            if (e.target.classList && e.target.classList.contains('school-select')) updateStudentCount(e.target.closest('.form-row'));
+        });
+        const _collect2 = collectAllData;
+        collectAllData = function () {
+            const d = _collect2();
+            try {
+                const rows = document.querySelectorAll('#schoolForms .form-row');
+                (d.schools || []).forEach(sc => {
+                    const row = rows[sc.id - 1]; if (!row) return;
+                    sc.studentCount = rowCount(row);
+                    const o = row.querySelector('.school-select').selectedOptions[0]; if (o && o.dataset.k) sc.classKey = o.dataset.k;
+                });
+                d.totals.totalStudents = (d.schools || []).reduce((a, x) => a + x.studentCount, 0);
+                d.session = (document.getElementById('stuSession') || {}).value ? document.getElementById('stuSession').value.trim() : '';
+            } catch (e) { console.error(e); }
+            return d;
+        };
+
         const _addRange = addRange;
         addRange = function (col) {
             _addRange(col);
@@ -1557,7 +1604,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 list.forEach(r => {
                     const roll = parseInt(String(r.roll).replace(/\D/g, ''), 10); if (isNaN(roll)) return;
                     const k = keyOf(r); if (!k) return;
-                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0, label: ['শ্রেণি ' + String(r.class_base).trim(), r.section && 'শাখা ' + String(r.section).trim(), r.grp && 'গ্রুপ ' + String(r.grp).trim()].filter(Boolean).join(' · ') });
+                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0, label: labelFor(r) });
                     if (!map[k].rolls.has(roll)) { map[k].rolls.add(roll); map[k].n++; }
                     map[k].names[roll] = r.name_bn || r.name_en || '';
                 });
@@ -1565,6 +1612,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 st.keys = Object.keys(map).sort((a, b) => parseFloat(a) - parseFloat(b) || a.localeCompare(b));
                 document.querySelectorAll('#columnInputs .stu-class').forEach(fillSelect);
                 fillAllSchoolSelects();
+                document.querySelectorAll('#schoolForms .form-row').forEach(updateStudentCount);
                 document.querySelectorAll('#columnInputs .range-item').forEach(refresh);
                 msg.style.color = '#9ee6bd';
                 msg.textContent = '✅ ' + bnN(list.length) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(st.keys.length) + 'টি শ্রেণি/শাখা)। এখন প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন।';
@@ -1596,6 +1644,93 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             } catch (e) { console.error(e); }
             return d;
         };
+    })();
+    </script>
+
+    <script>
+    // ===== পরীক্ষার নাম, সাল ও শুরুর সময় (সব কক্ষের প্রিন্টে বসে; সার্ভারে সংরক্ষিত) =====
+    (function () {
+        const $$ = id => document.getElementById(id);
+        const EXAM_TYPES = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
+        const TIME_OPTIONS = ['সকাল ১০:০০টা', 'বিকাল ২:০০টা', 'সকাল ৯:০০টা', 'সকাল ১১:০০টা'];
+        const DEF = { exam: 'এস.এস.সি পরীক্ষা - ২০২৬', time: 'সকাল ১০:০০টা, বিকাল ২:০০টা' };
+        const toEn = t => String(t).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+        const toBn = t => String(t).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+        const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        let saved = {};   // সার্ভারে সংরক্ষিত কেন্দ্রের তথ্য (অন্য ঘরগুলো অক্ষত রাখতে)
+
+        const card = document.createElement('div');
+        card.className = 'info-card';
+        card.style.cssText = 'margin-bottom:20px';
+        card.innerHTML =
+            '<div class="info-item" style="align-items:flex-end;flex-wrap:wrap">' +
+              '<div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:200px"><span class="info-label">পরীক্ষার নাম</span><select id="pxType"></select></div>' +
+              '<div id="pxYearWrap" style="display:flex;flex-direction:column;gap:5px;width:100px"><span class="info-label">সাল</span><input type="text" id="pxYear" inputmode="numeric" maxlength="4" style="text-align:center"></div>' +
+              '<div style="display:flex;flex-direction:column;gap:5px;flex:2;min-width:200px"><span class="info-label">পরীক্ষা শুরুর সময়</span><select id="pxTime"></select></div>' +
+              '<button type="button" id="pxSave" class="add-btn" style="margin:0;width:auto;padding:10px 20px">সংরক্ষণ</button>' +
+            '</div>' +
+            '<div style="display:flex;gap:10px;flex-wrap:wrap"><input type="text" id="pxName" placeholder="পরীক্ষার পূর্ণ নাম লিখুন" style="display:none;flex:2;min-width:200px"><input type="text" id="pxTimeOther" placeholder="সময় নিজে লিখুন" style="display:none;flex:1;min-width:160px"></div>' +
+            '<div id="pxMsg" style="font-size:12.5px;margin-top:8px;color:var(--ink-soft)">এই তথ্য সব কক্ষের প্রিন্টে বসবে।</div>';
+        const room = document.querySelector('.room-info');
+        room.parentNode.insertBefore(card, room);
+        const type = $$('pxType'), year = $$('pxYear'), name = $$('pxName'), time = $$('pxTime'), tOther = $$('pxTimeOther');
+
+        function fillType(cur) {
+            const m = String(cur || '').trim().match(/^(.*?)[\s\-]*([০-৯0-9]{4})$/);
+            const base = m ? m[1].trim() : '', yr = m ? toEn(m[2]) : String(new Date().getFullYear());
+            const known = EXAM_TYPES.includes(base);
+            type.innerHTML = EXAM_TYPES.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('') +
+                (!known && cur ? `<option value="__cur">${esc(cur)}</option>` : '') + '<option value="__other">অন্য নাম (নিজে লিখুন)</option>';
+            type.value = known ? base : (cur ? '__cur' : EXAM_TYPES[0]);
+            year.value = yr; name.value = ''; syncType();
+        }
+        function syncType() {
+            name.style.display = type.value === '__other' ? '' : 'none';
+            $$('pxYearWrap').style.display = (type.value === '__other' || type.value === '__cur') ? 'none' : '';
+        }
+        function fillTime(cur) {
+            const list = TIME_OPTIONS.includes(cur) || !cur ? TIME_OPTIONS : [cur, ...TIME_OPTIONS];
+            time.innerHTML = list.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('') + '<option value="__other">অন্য সময় (নিজে লিখুন)</option>';
+            time.value = cur || TIME_OPTIONS[0]; tOther.style.display = 'none'; tOther.value = '';
+        }
+        type.addEventListener('change', () => { syncType(); if (type.value === '__other') name.focus(); });
+        time.addEventListener('change', () => { const o = time.value === '__other'; tOther.style.display = o ? '' : 'none'; if (o) tOther.focus(); });
+        fillType(DEF.exam); fillTime(DEF.time);
+
+        const msg = (t, ok) => { const m = $$('pxMsg'); m.textContent = t; m.style.color = ok === undefined ? 'var(--ink-soft)' : (ok ? 'var(--success)' : 'var(--error)'); };
+
+        // সার্ভারে সংরক্ষিত তথ্য পড়ে ঘরগুলো ভরা
+        window.fbReady.then(async ({ api: sbApi, token }) => {
+            try {
+                const rows = await sbApi('seatPlanList', token);
+                const r = (rows || []).find(x => x.id === '__center__');
+                saved = (r && r.data && r.data.center) || {};
+                fillType(saved.exam || DEF.exam); fillTime(saved.time || DEF.time);
+            } catch (e) { msg('সংরক্ষিত তথ্য আনা যায়নি: ' + e.message, false); }
+        });
+
+        $$('pxSave').addEventListener('click', async () => {
+            let ex;
+            if (type.value === '__other') ex = name.value.trim();
+            else if (type.value === '__cur') ex = saved.exam || DEF.exam;
+            else {
+                const y = toEn(year.value.trim());
+                if (!/^\d{4}$/.test(y)) return msg('সাল ৪ অঙ্কে লিখুন (যেমন 2026)।', false);
+                ex = type.value + ' ' + toBn(y);
+            }
+            const tm = (time.value === '__other' ? tOther.value : time.value).trim();
+            if (!ex) return msg('পরীক্ষার নাম লিখুন।', false);
+            if (!tm) return msg('পরীক্ষা শুরুর সময় লিখুন।', false);
+            const btn = $$('pxSave'); btn.disabled = true;
+            try {
+                const { api: sbApi, token } = await window.fbReady;
+                const center = { ...saved, exam: ex, time: tm };
+                await sbApi('seatPlanSave', token, '__center__', { center });
+                saved = center; fillType(ex); fillTime(tm);
+                msg('✅ সংরক্ষিত হয়েছে: ' + ex + ' · শুরু ' + tm, true);
+            } catch (e) { msg('সংরক্ষণ করা যায়নি: ' + e.message, false); }
+            finally { btn.disabled = false; }
+        });
     })();
     </script>
 </body>
