@@ -208,6 +208,119 @@
   }
 
   /* =====================================================
+     ✨ পর্দার নকশা — গর্জিয়াস লুক (প্রিন্টে কোনো প্রভাব নেই)
+     ===================================================== */
+  :root { --gold-1:#B9822E; --gold-2:#E3BC6A; --gold-3:#F3DFAE; --navy-2:#2B4282; --navy-3:#121C38; }
+
+  /* ডেস্ক-ব্যাকগ্রাউন্ড */
+  body {
+    background:
+      radial-gradient(1100px 460px at 50% -150px, #FFFFFF, rgba(255,255,255,0)),
+      radial-gradient(760px 520px at 100% 0%, rgba(214,162,78,.13), rgba(214,162,78,0)),
+      radial-gradient(820px 640px at 0% 100%, rgba(47,111,237,.09), rgba(47,111,237,0)),
+      linear-gradient(180deg,#EAEEF6,#DCE2EE) fixed;
+  }
+  ::selection { background:rgba(214,162,78,.35); }
+
+  /* টুলবার: কাচের মতো + নিচে সোনালি রেখা */
+  .toolbar {
+    background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(246,248,253,.92));
+    border-bottom:none;
+    box-shadow:0 1px 0 rgba(23,34,59,.06), 0 14px 32px -10px rgba(23,34,59,.22);
+  }
+  .toolbar::after {
+    content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; pointer-events:none;
+    background:linear-gradient(90deg, transparent, var(--gold-1) 18%, var(--gold-3) 50%, var(--gold-1) 82%, transparent);
+  }
+  .brand .mark {
+    background:linear-gradient(145deg,#33509A,var(--accent) 55%,var(--navy-3));
+    box-shadow:0 0 0 2px #fff, 0 0 0 3.5px var(--gold-2), 0 6px 14px rgba(29,43,79,.35);
+  }
+  .brand-text strong { letter-spacing:.2px; color:var(--accent); }
+
+  .toolbar select, .toolbar button:not(.primary):not(.search-clear), .seg, .zoom {
+    box-shadow:0 1px 0 rgba(255,255,255,.95) inset, 0 1px 3px rgba(23,34,59,.08);
+  }
+  .toolbar select {
+    appearance:none; -webkit-appearance:none; border-radius:10px;
+    background:#fff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235B6579' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 10px center;
+  }
+  .toolbar select:focus-visible { border-color:var(--focus); box-shadow:0 0 0 3px rgba(47,111,237,.18); outline:none; }
+  .toolbar button { border-radius:10px; }
+  .toolbar button:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 14px -4px rgba(23,34,59,.22); }
+  .toolbar button:active:not(:disabled) { transform:translateY(0); box-shadow:none; }
+  .toolbar button.primary {
+    background:linear-gradient(180deg,#2F4A92,var(--accent) 60%,#18243F);
+    border-color:#16213D; letter-spacing:.2px;
+    box-shadow:0 8px 18px -6px rgba(29,43,79,.6), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .toolbar button.primary:hover:not(:disabled) {
+    background:linear-gradient(180deg,#38569F,var(--accent-hover) 60%,#1B294A); border-color:#16213D;
+    box-shadow:0 12px 22px -6px rgba(29,43,79,.65), inset 0 1px 0 rgba(255,255,255,.3);
+  }
+  .seg, .zoom { border-radius:11px; }
+  .seg button:hover:not(:disabled), .zoom button:hover:not(:disabled) { transform:none; box-shadow:none; background:#EEF3FF; }
+  .badge { background:linear-gradient(180deg,var(--gold-3),var(--gold-2)); color:#5A3C0C; box-shadow:inset 0 0 0 1px rgba(185,130,46,.35); }
+  .counter { background:#EFF2F9; border-radius:999px; font-weight:700; color:var(--accent); padding:0 12px; }
+  .search-wrap { box-shadow:0 1px 0 rgba(255,255,255,.95) inset, 0 1px 3px rgba(23,34,59,.08); }
+  .search-results { border-radius:16px; box-shadow:0 22px 50px -8px rgba(23,34,59,.3); border-color:#E3E7F0; }
+  .sr-num { background:linear-gradient(145deg,#33509A,var(--accent)); box-shadow:0 3px 8px rgba(29,43,79,.28); }
+  .sr-item.current .sr-num { background:linear-gradient(145deg,#2C9A63,var(--ok)); }
+  .sr-item:hover, .sr-item.active { background:linear-gradient(90deg,#EEF3FF,#F8FAFF); }
+
+  /* তথ্য-পট্টি */
+  .chip { box-shadow:0 1px 2px rgba(23,34,59,.07); padding:5px 14px; }
+  .chip.accent { background:linear-gradient(135deg,#34509A,var(--accent)); border-color:var(--accent); box-shadow:0 6px 14px -5px rgba(29,43,79,.55); }
+
+  /* ছাপার পাতা (শুধু পর্দায়): গভীর ছায়া + ঢোকার অ্যানিমেশন */
+  .page { box-shadow:0 1px 2px rgba(23,34,59,.10), 0 22px 55px -12px rgba(23,34,59,.32), 0 0 0 1px rgba(23,34,59,.05); }
+  @keyframes pageIn { from { opacity:0; transform:translateY(14px) scale(.992); } to { opacity:1; transform:none; } }
+  @media screen { .page:not(.hidden) { animation:pageIn .45s cubic-bezier(.2,.7,.2,1) both; } }
+
+  /* এডিট ডায়ালগ */
+  @keyframes dlgPop { from { opacity:0; transform:translateY(12px) scale(.98); } to { opacity:1; transform:none; } }
+  dialog.dlg[open] { animation:dlgPop .24s cubic-bezier(.2,.8,.2,1); }
+  dialog.dlg { border-radius:20px; box-shadow:0 40px 100px -10px rgba(10,16,36,.55), 0 0 0 1px rgba(255,255,255,.06); }
+  .dlg-head {
+    position:relative; padding:20px 24px 18px; color:#fff;
+    background:radial-gradient(500px 160px at 100% -40px, rgba(227,188,106,.28), rgba(227,188,106,0)), linear-gradient(135deg,var(--navy-3),var(--accent) 45%,var(--navy-2));
+  }
+  .dlg-head::after { content:""; position:absolute; left:0; right:0; bottom:0; height:3px; background:linear-gradient(90deg,var(--gold-1),var(--gold-3),var(--gold-1)); }
+  .dlg-head h2 { color:#fff; font-size:21px; letter-spacing:.2px; }
+  .dlg-head p { color:rgba(255,255,255,.78); }
+  .dlg-x { background:rgba(255,255,255,.15); color:#fff; transition:background .15s, transform .15s; }
+  .dlg-x:hover { background:rgba(255,255,255,.28); transform:rotate(90deg); }
+  .tabs { padding-top:14px; background:#F7F9FD; }
+  .tabs button { transition:background .15s, box-shadow .15s, transform .1s; }
+  .tabs button:hover { transform:translateY(-1px); }
+  .tabs button[aria-selected="true"] { background:linear-gradient(180deg,#34509A,var(--accent)); box-shadow:0 6px 14px -5px rgba(29,43,79,.55); }
+  .dlg-body { background:linear-gradient(180deg,#F7F9FD,#FFFFFF 120px); }
+  .dlg input, .dlg select { border-radius:10px; box-shadow:0 1px 2px rgba(23,34,59,.04) inset; transition:border-color .15s, box-shadow .15s; }
+  .col { background:linear-gradient(180deg,#FFFFFF,#F6F8FC); border-radius:14px; box-shadow:0 2px 6px rgba(23,34,59,.05); transition:box-shadow .2s, transform .2s; }
+  .col:hover { box-shadow:0 12px 24px -10px rgba(23,34,59,.22); transform:translateY(-1px); }
+  .col-h .pill { background:linear-gradient(180deg,var(--gold-3),var(--gold-2)); color:#5A3C0C; }
+  .btn { border-radius:10px; }
+  .btn.primary { background:linear-gradient(180deg,#2F4A92,var(--accent) 60%,#18243F); box-shadow:0 8px 18px -6px rgba(29,43,79,.6), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn.primary:hover:not(:disabled) { background:linear-gradient(180deg,#38569F,var(--accent-hover) 60%,#1B294A); transform:translateY(-1px); }
+  .dlg-foot { background:linear-gradient(180deg,#FAFBFD,#F1F4FA); }
+
+  /* বার্তা কার্ড ও টোস্ট */
+  #msg { border-radius:20px; border-top:3px solid var(--gold-2); box-shadow:0 22px 50px -16px rgba(23,34,59,.28); }
+  #msg.error { border-top-color:var(--danger); }
+  #msg.loading::before { border-top-color:var(--gold-1); }
+  #msg .msg-btn { background:linear-gradient(180deg,#2F4A92,var(--accent)); box-shadow:0 8px 18px -6px rgba(29,43,79,.55); }
+  .toast { border-radius:999px; padding:11px 22px; background:linear-gradient(135deg,#1D2B4F,#121C38); border:1px solid rgba(227,188,106,.55); box-shadow:0 18px 40px -10px rgba(10,16,36,.55); }
+
+  /* স্ক্রলবার */
+  .dlg-body, .search-results, .tabs { scrollbar-width:thin; scrollbar-color:#C6CEDD transparent; }
+  .dlg-body::-webkit-scrollbar, .search-results::-webkit-scrollbar { width:9px; height:9px; }
+  .dlg-body::-webkit-scrollbar-thumb, .search-results::-webkit-scrollbar-thumb { background:#C6CEDD; border-radius:999px; border:2px solid transparent; background-clip:padding-box; }
+  @media (prefers-reduced-motion:reduce) {
+    .page, dialog.dlg[open] { animation:none !important; }
+    .toolbar button:hover, .tabs button:hover, .col:hover, .dlg-x:hover { transform:none !important; }
+  }
+
+  /* =====================================================
      ছাপার পাতা (আগের মতোই — Legal 8.5in x 14in)
      ===================================================== */
   .page { background:#fff; width:var(--pw,8.5in); min-height:var(--ph,14in); margin:16px auto; padding:0.18in 0.3in; box-shadow:0 1px 2px rgba(23,34,59,.10), 0 10px 30px rgba(23,34,59,.14); border-radius:2px; page-break-after:always; }
@@ -257,8 +370,8 @@
   table.seat { width:100%; border-collapse:separate; border-spacing:0 1.4mm; table-layout:fixed; margin-top:0; }
   table.seat tr { page-break-inside:avoid; }
   table.seat td {
-    position:relative; height:10mm; padding:0 3pt; vertical-align:middle; text-align:center;
-    font-family:'Times New Roman',Times,serif; font-weight:700; font-size:25pt; line-height:1; white-space:nowrap;
+    position:relative; height:14mm; padding:0 3pt; vertical-align:middle; text-align:center;
+    font-family:'Times New Roman',Times,serif; font-weight:700; font-size:24pt; line-height:1; white-space:nowrap;
     color:#2A1405; text-shadow:0 1px 0 rgba(255,236,200,.55);   /* খোদাই করা নম্বরের মতো */
     /* সবচেয়ে উপরের স্তর থেকে নিচে: স্ক্রু, কাঠের গিঁট, মোটা ও সরু দানা, তক্তার আলো-ছায়া, মূল কাঠের রং */
     background:
