@@ -1465,24 +1465,26 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         bar.innerHTML = '<div class="column-header"><span class="column-label">শিক্ষার্থী তথ্য (Students টেবিল)</span>' +
             '<div style="display:flex;gap:8px;align-items:center"><input type="text" id="stuSession" placeholder="Session" style="width:90px">' +
             '<button type="button" class="add-range-btn" id="stuLoadBtn">🔄 Students লোড করুন</button></div></div>' +
-            '<div id="stuStatus" style="font-size:12.5px;color:#F1E2C3">প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন। শুরুর রোল ও সিট সংখ্যা অনুযায়ী Students-এ থাকা রোলগুলোই সিটে বসবে।</div>';
+            '<div id="stuStatus" style="font-size:12.5px;color:#F1E2C3">প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন। শুরুর রোল থেকে Students-এ থাকা পরবর্তী রোলগুলো ক্রমানুসারে সিটে বসবে (যেমন VI-001); মাঝের রোল না থাকলে বাদ যাবে, সিট ফাঁকা থাকবে না।</div>';
         const ci = $$('columnInputs'); ci.parentNode.insertBefore(bar, ci);
         $$('stuSession').value = String(new Date().getFullYear());
 
+        const ROMAN = { 1:'I',2:'II',3:'III',4:'IV',5:'V',6:'VI',7:'VII',8:'VIII',9:'IX',10:'X',11:'XI',12:'XII' };
+        const prefixOf = k => { const b = parseInt(String(k).trim(), 10); return ROMAN[b] || String(k).split(' ')[0]; };
         const keyOf = r => [r.class_base, r.grp, r.section].map(x => String(x ?? '').trim()).filter(Boolean).join(' ');
-        const labelOf = k => 'শ্রেণি ' + k;
+        const labelOf = k => (st.map[k] && st.map[k].label) || ('শ্রেণি ' + k);
 
         function fillSelect(sel) {
             const cur = sel.value;
             sel.innerHTML = '<option value="">— শ্রেণি —</option>' + st.keys.map(k => `<option value="${k.replace(/"/g, '&quot;')}">${labelOf(k)} (${st.map[k].n})</option>`).join('');
             if (st.keys.includes(cur)) sel.value = cur;
         }
+        // শুরুর রোল থেকে ক্রমানুসারে Students-এ থাকা পরবর্তী রোলগুলো (সিট সংখ্যা পর্যন্ত); মাঝের না থাকা রোল বাদ যায়
         function matched(key, start, count) {
-            const g = st.map[key]; const out = [];
-            if (!g) return out;
-            for (let k = 0; k < count; k++) if (g.rolls.has(start + k)) out.push(start + k);
-            return out;
+            const g = st.map[key]; if (!g) return [];
+            return [...g.rolls].filter(r => r >= start).sort((a, b) => a - b).slice(0, count);
         }
+        const fmt = (key, roll) => prefixOf(key) + '-' + String(roll).padStart(3, '0');
         function refresh(div) {
             const note = div.querySelector('.stu-note'), sel = div.querySelector('.stu-class');
             if (!note || !sel) return;
@@ -1490,11 +1492,14 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             const start = parseInt(div.querySelector('input[id^="start_roll_"]').value);
             const count = parseInt(div.querySelector('input[id^="seat_count_"]').value);
             if (!key || !st.loaded || isNaN(start) || isNaN(count) || count <= 0) { note.textContent = ''; return; }
-            const ok = matched(key, start, count), set = new Set(ok);
-            const miss = []; for (let k = 0; k < count; k++) if (!set.has(start + k)) miss.push(start + k);
-            note.style.color = miss.length ? '#f0a89e' : '#9ee6bd';
-            note.textContent = '✔ Students-এ আছে ' + bnN(ok.length) + ' জন / সিট ' + bnN(count) + 'টি' +
-                (miss.length ? ' · নেই: ' + miss.slice(0, 12).map(bnN).join(', ') + (miss.length > 12 ? ' …' : '') + ' (এই সিট ফাঁকা থাকবে)' : '');
+            const ok = matched(key, start, count);
+            const endEl = div.querySelector('input[id^="end_roll_"]');
+            if (endEl && ok.length) endEl.value = ok[ok.length - 1];
+            note.style.color = ok.length < count ? '#f0a89e' : '#9ee6bd';
+            note.textContent = ok.length
+                ? '✔ ' + fmt(key, ok[0]) + ' থেকে ' + fmt(key, ok[ok.length - 1]) + ' (' + bnN(ok.length) + ' জন)' +
+                  (ok.length < count ? ' · Students-এ আর রোল নেই, বাকি ' + bnN(count - ok.length) + 'টি সিট ফাঁকা থাকবে' : '')
+                : '❌ ' + bnN(start) + ' বা তার পরে এই শ্রেণিতে কোনো রোল নেই';
         }
         function decorate(div) {
             if (!div || div.querySelector('.stu-class')) return;
@@ -1508,6 +1513,31 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             sel.addEventListener('change', () => refresh(div));
             div.addEventListener('input', () => refresh(div));
         }
+        // ---- বিদ্যালয়ের নামের জায়গায় শ্রেণি / শাখা / গ্রুপ ----
+        const FALLBACK = ['শ্রেণি 6','শ্রেণি 7','শ্রেণি 8','শ্রেণি 9 · গ্রুপ SCI','শ্রেণি 9 · গ্রুপ HUM','শ্রেণি 9 · গ্রুপ BUS','শ্রেণি 10 · গ্রুপ SCI','শ্রেণি 10 · গ্রুপ HUM','শ্রেণি 10 · গ্রুপ BUS'];
+        function schoolOptions() { return st.loaded ? st.keys.map(k => ({ v: labelOf(k), k })) : FALLBACK.map(v => ({ v, k: '' })); }
+        function fillSchoolSelect(sel) {
+            const cur = sel.value, opts = schoolOptions();
+            sel.innerHTML = '<option value="">শ্রেণি / শাখা / গ্রুপ নির্বাচন করুন</option>' +
+                opts.map(o => `<option value="${o.v.replace(/"/g, '&quot;')}" data-k="${o.k.replace(/"/g, '&quot;')}">${o.v}</option>`).join('');
+            if (cur && !opts.some(o => o.v === cur)) sel.insertAdjacentHTML('beforeend', `<option value="${cur.replace(/"/g, '&quot;')}">${cur}</option>`);
+            sel.value = cur;
+        }
+        function fillAllSchoolSelects() { document.querySelectorAll('#schoolForms .school-select').forEach(fillSchoolSelect); }
+        // শ্রেণি বাছলে শুরু/শেষ রোল ফাঁকা থাকলে Students থেকে নিজে বসে
+        document.getElementById('schoolForms').addEventListener('change', e => {
+            const sel = e.target; if (!sel.classList || !sel.classList.contains('school-select')) return;
+            const k = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.k, row = sel.closest('.form-row');
+            if (!k || !st.map[k] || !row) return;
+            const a = row.querySelector('.start-roll'), b = row.querySelector('.end-roll');
+            if (a.value || b.value) return;
+            const rolls = [...st.map[k].rolls]; a.value = Math.min(...rolls); b.value = Math.max(...rolls);
+            updateStudentCount(row);
+        });
+        const _addNewRow = addNewRow;
+        addNewRow = function () { _addNewRow(); fillAllSchoolSelects(); };
+        fillAllSchoolSelects();
+
         const _addRange = addRange;
         addRange = function (col) {
             _addRange(col);
@@ -1527,13 +1557,14 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 list.forEach(r => {
                     const roll = parseInt(String(r.roll).replace(/\D/g, ''), 10); if (isNaN(roll)) return;
                     const k = keyOf(r); if (!k) return;
-                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0 });
+                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0, label: ['শ্রেণি ' + String(r.class_base).trim(), r.section && 'শাখা ' + String(r.section).trim(), r.grp && 'গ্রুপ ' + String(r.grp).trim()].filter(Boolean).join(' · ') });
                     if (!map[k].rolls.has(roll)) { map[k].rolls.add(roll); map[k].n++; }
                     map[k].names[roll] = r.name_bn || r.name_en || '';
                 });
                 st.map = map; st.loaded = true;
                 st.keys = Object.keys(map).sort((a, b) => parseFloat(a) - parseFloat(b) || a.localeCompare(b));
                 document.querySelectorAll('#columnInputs .stu-class').forEach(fillSelect);
+                fillAllSchoolSelects();
                 document.querySelectorAll('#columnInputs .range-item').forEach(refresh);
                 msg.style.color = '#9ee6bd';
                 msg.textContent = '✅ ' + bnN(list.length) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(st.keys.length) + 'টি শ্রেণি/শাখা)। এখন প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন।';
@@ -1559,7 +1590,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                         if (isNaN(sc) || sc <= 0) return;
                         const rg = out[n++], sel = rd.querySelector('.stu-class');
                         const sr = parseInt(rd.querySelector('input[id^="start_roll_"]').value);
-                        if (rg && sel && sel.value && st.loaded && !isNaN(sr) && sr > 0) { rg.classKey = sel.value; rg.rolls = matched(sel.value, sr, sc); }
+                        if (rg && sel && sel.value && st.loaded && !isNaN(sr) && sr > 0) { rg.classKey = sel.value; rg.prefix = prefixOf(sel.value); rg.rolls = matched(sel.value, sr, sc); }
                     });
                 });
             } catch (e) { console.error(e); }
