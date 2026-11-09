@@ -259,44 +259,74 @@
   table.seat td {
     position:relative; height:10mm; padding:0 3pt; vertical-align:middle; text-align:center;
     font-family:'Times New Roman',Times,serif; font-weight:700; font-size:25pt; line-height:1; white-space:nowrap;
-    color:#2B1606;
-    /* কাঠের দাগ + কাঠের রং */
+    color:#2A1405; text-shadow:0 1px 0 rgba(255,236,200,.55);   /* খোদাই করা নম্বরের মতো */
+    /* সবচেয়ে উপরের স্তর থেকে নিচে: স্ক্রু, কাঠের গিঁট, মোটা ও সরু দানা, তক্তার আলো-ছায়া, মূল কাঠের রং */
     background:
-      repeating-linear-gradient(180deg, rgba(90,50,15,.18) 0 1px, transparent 1px 3mm),
-      linear-gradient(180deg,#E6BC82 0%,#D3A05F 55%,#C08A4A 100%);
-    border:1.6pt solid #4A2A0C;
-    border-bottom:4.5pt solid #4A2A0C;           /* তক্তার সামনের মোটা ধার */
-    box-shadow:inset 0 2pt 0 rgba(255,255,255,.35);
+      radial-gradient(circle at 7% 50%, #3d3226 0 1.1pt, #8f8a80 1.2pt 1.7pt, transparent 1.9pt),
+      radial-gradient(circle at 93% 50%, #3d3226 0 1.1pt, #8f8a80 1.2pt 1.7pt, transparent 1.9pt),
+      radial-gradient(ellipse 9% 28% at 62% 46%, rgba(80,42,12,.38) 0 40%, rgba(80,42,12,.16) 60%, transparent 72%),
+      repeating-linear-gradient(180deg, rgba(95,52,16,.22) 0 .6pt, transparent .6pt 2.3mm),
+      repeating-linear-gradient(180deg, rgba(255,240,205,.20) 0 .5pt, transparent .5pt 1.1mm),
+      linear-gradient(180deg,#F0CE98 0%,#DDB072 18%,#CF9C5C 62%,#B98446 100%);
+    border:1.5pt solid #3F2209;
+    border-bottom:4.5pt solid #5B3413;            /* তক্তার সামনের মোটা ধার */
+    box-shadow:
+      inset 0 1.6pt 0 rgba(255,247,225,.55),       /* উপরের ধারের আলো */
+      inset 0 -2.4pt 2pt -1pt rgba(70,35,8,.38),   /* সিটের নিচের দিকে গভীরতা */
+      0 2.2pt 2pt -1pt rgba(0,0,0,.38);            /* মেঝেতে ছায়া */
   }
   /* একটি সারি ছাড়া একটি সারিতে একটু গাঢ় কাঠ */
   table.seat tr.even td:not(.g):not(.blank):not(.door) {
     background:
-      repeating-linear-gradient(180deg, rgba(90,50,15,.18) 0 1px, transparent 1px 3mm),
-      linear-gradient(180deg,#D9AC70 0%,#C79350 55%,#B37D3F 100%);
+      radial-gradient(circle at 7% 50%, #3d3226 0 1.1pt, #8f8a80 1.2pt 1.7pt, transparent 1.9pt),
+      radial-gradient(circle at 93% 50%, #3d3226 0 1.1pt, #8f8a80 1.2pt 1.7pt, transparent 1.9pt),
+      radial-gradient(ellipse 9% 28% at 34% 54%, rgba(70,35,8,.38) 0 40%, rgba(70,35,8,.16) 60%, transparent 72%),
+      repeating-linear-gradient(180deg, rgba(95,52,16,.24) 0 .6pt, transparent .6pt 2.7mm),
+      repeating-linear-gradient(180deg, rgba(255,240,205,.16) 0 .5pt, transparent .5pt 1.3mm),
+      linear-gradient(180deg,#E6BF84 0%,#D2A065 18%,#C28D4C 62%,#AB7539 100%);
   }
-  /* বাঁ সিট: বাঁ কোণা গোল + মাঝে ভাগ-রেখা */
-  table.seat td.l  { border-right:1.4pt solid #4A2A0C; border-radius:7px 0 0 7px; }
+  /* বাঁ সিট: বাঁ কোণা গোল + মাঝে জোড়ার খাঁজ */
+  table.seat td.l  { border-right:1.2pt solid #3F2209; border-radius:8px 0 0 8px;
+    box-shadow: inset 0 1.6pt 0 rgba(255,247,225,.55), inset 0 -2.4pt 2pt -1pt rgba(70,35,8,.38), inset -1.5pt 0 1.5pt -.5pt rgba(60,30,6,.35), 0 2.2pt 2pt -1pt rgba(0,0,0,.38); }
   /* ডান সিট: ডান কোণা গোল */
-  table.seat td.rt { border-left:none; border-radius:0 7px 7px 0; }
-  /* পায়া: বেঞ্চের দুই প্রান্তে */
+  table.seat td.rt { border-left:none; border-radius:0 8px 8px 0;
+    box-shadow: inset 0 1.6pt 0 rgba(255,247,225,.55), inset 0 -2.4pt 2pt -1pt rgba(70,35,8,.38), inset 1.5pt 0 1.5pt -.5pt rgba(255,240,210,.35), 0 2.2pt 2pt -1pt rgba(0,0,0,.38); }
+  /* পায়া: বেঞ্চের দুই প্রান্তে (ধাতব-কাঠের পায়া, নিচে সামান্য সরু) */
   table.seat td.l::after,
-  table.seat td.rt::after { content:""; position:absolute; top:100%; width:3.2mm; height:1mm; background:#4A2A0C; border-radius:0 0 2px 2px; }
-  table.seat td.l::after  { left:9%; }
-  table.seat td.rt::after { right:9%; }
+  table.seat td.rt::after { content:""; position:absolute; top:100%; width:3.4mm; height:1.25mm;
+    background:linear-gradient(90deg,#2E1806 0%,#6B3F18 45%,#2E1806 100%);
+    clip-path:polygon(0 0,100% 0,88% 100%,12% 100%); }
+  table.seat td.l::after  { left:8%; }
+  table.seat td.rt::after { right:8%; }
   /* জোড়ার মাঝের পথ */
   table.seat td.g { width:14pt; border:none; background:transparent !important; box-shadow:none; padding:0; }
   table.seat td.g::after { display:none; }
   /* ফাঁকা সিট */
-  table.seat td.blank { background:#F1E9DC !important; border-color:#9C8B73; border-bottom-width:3pt; border-style:dashed; box-shadow:none; }
-  table.seat td.blank::after { background:#9C8B73; }
+  table.seat td.blank { background:#F1E9DC !important; border-color:#9C8B73; border-bottom-width:3pt; border-style:dashed; box-shadow:none !important; text-shadow:none; }
+  table.seat td.blank::after { background:#9C8B73; clip-path:none; }
   /* ২ কলামে বেঞ্চ বড় */
   table.seat.two td { height:13.5mm; font-size:32pt; }
   table.seat.two td.g { width:auto; }
   /* DOOR */
-  table.seat td.door { vertical-align:middle; padding:0; background:var(--navy) !important; color:#fff; font-family:'Times New Roman',Times,serif; font-size:19pt; text-align:center; letter-spacing:.5pt; border:none; border-radius:7px; box-shadow:none; }
+  table.seat td.door {
+    vertical-align:middle; padding:0 9pt 0 0; text-align:center;
+    font-family:'Times New Roman',Times,serif; font-weight:700; font-size:19pt; letter-spacing:5pt; text-indent:5pt;
+    color:#F6E2A8; text-shadow:0 1px 0 rgba(0,0,0,.55), 0 0 4pt rgba(246,226,168,.35);
+    background:
+      radial-gradient(circle at 93% 50%, #FFF3C2 0 1pt, #E2B24C 1.4pt 2.8pt, #7A5114 3.1pt 3.5pt, transparent 3.8pt),
+      linear-gradient(180deg,#F0CF7A,#A97B24) 2.2% 20% / 1.5mm 1.3mm no-repeat,
+      linear-gradient(180deg,#F0CF7A,#A97B24) 2.2% 80% / 1.5mm 1.3mm no-repeat,
+      linear-gradient(180deg, rgba(255,255,255,.16) 0%, transparent 45%, rgba(0,0,0,.28) 100%),
+      linear-gradient(135deg,#1F4378 0%,#13305E 55%,#0B1F42 100%) !important;
+    border:1.5pt solid #D9AE45; border-radius:10px 10px 3px 3px;
+    box-shadow:
+      inset 0 0 0 2pt #0B1F42,
+      inset 0 0 0 3pt rgba(217,174,69,.8),
+      0 2.2pt 2pt -1pt rgba(0,0,0,.4);
+  }
   table.seat td.door::after { display:none; }
   table.seat.two td.door { font-size:26pt; }
-  table.seat td.door.one, table.seat.two td.door.one { font-size:13pt; }
+  table.seat td.door.one, table.seat.two td.door.one { font-size:12.5pt; letter-spacing:2pt; text-indent:2pt; padding-right:7pt; }
 
   /* কাগজের মাপ টুলবারের ড্রপডাউন থেকে JS দিয়ে বসে (উপরের #pageSize স্টাইল) */
   @media print {
