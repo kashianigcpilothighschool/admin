@@ -362,13 +362,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>
       প্রিন্ট করুন
     </button>
-    <button id="btnExam" title="পরীক্ষার নাম, সাল ও শুরুর সময় বদলান (সব কক্ষের প্রিন্টে বসবে)">
-      📅 পরীক্ষার নাম ও সময়
-    </button>
-    <button id="btnEdit" disabled title="কেন্দ্র, কক্ষ, স্কুল ও সিটের তথ্য এডিট করুন">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      এডিট
-    </button>
     <div class="seg" role="group" aria-label="একসাথে অনেক কক্ষ প্রিন্ট">
       <button id="btnTwo" onclick="printType('two')">২ কলাম <span class="badge" id="cntTwo">০</span></button>
       <button id="btnThree" onclick="printType('three')">৩ কলাম <span class="badge" id="cntThree">০</span></button>
@@ -675,7 +668,6 @@ async function loadPlans() {
   $('cntAll').textContent = bn(plans.length);
   sInput.disabled = false;
   sInput.placeholder = 'কক্ষ, রোল বা স্কুল';
-  $('btnEdit').disabled = false;
 
   const wanted = new URLSearchParams(location.search).get('room');
   const start = plans.find(p => p.id === wanted) ? wanted : latestId;
@@ -1030,7 +1022,6 @@ $('editTabs').addEventListener('click', e => {
   const b = e.target.closest('button[data-tab]');
   if (b) switchTab(b.dataset.tab);
 });
-$('btnEdit').addEventListener('click', () => openEdit('room'));
 const EXAM_TYPES = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
 const TIME_OPTIONS = ['সকাল ১০:০০টা', 'বিকাল ২:০০টা', 'সকাল ৯:০০টা', 'সকাল ১১:০০টা'];
 const examDlg = $('examDlg'), examTime = $('examTime'), examOther = $('examTimeOther');
@@ -1059,10 +1050,6 @@ function syncExamUi() {
 }
 examType.addEventListener('change', () => { syncExamUi(); if (examType.value === '__other') examName.focus(); });
 examTime.addEventListener('change', () => { const o = examTime.value === '__other'; examOther.style.display = o ? '' : 'none'; if (o) examOther.focus(); });
-$('btnExam').addEventListener('click', () => {
-  fillExamType(CENTER.exam); fillExamTime(CENTER.time); $('examErr').textContent = '';
-  examDlg.showModal();
-});
 $('examClose').addEventListener('click', () => examDlg.close());
 $('examCancel').addEventListener('click', () => examDlg.close());
 $('examForm').addEventListener('submit', async e => {
