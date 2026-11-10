@@ -239,6 +239,9 @@
         }
         .form-row select, .form-row input { width: 100%; }
 
+        input.student-count { font-family: inherit; font-size: inherit; }
+        input.student-count::placeholder { color: #6fa88a; font-weight: 500; }
+        input.end-roll.auto { background: linear-gradient(180deg,#fbf3e0,#f3e4bf); font-weight: 700; color: #5a3c0c; }
         .student-count {
             background-color: var(--success-bg);
             color: var(--success);
@@ -773,8 +776,8 @@
                             <option value="আলহাজ্ব আব্দুল গণি উচ্চ বিদ্যালয়">আলহাজ্ব আব্দুল গণি উচ্চ বিদ্যালয়</option>
                         </select>
                         <input type="number" placeholder="শুরুর রোল" class="start-roll" min="1" maxlength="6" oninput="handleRollInput(this, 'start')">
+                        <input type="number" placeholder="সংখ্যা" class="student-count" min="1" title="কতজন পরীক্ষার্থী — দিলে শেষ রোল নিজে বসবে">
                         <input type="number" placeholder="শেষের রোল" class="end-roll" min="1" maxlength="6" oninput="handleRollInput(this, 'end')">
-                        <div class="student-count">০</div>
                         <button type="button" class="remove-btn" onclick="removeRow(this)" title="সরান">✕</button>
                     </div>
                 </div>
@@ -1271,8 +1274,8 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                         <option value="আলহাজ্ব আব্দুল গণি উচ্চ বিদ্যালয়">আলহাজ্ব আব্দুল গণি উচ্চ বিদ্যালয়</option>
                 </select>
                 <input type="number" placeholder="শুরুর রোল" class="start-roll" min="1" maxlength="6" oninput="handleRollInput(this, 'start')" onkeydown="handleKeyPress(event, this, 'start')">
+                <input type="number" placeholder="সংখ্যা" class="student-count" min="1" title="কতজন পরীক্ষার্থী — দিলে শেষ রোল নিজে বসবে">
                 <input type="number" placeholder="শেষের রোল" class="end-roll" min="1" maxlength="6" oninput="handleRollInput(this, 'end')" onkeydown="handleKeyPress(event, this, 'end')">
-                <div class="student-count">০</div>
                 <button type="button" class="remove-btn" onclick="removeRow(this)" title="সরান">✕</button>
             `;
             schoolForms.appendChild(newRow);
@@ -1654,7 +1657,15 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             if (k && st.loaded && st.map[k] && !isNaN(a) && !isNaN(b)) return [...st.map[k].rolls].filter(r => r >= a && r <= b).length;
             return calculateStudents(row.querySelector('.start-roll').value, row.querySelector('.end-roll').value);
         }
-        updateStudentCount = function (row) { row.querySelector('.student-count').textContent = rowCount(row); updateTotal(); };
+        // সংখ্যা ঘর: ইনপুট হলে (mode='count') ব্যবহারকারীর দেওয়া সংখ্যা বদলায় না; শেষ রোল হাতে বদলালে (mode='end') সংখ্যা নিজে হিসাব হয়
+        updateStudentCount = function (row) {
+            const c = row.querySelector('.student-count'), v = rowCount(row);
+            if (c) {
+                if (c.tagName === 'INPUT') { if (row.dataset.mode !== 'count') c.value = v || ''; }
+                else c.textContent = v;
+            }
+            updateTotal();
+        };
         updateTotal = function () {
             let total = 0;
             document.querySelectorAll('#schoolForms .form-row').forEach(row => {
@@ -1720,6 +1731,44 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         }
         $$('stuLoadBtn').addEventListener('click', loadStudents);
         window.fbReady.then(() => loadStudents());
+
+        // ---- শ্রেণি + শুরুর রোল + সংখ্যা দিলে শেষ রোল নিজে বসে ----
+        function endFromCount(row) {
+            const a = row.querySelector('.start-roll'), b = row.querySelector('.end-roll'), c = row.querySelector('.student-count');
+            const sel = row.querySelector('.school-select'), o = sel && sel.selectedOptions[0], k = o && o.dataset.k;
+            const start = parseInt(a.value), n = parseInt(c.value);
+            c.style.borderColor = ''; c.title = 'কতজন পরীক্ষার্থী — দিলে শেষ রোল নিজে বসবে';
+            if (isNaN(start) || isNaN(n) || n <= 0) { b.value = ''; b.classList.remove('auto'); updateTotal(); return; }
+            let end = start + n - 1;
+            if (k && st.loaded && st.map[k]) {
+                const ok = matched(k, start, n);            // মাঝের না থাকা রোল বাদ দিয়ে ক্রমানুসারে n-তম রোল
+                if (ok.length) end = ok[ok.length - 1];
+                if (ok.length < n) {
+                    c.style.borderColor = '#e0a030';
+                    c.title = 'Students-এ ' + start + ' থেকে মাত্র ' + ok.length + ' জন আছে';
+                }
+            }
+            b.value = end; b.classList.add('auto');
+            updateTotal();
+        }
+        const sf = document.getElementById('schoolForms');
+        // আগে (capture): কে বদলাল তা থেকে মোড ঠিক করি, যাতে পুরোনো inline হ্যান্ডলার সংখ্যা মুছে না দেয়
+        sf.addEventListener('input', e => {
+            const t = e.target, row = t.closest && t.closest('.form-row'); if (!row) return;
+            if (t.classList.contains('student-count')) row.dataset.mode = 'count';
+            else if (t.classList.contains('end-roll')) { row.dataset.mode = 'end'; t.classList.remove('auto'); }
+            else if (t.classList.contains('start-roll') && row.querySelector('.student-count').value && row.dataset.mode !== 'end') row.dataset.mode = 'count';
+        }, true);
+        // পরে (bubble): হিসাব
+        sf.addEventListener('input', e => {
+            const t = e.target, row = t.closest && t.closest('.form-row'); if (!row) return;
+            if (row.dataset.mode === 'count' && (t.classList.contains('student-count') || t.classList.contains('start-roll'))) endFromCount(row);
+        });
+        sf.addEventListener('change', e => {
+            const t = e.target; if (!t.classList || !t.classList.contains('school-select')) return;
+            const row = t.closest('.form-row');
+            if (row && row.dataset.mode === 'count') endFromCount(row);
+        });
 
         // সংরক্ষণের ডেটায় শ্রেণি ও বসার উপযোগী রোল যোগ (মূল ফাংশন আগের মতোই চলে)
         const _collect = collectAllData;
