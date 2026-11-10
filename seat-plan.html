@@ -407,6 +407,99 @@
         }
         .remove-range-btn:hover { background: rgba(192, 57, 43, 0.2); }
 
+        /* ===== ✨ রেঞ্জ সারি: শ্রেণি | শুরুর রোল | সিট সংখ্যা | শেষ রোল — এক লাইনে, গর্জিয়াস লুক ===== */
+        .column-input {
+            position: relative;
+            border-radius: 18px;
+            background: linear-gradient(160deg, rgba(255,255,255,.075), rgba(255,255,255,.03));
+            box-shadow: 0 14px 34px -18px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08);
+            transition: border-color .2s ease, background .2s ease, transform .2s ease, box-shadow .2s ease;
+        }
+        .column-input::before {
+            content: ""; position: absolute; left: 22px; right: 22px; top: 0; height: 2px; border-radius: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), var(--gold-soft), var(--gold), transparent);
+            opacity: .75;
+        }
+        .column-input:hover { transform: translateY(-2px); box-shadow: 0 22px 44px -18px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.1); }
+        .column-label { display: inline-flex; align-items: center; gap: 9px; font-size: 16px; letter-spacing: .2px; }
+        .column-label::before {
+            content: ""; width: 9px; height: 9px; border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #fff3cf, var(--gold));
+            box-shadow: 0 0 0 3px rgba(214,162,78,.22), 0 0 12px rgba(214,162,78,.55);
+        }
+        .add-range-btn {
+            border-radius: 999px; padding: 7px 15px;
+            background: linear-gradient(180deg, rgba(214,162,78,.18), rgba(214,162,78,.06));
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        }
+        .add-range-btn:hover { background: linear-gradient(180deg, rgba(214,162,78,.34), rgba(214,162,78,.14)); transform: translateY(-1px); }
+
+        .range-item {
+            display: grid;
+            grid-template-columns: 1fr 34px;
+            grid-template-areas: "label btn" "group group";
+            align-items: center;
+            gap: 10px 8px;
+            padding: 12px 14px 14px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,.1);
+            border-left: 3px solid var(--gold);
+            background: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+            transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .range-item:hover, .range-item:focus-within {
+            border-color: rgba(214,162,78,.5);
+            background: linear-gradient(135deg, rgba(255,255,255,.09), rgba(255,255,255,.04));
+            box-shadow: 0 8px 22px -12px rgba(0,0,0,.6), 0 0 0 1px rgba(214,162,78,.12);
+        }
+        .range-label {
+            grid-area: label; justify-self: start; min-width: 0;
+            padding: 3px 12px; border-radius: 999px;
+            font-size: 12px; font-weight: 700; letter-spacing: .2px;
+            color: #4a3208;
+            background: linear-gradient(180deg, #f6e2b0, var(--gold-soft, #e3bc6a));
+            box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        }
+        .input-group {
+            grid-area: group;
+            display: grid; width: 100%;
+            grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr);
+            gap: 8px; align-items: end;
+        }
+        .input-wrapper { display: flex; flex-direction: column; align-items: stretch; min-width: 0; }
+        .input-wrapper:has(.stu-class) { order: -1; }          /* শ্রেণি সবার আগে */
+        .stu-note { order: 10; grid-column: 1 / -1; }
+        .input-label {
+            text-align: center; margin-bottom: 5px; font-size: 11.5px; font-weight: 600;
+            color: var(--gold-soft); letter-spacing: .2px; white-space: nowrap;
+        }
+        .column-input input, .column-input select.stu-class {
+            width: 100% !important; max-width: none !important; min-width: 0; height: 38px; padding: 0 8px !important;
+            border-radius: 10px !important; font-size: 14px !important; font-family: inherit;
+            box-shadow: 0 1px 2px rgba(0,0,0,.18) inset;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .column-input select.stu-class { cursor: pointer; text-overflow: ellipsis; }
+        .column-input input:focus, .column-input select.stu-class:focus {
+            outline: none; border-color: var(--gold) !important;
+            box-shadow: 0 0 0 3px rgba(214,162,78,.3);
+        }
+        .column-input input[id^="end_roll_"] {                  /* শেষ রোল (শুধু পড়া যায়) */
+            background: linear-gradient(180deg, #fbf3e0, #f3e4bf) !important;
+            font-weight: 700; color: #5a3c0c !important; cursor: default;
+        }
+        .column-input input[id^="start_roll_"]::placeholder { color: #9aa3b4; }
+        .remove-range-btn {
+            grid-area: btn; width: 34px; height: 34px; min-width: 0; padding: 0; border-radius: 50%;
+            display: grid; place-items: center; font-size: 18px; line-height: 1;
+            transition: background .15s ease, transform .15s ease;
+        }
+        .remove-range-btn:hover { transform: rotate(90deg); }
+        @media (max-width: 520px) {
+            .input-group { grid-template-columns: 1fr 1fr; }
+            .input-wrapper:has(.stu-class) { grid-column: 1 / -1; }
+        }
+
         .submit-section {
             text-align: center;
             margin-top: 28px;
