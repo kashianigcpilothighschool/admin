@@ -688,6 +688,20 @@
             .test-btn, .print-btn { width: 100%; }
             #columnInputs { grid-template-columns: 1fr; }
         }
+    
+        /* ===== রেঞ্জ লেবেলের পাশে + ও - বাটন ===== */
+        .range-item { grid-template-columns: 1fr; grid-template-areas: "label" "group"; }
+        .range-top { grid-area: label; display: flex; align-items: center; gap: 8px; }
+        .range-top .range-label { grid-area: auto; }
+        .range-top .remove-range-btn { grid-area: auto; width: 30px; height: 30px; font-size: 18px; }
+        .range-plus-btn {
+            width: 30px; height: 30px; padding: 0; border-radius: 50%;
+            display: grid; place-items: center; font-size: 18px; font-weight: 700; line-height: 1;
+            cursor: pointer; font-family: inherit;
+            color: #9ee6bd; background: transparent; border: 1px solid rgba(158, 230, 189, 0.5);
+            transition: background .15s ease, transform .15s ease;
+        }
+        .range-plus-btn:hover { background: rgba(35, 137, 91, 0.25); transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -696,7 +710,7 @@
             <div class="exam-head">
                 <select id="examName" title="পরীক্ষার নাম">
                     <option value="">-- পরীক্ষার নাম নির্বাচন করুন --</option>
-                    <option value="অর্ধবার্ষিক পরীক্ষা">অর্ধবার্ষিক পরীক্ষা</option>
+                    <option value="অর্ধ-বার্ষিক পরীক্ষা">অর্ধ-বার্ষিক পরীক্ষা</option>
                     <option value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</option>
                     <option value="প্রাক-নির্বাচনী পরীক্ষা">প্রাক-নির্বাচনী পরীক্ষা</option>
                     <option value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</option>
@@ -1354,7 +1368,6 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 div.innerHTML = `
                     <div class="column-header">
                         <span class="column-label">${labelText}: (ক্রমানুসারে সাজানো)</span>
-                        <button type="button" class="add-range-btn" onclick="addRange('${col}')">+ রেঞ্জ যোগ করুন</button>
                     </div>
                     <div id="ranges_${col}"></div>
                 `;
@@ -1380,7 +1393,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             rangeDiv.id = 'range_' + col + '_' + rangeCounters[col];
 
             rangeDiv.innerHTML = `
-    <span class="range-label">রেঞ্জ ${container.children.length + 1}:</span>
+    <div class="range-top"><span class="range-label">রেঞ্জ ${container.children.length + 1}:</span><button type="button" class="range-plus-btn" onclick="addRange('${col}')" title="রেঞ্জ যোগ করুন">+</button><button type="button" class="remove-range-btn" onclick="removeRange('${col}', '${rangeCounters[col]}')" title="রেঞ্জ সরান">-</button></div>
     <div class="input-group">
 
         <div class="input-wrapper">
@@ -1405,9 +1418,6 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         </div>
 
     </div>
-
-    <button type="button" class="remove-range-btn"
-        onclick="removeRange('${col}', '${rangeCounters[col]}')">-</button>
 `;
 
             container.appendChild(rangeDiv);
@@ -1858,13 +1868,14 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     // আগের নির্বাচন ফিরিয়ে আনা
     try {
         const s = JSON.parse(localStorage.getItem(KEY) || '{}');
-        if (s.name) nameSel.value = s.name;
+        if (s.name) nameSel.value = (s.name === 'অর্ধবার্ষিক পরীক্ষা' ? 'অর্ধ-বার্ষিক পরীক্ষা' : s.name);
         if (s.year) yearSel.value = s.year;
         if (s.time) { addTime(s.time); timeSel.value = s.time; }
     } catch (e) {}
 
     function saveSel() {
         try { localStorage.setItem(KEY, JSON.stringify({ name: nameSel.value, year: yearSel.value, time: timeSel.value })); } catch (e) {}
+        scheduleSync();
     }
     nameSel.addEventListener('change', saveSel);
     yearSel.addEventListener('change', saveSel);
@@ -1879,6 +1890,37 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         lastTime = timeSel.value;
         saveSel();
     });
+
+    // ===== প্রিন্ট পেজের কেন্দ্রের তথ্যে (__center__) পরীক্ষার নাম ও সময় পাঠানো =====
+    // সার্ভারে থাকা বর্তমান তথ্য পড়ে শুধু exam ও time বদলানো হয়, বাকি তথ্য (কেন্দ্রের নাম, কোড ইত্যাদি) অক্ষত থাকে
+    let syncTimer = null;
+    function scheduleSync() {
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => { syncCenter().catch(e => console.warn('কেন্দ্রের তথ্য সিঙ্ক হয়নি:', e.message)); }, 1000);
+    }
+    async function syncCenter() {
+        const exam = nameSel.value ? nameSel.value + ' ' + bn(yearSel.value) : '';
+        const time = timeSel.value && timeSel.value !== '__other__' ? timeSel.value : '';
+        if (!exam && !time) return false;
+        const { api: sbApi, token } = await window.fbReady;
+        const rows = await sbApi('seatPlanList', token);
+        const cRow = (Array.isArray(rows) ? rows : []).find(r => r.id === '__center__');
+        const cur = (cRow && cRow.data && cRow.data.center) || {};
+        const next = { ...cur };
+        if (exam) next.exam = exam;
+        if (time) next.time = /[0-9০-৯]$/.test(time) ? time + 'টা' : time;   // প্রিন্ট পেজের ধরন: "সকাল ১০:০০টা"
+        if (next.exam === cur.exam && next.time === cur.time) return false;
+        await sbApi('seatPlanSave', token, '__center__', { center: next });
+        return true;
+    }
+
+    // সাবমিটের পরও একবার সিঙ্ক
+    const _fastGen = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () {
+        await _fastGen();
+        try { await syncCenter(); }
+        catch (e) { showAlert('পরীক্ষার নাম প্রিন্ট পেজে পাঠানো যায়নি: ' + e.message, 'error'); }
+    };
 
     // সাবমিটের ডেটায় পরীক্ষার নাম ও সাল যোগ করা
     const _collectExam = collectAllData;
