@@ -876,11 +876,6 @@
                     <button type="button" class="print-btn no-print" id="localTestBtn" onclick="testDataCollection()">
                         ডেটা টেস্ট করুন
                     </button>
-                </div>
-
-                <div class="toolbar-divider">অতিরিক্ত অপশন</div>
-
-                <div class="toolbar">
                     <button type="button" class="test-btn" id="adminLinkBtn" style="display:none" onclick="window.location.href='index.html'">← হাব</button>
                     <button type="button" class="test-btn" onclick="logout()">লগআউট</button>
                 </div>
@@ -1588,6 +1583,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     (function () {
         const COLS = ['C', 'D', 'F', 'G', 'I', 'J'];
         const st = { map: {}, keys: [], loaded: false };
+        window.__stu = { st: st, matched: function (k, a, c) { return matched(k, a, c); }, prefixOf: function (k) { return prefixOf(k); } };
         const $$ = id => document.getElementById(id);
         const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 
@@ -1914,6 +1910,138 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         d.examTitle = (nameSel.value ? nameSel.value + ' ' : '') + bn(yearSel.value);
         return d;
     };
+})();
+</script>
+<script>
+// ===== পরের রোল: যে রোল একবার ব্যবহার হয়েছে, তার পরের রোল পরবর্তী রুম/রেঞ্জের জন্য দেখাবে =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const fmt = (key, roll) => window.__stu.prefixOf(key) + '-' + String(roll).padStart(3, '0');
+    let savedRows = [];
+
+    async function loadSaved() {
+        try {
+            const { api: sbApi, token } = await window.fbReady;
+            const rows = await sbApi('seatPlanList', token);
+            savedRows = Array.isArray(rows) ? rows : [];
+        } catch (e) { console.warn('সংরক্ষিত রুমের রোল পড়া যায়নি:', e.message); }
+    }
+    function currentRoomId() {
+        return [$('buildingSelect').value, $('floorSelect').value, $('roomNumber').value]
+            .map(s => String(s).trim()).join('_').replace(/[\/\s]+/g, '-');
+    }
+    // অন্য সংরক্ষিত রুমে ব্যবহৃত রোল (এই রুম বাদে)
+    function usedSaved(key) {
+        const me = currentRoomId(), out = [];
+        savedRows.forEach(r => {
+            if (!r || r.id === '__center__' || r.id === me || !r.data) return;
+            (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
+                if (rg.classKey === key && Array.isArray(rg.rolls)) rg.rolls.forEach(x => out.push(x));
+            }));
+        });
+        return out;
+    }
+    // এই ফর্মের অন্য রেঞ্জে ব্যবহৃত রোল
+    function usedInForm(key, self) {
+        const out = [];
+        document.querySelectorAll('#columnInputs .range-item').forEach(div => {
+            if (div === self) return;
+            const sel = div.querySelector('.stu-class');
+            if (!sel || sel.value !== key) return;
+            const a = parseInt(div.querySelector('input[id^="start_roll_"]').value);
+            const c = parseInt(div.querySelector('input[id^="seat_count_"]').value);
+            if (isNaN(a) || isNaN(c) || c <= 0) return;
+            window.__stu.matched(key, a, c).forEach(x => out.push(x));
+        });
+        return out;
+    }
+    // সর্বোচ্চ ব্যবহৃত রোলের পরের রোল (Students-এ যেটি আছে)
+    function nextRoll(key, self) {
+        const st = window.__stu.st;
+        if (!st.loaded || !st.map[key]) return undefined;
+        const all = [...st.map[key].rolls].sort((a, b) => a - b);
+        const used = usedSaved(key).concat(usedInForm(key, self));
+        if (!used.length) return all[0];
+        const mx = Math.max.apply(null, used);
+        return all.find(r => r > mx) || null;   // null = সব রোল শেষ
+    }
+    function fillStart(div, auto) {
+        const sel = div.querySelector('.stu-class'), a = div.querySelector('input[id^="start_roll_"]');
+        if (!sel || !a || !sel.value) return;
+        const nx = nextRoll(sel.value, div);
+        if (!nx) return;
+        a.value = nx;
+        if (auto) a.dataset.autoRoll = '1';
+        a.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    function hintOf(div) {
+        let h = div.querySelector('.next-hint');
+        if (!h) {
+            h = document.createElement('div'); h.className = 'next-hint';
+            h.style.cssText = 'flex-basis:100%;font-size:11.5px;line-height:1.6;color:#F1E2C3';
+            const g = div.querySelector('.input-group'); if (g) g.appendChild(h);
+        }
+        return h;
+    }
+    function updateHint(div) {
+        const sel = div.querySelector('.stu-class'); if (!sel) return;
+        const h = hintOf(div), key = sel.value;
+        h.textContent = '';
+        if (!key) return;
+        const nx = nextRoll(key, div);
+        if (nx === undefined) return;
+        if (nx === null) { h.textContent = '✔ এই শ্রেণির সব রোল আগের রুমগুলোতে ব্যবহার হয়ে গেছে'; return; }
+        const a = div.querySelector('input[id^="start_roll_"]');
+        if (parseInt(a.value) === nx) { h.textContent = '➡ পরের অব্যবহৃত রোল: ' + fmt(key, nx) + ' (বসানো আছে)'; return; }
+        h.appendChild(document.createTextNode('➡ পরের অব্যবহৃত রোল: ' + fmt(key, nx) + ' '));
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = 'শুরুর রোলে বসান';
+        b.style.cssText = 'padding:2px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-size:11px;cursor:pointer';
+        b.onclick = () => { fillStart(div, true); updateAll(); };
+        h.appendChild(b);
+    }
+    function updateAll() { document.querySelectorAll('#columnInputs .range-item').forEach(updateHint); }
+
+    const ci = $('columnInputs');
+    // শ্রেণি বাছলে শুরুর রোল ফাঁকা থাকলে নিজে বসবে (d/D লেখা থাকলে বসবে না)
+    ci.addEventListener('change', e => {
+        const t = e.target; if (!t.classList || !t.classList.contains('stu-class')) return;
+        const div = t.closest('.range-item'), a = div.querySelector('input[id^="start_roll_"]');
+        if (a && !String(a.value).trim()) fillStart(div, true);
+        setTimeout(updateAll, 0);
+    });
+    // হাতে শুরুর রোল লিখলে স্বয়ংক্রিয় চিহ্ন উঠে যাবে
+    ci.addEventListener('input', e => {
+        const t = e.target;
+        if (t.id && t.id.indexOf('start_roll_') === 0 && e.isTrusted) delete t.dataset.autoRoll;
+        setTimeout(updateAll, 0);
+    });
+    // রুম বদলালে (পরের রুম) স্বয়ংক্রিয়ভাবে বসানো রেঞ্জগুলো নতুন "পরের রোল"-এ বদলাবে
+    function onRoomChange() {
+        document.querySelectorAll('#columnInputs .range-item').forEach(div => {
+            const a = div.querySelector('input[id^="start_roll_"]');
+            if (a && a.dataset.autoRoll === '1') fillStart(div, true);
+        });
+        updateAll();
+    }
+    ['roomNumber', 'buildingSelect', 'floorSelect'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', onRoomChange); });
+
+    // সাবমিটের পর সংরক্ষিত তালিকা নতুন করে পড়ে "পরের রোল" হালনাগাদ
+    const _fgen = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () {
+        await _fgen();
+        await loadSaved();
+        updateAll();
+    };
+    // নতুন রেঞ্জ যোগ হলে হিন্ট ঠিক করা
+    const _ar = addRange;
+    addRange = function (col) { _ar(col); setTimeout(updateAll, 0); };
+
+    window.fbReady.then(loadSaved).then(() => {
+        const t = setInterval(() => { if (window.__stu.st.loaded) { clearInterval(t); updateAll(); } }, 400);
+        setTimeout(() => clearInterval(t), 20000);
+    });
 })();
 </script>
 </body>
