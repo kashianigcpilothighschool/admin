@@ -83,6 +83,22 @@
             color: var(--gold-soft);
             font-size: 14px;
         }
+        .exam-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .exam-head select {
+            font-family: 'Noto Serif Bengali', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--navy-dark);
+            background: #fff;
+            border: 1.5px solid var(--gold);
+            border-radius: var(--radius-sm);
+            padding: 8px 14px;
+            cursor: pointer;
+        }
+        .exam-head select:focus { outline: none; box-shadow: 0 0 0 4px rgba(214, 162, 78, 0.35); }
+        #examName { flex: 1; min-width: 220px; }
+        #examYear { width: 130px; }
+        @media (max-width: 768px) { #examYear { width: 100%; } }
 
         .body-pad { padding: 22px 44px 8px; }
 
@@ -674,7 +690,16 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>পরীক্ষা কক্ষের তথ্য</h1>
+            <div class="exam-head">
+                <select id="examName" title="পরীক্ষার নাম">
+                    <option value="">-- পরীক্ষার নাম নির্বাচন করুন --</option>
+                    <option value="অর্ধবার্ষিক পরীক্ষা">অর্ধবার্ষিক পরীক্ষা</option>
+                    <option value="বার্ষিক পরীক্ষা">বার্ষিক পরীক্ষা</option>
+                    <option value="প্রাক-নির্বাচনী পরীক্ষা">প্রাক-নির্বাচনী পরীক্ষা</option>
+                    <option value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</option>
+                </select>
+                <select id="examYear" title="সাল"></select>
+            </div>
         </div>
 
         <div class="body-pad">
@@ -1792,5 +1817,43 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         };
     })();
     </script>
+<script>
+(function () {
+    const KEY = 'seatplan_exam';
+    const nameSel = document.getElementById('examName');
+    const yearSel = document.getElementById('examYear');
+    const bn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+
+    // সাল: গত বছর থেকে আগামী ২ বছর
+    const cy = new Date().getFullYear();
+    for (let y = cy - 1; y <= cy + 2; y++) {
+        yearSel.insertAdjacentHTML('beforeend', `<option value="${y}">${bn(y)}</option>`);
+    }
+    yearSel.value = String(cy);
+
+    // আগের নির্বাচন ফিরিয়ে আনা
+    try {
+        const s = JSON.parse(localStorage.getItem(KEY) || '{}');
+        if (s.name) nameSel.value = s.name;
+        if (s.year) yearSel.value = s.year;
+    } catch (e) {}
+
+    function saveSel() {
+        try { localStorage.setItem(KEY, JSON.stringify({ name: nameSel.value, year: yearSel.value })); } catch (e) {}
+    }
+    nameSel.addEventListener('change', saveSel);
+    yearSel.addEventListener('change', saveSel);
+
+    // সাবমিটের ডেটায় পরীক্ষার নাম ও সাল যোগ করা
+    const _collectExam = collectAllData;
+    collectAllData = function () {
+        const d = _collectExam();
+        d.examName = nameSel.value;
+        d.examYear = yearSel.value;
+        d.examTitle = (nameSel.value ? nameSel.value + ' ' : '') + bn(yearSel.value);
+        return d;
+    };
+})();
+</script>
 </body>
 </html>
