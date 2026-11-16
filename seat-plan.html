@@ -98,7 +98,10 @@
         .exam-head select:focus { outline: none; box-shadow: 0 0 0 4px rgba(214, 162, 78, 0.35); }
         #examName { flex: 1; min-width: 220px; }
         #examYear { width: 130px; }
-        @media (max-width: 768px) { #examYear { width: 100%; } }
+        .exam-time { display: flex; align-items: center; gap: 8px; }
+        .exam-time label { color: var(--gold-soft); font-size: 15px; font-weight: 600; white-space: nowrap; }
+        #examTime { width: 170px; }
+        @media (max-width: 768px) { #examYear, #examTime { width: 100%; } .exam-time { width: 100%; } }
 
         .body-pad { padding: 22px 44px 8px; }
 
@@ -699,6 +702,17 @@
                     <option value="নির্বাচনী পরীক্ষা">নির্বাচনী পরীক্ষা</option>
                 </select>
                 <select id="examYear" title="সাল"></select>
+                <div class="exam-time">
+                    <label for="examTime">পরীক্ষা শুরুর সময়:</label>
+                    <select id="examTime" title="পরীক্ষা শুরুর সময়">
+                        <option value="">-- সময় --</option>
+                        <option value="সকাল ৯:৪৫">সকাল ৯:৪৫</option>
+                        <option value="সকাল ১০:০০">সকাল ১০:০০</option>
+                        <option value="দুপুর ১:৪৫">দুপুর ১:৪৫</option>
+                        <option value="দুপুর ২:০০">দুপুর ২:০০</option>
+                        <option value="__other__">✏️ অন্যান্য (নিজে লিখুন)</option>
+                    </select>
+                </div>
             </div>
         </div>
 
@@ -1822,6 +1836,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     const KEY = 'seatplan_exam';
     const nameSel = document.getElementById('examName');
     const yearSel = document.getElementById('examYear');
+    const timeSel = document.getElementById('examTime');
     const bn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 
     // সাল: গত বছর থেকে আগামী ২ বছর
@@ -1831,18 +1846,39 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     }
     yearSel.value = String(cy);
 
+    // তালিকায় না থাকা সময় (নিজে লেখা) অপশন হিসেবে যোগ করা
+    function addTime(t) {
+        if (!t || t === '__other__') return;
+        if ([...timeSel.options].some(o => o.value === t)) return;
+        const o = document.createElement('option');
+        o.value = o.textContent = t;
+        timeSel.insertBefore(o, timeSel.querySelector('option[value="__other__"]'));
+    }
+
     // আগের নির্বাচন ফিরিয়ে আনা
     try {
         const s = JSON.parse(localStorage.getItem(KEY) || '{}');
         if (s.name) nameSel.value = s.name;
         if (s.year) yearSel.value = s.year;
+        if (s.time) { addTime(s.time); timeSel.value = s.time; }
     } catch (e) {}
 
     function saveSel() {
-        try { localStorage.setItem(KEY, JSON.stringify({ name: nameSel.value, year: yearSel.value })); } catch (e) {}
+        try { localStorage.setItem(KEY, JSON.stringify({ name: nameSel.value, year: yearSel.value, time: timeSel.value })); } catch (e) {}
     }
     nameSel.addEventListener('change', saveSel);
     yearSel.addEventListener('change', saveSel);
+    let lastTime = timeSel.value;
+    timeSel.addEventListener('change', function () {
+        if (timeSel.value === '__other__') {
+            const t = (prompt('পরীক্ষা শুরুর সময় লিখুন (যেমন: সকাল ১০:১৫):') || '').trim();
+            if (!t) { timeSel.value = lastTime; return; }
+            addTime(t);
+            timeSel.value = t;
+        }
+        lastTime = timeSel.value;
+        saveSel();
+    });
 
     // সাবমিটের ডেটায় পরীক্ষার নাম ও সাল যোগ করা
     const _collectExam = collectAllData;
@@ -1850,6 +1886,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         const d = _collectExam();
         d.examName = nameSel.value;
         d.examYear = yearSel.value;
+        d.examStartTime = timeSel.value;
         d.examTitle = (nameSel.value ? nameSel.value + ' ' : '') + bn(yearSel.value);
         return d;
     };
