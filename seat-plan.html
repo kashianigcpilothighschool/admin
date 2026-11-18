@@ -8,6 +8,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ===== সোলেমানলিপি ফন্ট: পিসিতে ইনস্টল থাকলে সেটি, নইলে ফাইলের পাশের SolaimanLipi.ttf ===== */
+        @font-face {
+            font-family: 'SolaimanLipi';
+            src: local('SolaimanLipi'), local('Solaiman Lipi'), local('SolaimanLipi Regular'),
+                 url('SolaimanLipi.ttf') format('truetype'),
+                 url('fonts/SolaimanLipi.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        button, input, select, textarea, option { font-family: inherit; }
+
         :root {
             --navy: #1D2B4F;
             --navy-dark: #101A33;
@@ -38,7 +50,7 @@
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Hind Siliguri', 'SolaimanLipi', 'Kalpurush', sans-serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', 'Kalpurush', sans-serif;
             margin: 0;
             padding: 32px 16px 60px;
             background: radial-gradient(circle at top, #FDFCF9 0%, var(--paper) 55%);
@@ -71,7 +83,7 @@
             background: linear-gradient(90deg, var(--gold), var(--gold-bright) 40%, transparent);
         }
         .header h1 {
-            font-family: 'Noto Serif Bengali', serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', serif;
             color: #fff;
             margin: 0 0 4px;
             font-size: 22px;
@@ -85,7 +97,7 @@
         }
         .exam-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .exam-head select {
-            font-family: 'Noto Serif Bengali', serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', serif;
             font-size: 18px;
             font-weight: 600;
             color: var(--navy-dark);
@@ -120,7 +132,7 @@
             border-radius: 10px;
             background: var(--navy);
             color: #fff;
-            font-family: 'Noto Serif Bengali', serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', serif;
             font-weight: 600;
             font-size: 14px;
             display: flex;
@@ -130,7 +142,7 @@
         }
         .section-heading h3 {
             margin: 0;
-            font-family: 'Noto Serif Bengali', serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', serif;
             font-size: 18px;
             font-weight: 600;
             color: var(--navy);
@@ -324,7 +336,7 @@
         .seat-plan-header { margin-bottom: 22px; }
         .seat-plan-header h2 {
             margin: 0 0 6px;
-            font-family: 'Noto Serif Bengali', serif;
+            font-family: 'SolaimanLipi', 'Hind Siliguri', serif;
             font-size: 22px;
             font-weight: 600;
             color: #fff;
@@ -831,6 +843,7 @@
                             <option value="ব্যবসায় শিক্ষা">ব্যবসায় শিক্ষা</option>
                             <option value="বিজ্ঞান ও মানবিক">বিজ্ঞান ও মানবিক</option>
                             <option value="সকল বিভাগ">সকল বিভাগ</option>
+                            <option value="প্রযোজ্য নয়">প্রযোজ্য নয়</option>
                         </select>
                     </div>
                     <div class="info-item">
@@ -2423,9 +2436,69 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         return [i.building, i.floor, sh].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
     }
 
-    // ---- ড্রপডাউন ডায়ালগ: শিফট (সকাল / দুপুর-বিকাল) → সেই শিফটের কক্ষ ----
-    const SH_LABEL = { morning: '🌅 সকাল', noon: '☀️ দুপুর / বিকাল' };
+    // ---- আধুনিক এডিট ডায়ালগ: শিফট → কক্ষ (ড্রপডাউন) → তথ্যের প্রিভিউ ----
+    const SH_ICON = { morning: '🌅', noon: '☀️' };
+    const SH_TXT = { morning: 'সকাল', noon: 'দুপুর / বিকাল' };
     const numOf = r => parseInt(en((r.data.roomInfo || {}).roomNumber), 10) || 0;
+    const stuOf = r => {
+        const t = r.data.totals && r.data.totals.totalStudents;
+        if (t != null) return t;
+        let n = 0;
+        (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(g => { if (Array.isArray(g.rolls)) n += g.rolls.length; }));
+        return n;
+    };
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function injectCss() {
+        if ($('editDlgCss')) return;
+        const st = document.createElement('style');
+        st.id = 'editDlgCss';
+        st.textContent = `
+        #editDlg{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;
+            background:rgba(16,26,51,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:edFade .18s ease}
+        #editDlg .ed-box{width:100%;max-width:420px;background:var(--surface,#fff);color:var(--ink,#1E2330);border-radius:20px;overflow:hidden;
+            box-shadow:0 24px 60px rgba(16,26,51,.45);animation:edPop .22s cubic-bezier(.2,.9,.3,1.2);font-family:inherit}
+        #editDlg .ed-head{position:relative;padding:20px 22px 18px;color:#fff;background:linear-gradient(135deg,var(--navy-dark,#101A33),var(--navy-soft,#33456F))}
+        #editDlg .ed-head h3{margin:0;font-size:19px;font-weight:700;font-family:'SolaimanLipi','Hind Siliguri',serif}
+        #editDlg .ed-head p{margin:3px 0 0;font-size:12.5px;color:var(--gold-soft,#F1E2C3);opacity:.9}
+        #editDlg .ed-x{position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;
+            background:rgba(255,255,255,.14);color:#fff;font-size:16px;line-height:1;transition:background .15s}
+        #editDlg .ed-x:hover{background:rgba(255,255,255,.28)}
+        #editDlg .ed-body{padding:20px 22px 6px}
+        #editDlg .ed-lbl{display:block;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink-soft,#6B7280);margin:0 0 7px}
+        #editDlg .ed-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:var(--navy-tint,#EEF1F8);margin-bottom:18px}
+        #editDlg .ed-seg button{border:0;background:transparent;padding:10px 8px;border-radius:9px;cursor:pointer;font-family:inherit;
+            font-size:14.5px;font-weight:600;color:var(--ink-soft,#6B7280);transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px}
+        #editDlg .ed-seg button.on{background:#fff;color:var(--navy,#1D2B4F);box-shadow:0 2px 8px rgba(16,24,40,.12)}
+        #editDlg .ed-seg small{font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--navy-tint,#EEF1F8);color:var(--navy-soft,#33456F)}
+        #editDlg .ed-seg button.on small{background:var(--gold-soft,#F1E2C3);color:var(--gold,#B9822E)}
+        #editDlg .ed-sel{position:relative;margin-bottom:16px}
+        #editDlg .ed-sel select{width:100%;appearance:none;-webkit-appearance:none;padding:13px 40px 13px 14px;border-radius:12px;
+            border:1.5px solid var(--border,#E4E0D4);background:#fff;color:var(--ink,#1E2330);font-family:inherit;font-size:15px;font-weight:500;
+            cursor:pointer;transition:border-color .15s,box-shadow .15s}
+        #editDlg .ed-sel select:focus{outline:0;border-color:var(--gold,#B9822E);box-shadow:0 0 0 4px rgba(185,130,46,.15)}
+        #editDlg .ed-sel::after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;margin-top:-6px;
+            border-right:2px solid var(--ink-soft,#6B7280);border-bottom:2px solid var(--ink-soft,#6B7280);transform:rotate(45deg);pointer-events:none}
+        #editDlg .ed-prev{border:1px solid var(--border-soft,#EDEAE0);background:var(--paper,#FAF9F5);border-radius:14px;padding:14px;margin-bottom:6px;min-height:92px}
+        #editDlg .ed-prev .t{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+        #editDlg .ed-prev .t b{font-size:16px;color:var(--navy,#1D2B4F)}
+        #editDlg .ed-badge{font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:99px;background:var(--success-bg,#E7F6EE);color:var(--success,#23895B)}
+        #editDlg .ed-chips{display:flex;flex-wrap:wrap;gap:6px}
+        #editDlg .ed-chips span{font-size:12.5px;padding:4px 10px;border-radius:8px;background:#fff;border:1px solid var(--border,#E4E0D4);color:var(--ink,#1E2330)}
+        #editDlg .ed-empty{display:grid;place-items:center;height:64px;color:var(--ink-faint,#9CA3AF);font-size:13.5px}
+        #editDlg .ed-foot{display:flex;gap:10px;padding:16px 22px 20px}
+        #editDlg .ed-foot button{flex:1;padding:13px;border-radius:12px;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;border:0;transition:filter .15s,transform .1s}
+        #editDlg .ed-cancel{background:var(--navy-tint,#EEF1F8);color:var(--navy,#1D2B4F)}
+        #editDlg .ed-go{flex:1.6!important;background:linear-gradient(135deg,var(--gold-bright,#D6A24E),var(--gold,#B9822E));color:var(--navy-dark,#101A33);box-shadow:0 8px 20px rgba(185,130,46,.28)}
+        #editDlg .ed-foot button:hover:not(:disabled){filter:brightness(1.05)}
+        #editDlg .ed-foot button:active:not(:disabled){transform:scale(.98)}
+        #editDlg .ed-go:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+        @keyframes edFade{from{opacity:0}to{opacity:1}}
+        @keyframes edPop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+        @media (max-width:480px){#editDlg{align-items:flex-end;padding:0}#editDlg .ed-box{max-width:none;border-radius:20px 20px 0 0}}
+        @media (prefers-reduced-motion:reduce){#editDlg,#editDlg .ed-box{animation:none}}`;
+        document.head.appendChild(st);
+    }
 
     window.openEditRoom = async function () {
         if ($('editDlg')) return;
@@ -2444,55 +2517,78 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         if (btn) btn.disabled = false;
         if (!rows.length) { showAlert('কোনো সংরক্ষিত কক্ষ পাওয়া যায়নি!', 'error'); return; }
 
+        injectCss();
+        const count = { morning: 0, noon: 0 };
+        rows.forEach(r => { count[window.shiftOfRow(r)]++; });
+        let shift = window.currentShift() || (count.morning ? 'morning' : 'noon');
+
         const ov = document.createElement('div');
         ov.id = 'editDlg';
-        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
-        const st = 'width:100%;padding:10px;border-radius:8px;border:1.5px solid #bbb;font-family:inherit;font-size:15px;margin:4px 0 12px;background:#fff;color:#1E2330';
+        ov.setAttribute('role', 'dialog');
+        ov.setAttribute('aria-modal', 'true');
         ov.innerHTML =
-            '<div style="background:#fff;color:#1E2330;border-radius:14px;padding:20px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.4)">' +
-            '<div style="font-weight:700;font-size:17px;margin-bottom:12px">কক্ষের তথ্য এডিট করুন</div>' +
-            '<label style="font-size:13px">শিফট</label>' +
-            '<select id="editShift" style="' + st + '"><option value="morning">' + SH_LABEL.morning + '</option><option value="noon">' + SH_LABEL.noon + '</option></select>' +
-            '<label style="font-size:13px">কক্ষ নং</label>' +
-            '<select id="editRoomSel" style="' + st + '"></select>' +
-            '<div style="display:flex;gap:8px;justify-content:flex-end">' +
-            '<button type="button" id="editCancel" style="padding:9px 16px;border-radius:8px;border:1px solid #bbb;background:#f3f3f3;cursor:pointer;font-family:inherit">বাতিল</button>' +
-            '<button type="button" id="editLoad" style="padding:9px 18px;border-radius:8px;border:0;background:#1E2330;color:#fff;cursor:pointer;font-family:inherit">লোড করুন</button>' +
-            '</div></div>';
+            '<div class="ed-box">' +
+              '<div class="ed-head"><h3>কক্ষের তথ্য এডিট করুন</h3><p>শিফট ও কক্ষ বেছে নিন</p>' +
+              '<button type="button" class="ed-x" aria-label="বন্ধ করুন">✕</button></div>' +
+              '<div class="ed-body">' +
+                '<span class="ed-lbl">শিফট</span>' +
+                '<div class="ed-seg">' + ['morning', 'noon'].map(k =>
+                    '<button type="button" data-sh="' + k + '">' + SH_ICON[k] + ' ' + SH_TXT[k] + ' <small>' + bn(count[k]) + '</small></button>').join('') + '</div>' +
+                '<label class="ed-lbl" for="editRoomSel">কক্ষ নং</label>' +
+                '<div class="ed-sel"><select id="editRoomSel"></select></div>' +
+                '<div class="ed-prev" id="editPrev"></div>' +
+              '</div>' +
+              '<div class="ed-foot"><button type="button" class="ed-cancel">বাতিল</button>' +
+              '<button type="button" class="ed-go" id="editLoad">তথ্য লোড করুন</button></div>' +
+            '</div>';
         document.body.appendChild(ov);
 
-        const shSel = $('editShift'), roomSel = $('editRoomSel');
-        shSel.value = window.currentShift() || 'morning';
+        const roomSel = $('editRoomSel'), prev = $('editPrev'), go = $('editLoad');
+        let current = [];
 
-        function fillRooms() {
-            const sh = shSel.value;
-            const list = rows.filter(r => window.shiftOfRow(r) === sh).sort((x, y) => numOf(x) - numOf(y));
-            roomSel.innerHTML = list.length
-                ? list.map(r => {
-                    const i = r.data.roomInfo;
-                    const t = bn(en(i.roomNumber)) + ' নং কক্ষ — ' + [i.building, i.floor].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
-                    return '<option value="' + String(r.id).replace(/"/g, '&quot;') + '">' + t + '</option>';
-                }).join('')
-                : '<option value="">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</option>';
-            $('editLoad').disabled = !list.length;
+        function showPrev() {
+            const r = current.find(x => x.id === roomSel.value);
+            if (!r) { prev.innerHTML = '<div class="ed-empty">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</div>'; go.disabled = true; return; }
+            go.disabled = false;
+            const i = r.data.roomInfo;
+            const chips = [i.building, i.floor, i.gender, i.department, i.direction && i.direction !== 'নির্বাচিত নয়' ? i.direction : '']
+                .map(x => String(x || '').trim()).filter(Boolean).map(x => '<span>' + esc(x) + '</span>').join('');
+            prev.innerHTML = '<div class="t"><b>' + bn(esc(en(i.roomNumber))) + ' নং কক্ষ</b><span class="ed-badge">' + bn(stuOf(r)) + ' জন পরীক্ষার্থী</span></div>' +
+                '<div class="ed-chips">' + chips + '</div>';
         }
-        shSel.addEventListener('change', fillRooms);
+        function fillRooms() {
+            ov.querySelectorAll('.ed-seg button').forEach(b => b.classList.toggle('on', b.dataset.sh === shift));
+            current = rows.filter(r => window.shiftOfRow(r) === shift).sort((x, y) => numOf(x) - numOf(y));
+            roomSel.innerHTML = current.length
+                ? current.map(r => '<option value="' + esc(r.id) + '">' + bn(esc(en(r.data.roomInfo.roomNumber))) + ' নং কক্ষ</option>').join('')
+                : '<option value="">— কোনো কক্ষ নেই —</option>';
+            showPrev();
+        }
+        ov.querySelector('.ed-seg').addEventListener('click', e => {
+            const b = e.target.closest('button'); if (!b) return;
+            shift = b.dataset.sh; fillRooms();
+        });
+        roomSel.addEventListener('change', showPrev);
         fillRooms();
 
-        const close = () => ov.remove();
-        $('editCancel').onclick = close;
-        ov.addEventListener('click', e => { if (e.target === ov) close(); });
-        $('editLoad').onclick = () => {
-            const pick = rows.find(r => r.id === roomSel.value);
+        const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+        const onKey = e => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', onKey);
+        ov.querySelector('.ed-x').onclick = close;
+        ov.querySelector('.ed-cancel').onclick = close;
+        ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+
+        go.onclick = () => {
+            const pick = current.find(r => r.id === roomSel.value);
             if (!pick) return;
             fill(pick.data);
             try { if (typeof updateAll === 'function') updateAll(); } catch (e) {}
             close();
-            const rn = bn(en(pick.data.roomInfo.roomNumber));
-            showAlert(rn + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
+            showAlert(bn(en(pick.data.roomInfo.roomNumber)) + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
             log('এডিটের জন্য লোড: ' + pick.id, 'success');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
+        roomSel.focus();
     };
 })();
 </script>
