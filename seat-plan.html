@@ -966,7 +966,7 @@
                     <button type="button" class="print-btn no-print" id="editPrintBtn" onclick="openEditRoom()" title="কক্ষ নম্বর দিয়ে সংরক্ষিত তথ্য ফর্মে ফিরিয়ে আনুন">
                         এডিট
                     </button>
-                    <button type="button" class="print-btn no-print" id="localTestBtn" onclick="testDataCollection()">
+                    <button type="button" class="print-btn no-print" id="localTestBtn" style="display:none" onclick="testDataCollection()">
                         ডেটা টেস্ট করুন
                     </button>
                     <button type="button" class="test-btn" id="adminLinkBtn" style="display:none" onclick="window.location.href='index.html'">← হাব</button>
@@ -1145,6 +1145,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 
                 await sbApi('seatPlanSave', token, roomId, { ...allData, roomId: roomId });
 
+                window.__seatSaved = true;   // সফল হলে অটো রিফ্রেশের জন্য ফ্ল্যাগ
                 showAlert('সিট প্লান সফলভাবে সংরক্ষিত হয়েছে!', 'success');
                 log('সফল: seatPlans/' + roomId, 'success');
             } catch (error) {
@@ -2589,6 +2590,22 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         roomSel.focus();
+    };
+})();
+</script>
+<script>
+// ===== সাবমিট সফল হলে পেজ অটো রিফ্রেশ =====
+(function () {
+    const AUTO_REFRESH_DELAY = 1500;   // মিলিসেকেন্ড — সফল বার্তা দেখানোর সময়
+    const _orig = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () {
+        window.__seatSaved = false;
+        await _orig();
+        if (window.__seatSaved) {
+            const btn = document.getElementById('submitBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'রিফ্রেশ হচ্ছে...'; }
+            setTimeout(function () { location.reload(); }, AUTO_REFRESH_DELAY);
+        }
     };
 })();
 </script>
