@@ -909,6 +909,13 @@
   .page .plan-title, .page table.info, .page .building { box-shadow:0 6px 16px rgba(29,43,79,.12); }
   .page table.info { box-shadow:0 6px 16px rgba(29,43,79,.10); }
 }
+
+  /* ===== শিফট বদলানোর বাটন ===== */
+  #shiftSeg[hidden] { display:none; }
+  #shiftSeg button { cursor:pointer; white-space:nowrap; }
+  #shiftSeg button.on, #shiftSeg button.on:hover:not(:disabled) { background:#1d2b4f !important; color:#fff !important; }
+  #shiftSeg button.on .badge { background:rgba(255,255,255,.22) !important; color:#fff !important; }
+  @media print { #shiftSeg { display:none !important; } }
 </style>
 </head>
 <body>
@@ -969,6 +976,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       এডিট
     </button>
+    <div class="seg shiftseg" id="shiftSeg" role="group" aria-label="শিফট বেছে নিন" hidden></div>
     <div class="seg" role="group" aria-label="একসাথে অনেক কক্ষ প্রিন্ট">
       <button id="btnAll" onclick="printAll()">সব কক্ষ <span class="badge" id="cntAll">০</span></button>
     </div>
@@ -1238,6 +1246,22 @@ async function refreshCounts() {
   } catch (e) { console.warn('Students থেকে সংখ্যা গোনা যায়নি; সংরক্ষিত সংখ্যাই থাকবে:', e.message); }
 }
 
+// ---- শিফট বদলানোর বাটন (সব | Morning | Noon) ----
+function renderShiftSeg(cnt, active) {
+  const box = $('shiftSeg'); if (!box) return;
+  const items = [['', 'সব'], ['morning', '🌅 Morning'], ['noon', '☀️ Noon']];
+  box.innerHTML = items.map(([k, t]) =>
+    `<button type="button" data-shift="${k}" class="${k === active ? 'on' : ''}" aria-pressed="${k === active}" title="${cnt[k].n} কক্ষ • ${cnt[k].s} জন">${t} <span class="badge">${bn(cnt[k].n)}</span></button>`).join('');
+  box.hidden = false;
+  box.onclick = e => {
+    const b = e.target.closest('button'); if (!b || b.dataset.shift === active) return;
+    const u = new URL(location.href);
+    if (b.dataset.shift) u.searchParams.set('shift', b.dataset.shift); else u.searchParams.delete('shift');
+    u.searchParams.delete('room'); u.searchParams.delete('edit');
+    location.href = u.href;
+  };
+}
+
 async function loadPlans() {
   const rows = await api('seatPlanList', TOKEN);
   const allRows = Array.isArray(rows) ? rows : [];
@@ -1248,26 +1272,33 @@ async function loadPlans() {
   }
   plans = allRows.filter(r => r.id !== '__center__').map(r => ({ ...(r.data || {}), id: r.id, updatedAt: r.updatedAt || null }));
 
-  // ?shift=morning|noon হলে শুধু সেই কার্ডের (শিফটের) কক্ষ দেখাবে ও প্রিন্ট হবে
-  const wantShift = new URLSearchParams(location.search).get('shift');
-  if (wantShift === 'morning' || wantShift === 'noon') {
-    const enD = x => String(x).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
-    const shiftOfTime = t => {
-      t = String(t || '').trim(); if (!t) return '';
-      if (/^(সকাল|ভোর)/.test(t)) return 'morning';
-      if (/^(দুপুর|বিকাল|বিকেল|অপরাহ্ণ|অপরাহ্ন|বেলা)/.test(t)) return 'noon';
-      const m = enD(t).match(/(\d{1,2})/); if (!m) return '';
-      const h = parseInt(m[1], 10); return (h >= 12 || h <= 5) ? 'noon' : 'morning';
-    };
-    plans = plans.filter(p => (p.shift || shiftOfTime(p.examStartTime) || 'morning') === wantShift);
-    window.__shiftLabel = wantShift === 'morning' ? 'Morning (সকাল)' : 'Noon (দুপুর)';
+  await refreshCounts();   // শ্রেণির সংখ্যা Students টেবিল থেকে গুনে প্রকৃত সংখ্যা বসানো
+
+  // ---- শিফট (Morning / Noon): ?shift=morning|noon হলে শুধু সেই কার্ডের কক্ষ ----
+  const enD = x => String(x).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+  const shiftOfTime = t => {
+    t = String(t || '').trim(); if (!t) return '';
+    if (/^(সকাল|ভোর)/.test(t)) return 'morning';
+    if (/^(দুপুর|বিকাল|বিকেল|অপরাহ্ণ|অপরাহ্ন|বেলা)/.test(t)) return 'noon';
+    const m = enD(t).match(/(\d{1,2})/); if (!m) return '';
+    const h = parseInt(m[1], 10); return (h >= 12 || h <= 5) ? 'noon' : 'morning';
+  };
+  const shiftOfPlan = q => q.shift || shiftOfTime(q.examStartTime) || 'morning';
+  const wantShift = ['morning', 'noon'].includes(new URLSearchParams(location.search).get('shift')) ? new URLSearchParams(location.search).get('shift') : '';
+  const SH_NAME = { morning: 'Morning (সকাল)', noon: 'Noon (দুপুর)' };
+  const cnt = { '': { n: plans.length, s: 0 }, morning: { n: 0, s: 0 }, noon: { n: 0, s: 0 } };
+  plans.forEach(q => { const k = shiftOfPlan(q), st = Number(q.totals?.totalStudents) || 0; cnt[k].n++; cnt[k].s += st; cnt[''].s += st; });
+  renderShiftSeg(cnt, wantShift);
+  if (wantShift) {
+    plans = plans.filter(q => shiftOfPlan(q) === wantShift);
+    window.__shiftLabel = SH_NAME[wantShift];
+    document.title = 'সিট প্লান প্রিন্ট — ' + SH_NAME[wantShift];
+    $('btnAll').title = SH_NAME[wantShift] + '-এর সব কক্ষ একসাথে প্রিন্ট';
     if (plans.length === 0) {
-      showMsg('', 'এই শিফটে কোনো কক্ষ নেই', window.__shiftLabel + ' কার্ডে কোনো সিট প্লান সংরক্ষিত নেই।',
-        '<a class="msg-btn" href="seat-plan.html">সিট প্লান পেজে যান</a>');
+      showMsg('', 'এই শিফটে কোনো কক্ষ নেই', SH_NAME[wantShift] + ' কার্ডে কোনো সিট প্লান সংরক্ষিত নেই। উপর থেকে অন্য শিফট বেছে নিন।', '');
       return;
     }
   }
-  await refreshCounts();   // শ্রেণির সংখ্যা Students টেবিল থেকে গুনে প্রকৃত সংখ্যা বসানো
 
   if (plans.length === 0) {
     showMsg('', 'কোনো সিট প্লান পাওয়া যায়নি', 'সিট প্লান পেজে গিয়ে আগে সাবমিট করুন।',
