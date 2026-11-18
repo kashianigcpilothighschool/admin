@@ -2663,6 +2663,90 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 })();
 </script>
 <script>
+// ===== শ্রেণিভিত্তিক ব্যবহৃত / বাকি শিক্ষার্থীর হিসাব =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    let saved = [];
+
+    function ensureBox() {
+        let b = $('stuUsage');
+        if (!b) {
+            const s = $('stuStatus'); if (!s) return null;
+            b = document.createElement('div');
+            b.id = 'stuUsage';
+            b.style.cssText = 'margin-top:12px;font-size:12.5px;color:#fff';
+            s.insertAdjacentElement('afterend', b);
+        }
+        return b;
+    }
+
+    // সংরক্ষিত সব কক্ষ (সকাল + দুপুর) থেকে প্রতিটি শ্রেণির ব্যবহৃত রোলের সেট
+    function usedMap() {
+        const out = {}, S = window.__stu;
+        saved.forEach(r => {
+            if (!r || r.id === '__center__' || !r.data) return;
+            (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
+                if (!rg.classKey || !Array.isArray(rg.rolls)) return;
+                const set = out[rg.classKey] || (out[rg.classKey] = new Set());
+                rg.rolls.forEach(x => { const v = S.fromSaved(rg.classKey, x); if (!isNaN(v)) set.add(v); });
+            }));
+        });
+        return out;
+    }
+
+    function render() {
+        const box = ensureBox(); if (!box) return;
+        const st = window.__stu && window.__stu.st;
+        if (!st || !st.loaded) { box.innerHTML = ''; return; }
+        const um = usedMap();
+        let tTotal = 0, tUsed = 0;
+        const rows = st.keys.map(k => {
+            const g = st.map[k], set = um[k] || new Set();
+            let used = 0; set.forEach(v => { if (g.rolls.has(v)) used++; });
+            const total = g.n, left = total - used, pct = total ? Math.round(used / total * 100) : 0;
+            tTotal += total; tUsed += used;
+            const color = left === 0 ? '#9ee6bd' : (used === 0 ? '#c9cfdb' : '#F1E2C3');
+            return '<tr style="border-top:1px solid rgba(255,255,255,.1)">' +
+                '<td style="padding:6px 8px;text-align:left">' + g.label.replace('শ্রেণি: ', '') + '</td>' +
+                '<td style="padding:6px 8px;text-align:center">' + bnN(total) + '</td>' +
+                '<td style="padding:6px 8px;text-align:center;color:#9ee6bd;font-weight:700">' + bnN(used) + '</td>' +
+                '<td style="padding:6px 8px;text-align:center;color:' + (left ? '#f0a89e' : '#9ee6bd') + ';font-weight:700">' + (left ? bnN(left) : '✔ ০') + '</td>' +
+                '<td style="padding:6px 8px;min-width:90px"><div style="height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden">' +
+                '<i style="display:block;height:100%;width:' + pct + '%;background:' + color + '"></i></div></td></tr>';
+        }).join('');
+        box.innerHTML =
+            '<div style="font-weight:700;margin-bottom:6px;color:#F1E2C3">📊 শ্রেণিভিত্তিক হিসাব — মোট ' + bnN(tTotal) +
+            ' জন • ব্যবহৃত ' + bnN(tUsed) + ' জন • বাকি ' + bnN(tTotal - tUsed) + ' জন</div>' +
+            '<div style="max-height:260px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px">' +
+            '<table style="width:100%;border-collapse:collapse;font-size:12.5px">' +
+            '<thead><tr style="color:#F1E2C3;background:rgba(255,255,255,.06)">' +
+            '<th style="padding:7px 8px;text-align:left">শ্রেণি</th><th style="padding:7px 8px">মোট</th>' +
+            '<th style="padding:7px 8px">ব্যবহৃত</th><th style="padding:7px 8px">বাকি</th><th></th></tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>';
+    }
+
+    async function loadSaved() {
+        try {
+            const { api: sbApi, token } = await window.fbReady;
+            const list = await sbApi('seatPlanList', token);
+            saved = Array.isArray(list) ? list : [];
+        } catch (e) { console.warn('ব্যবহৃত রোলের হিসাব আনা যায়নি:', e.message); }
+        render();
+    }
+
+    // Students লোড হলে (স্ট্যাটাস বার্তা বদলালে) আবার আঁকবে
+    const s = $('stuStatus');
+    if (s) new MutationObserver(render).observe(s, { childList: true, characterData: true, subtree: true });
+
+    // সাবমিটের পর হালনাগাদ
+    const _fg = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () { await _fg(); await loadSaved(); };
+
+    window.fbReady.then(loadSaved);
+})();
+</script>
+<script>
 // ===== সাবমিট সফল হলে পেজ অটো রিফ্রেশ =====
 (function () {
     const AUTO_REFRESH_DELAY = 1500;   // মিলিসেকেন্ড — সফল বার্তা দেখানোর সময়
