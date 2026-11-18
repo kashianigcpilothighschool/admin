@@ -928,6 +928,146 @@
   @media (max-width:700px) { #shiftSeg button { padding:0 9px !important; } }
   @media print { #shiftSeg { display:none !important; } }
 </style>
+<style id="modernBtn4">
+/* =====================================================
+   আধুনিক বাটন (v4) — শুধু পর্দা; প্রিন্ট অপরিবর্তিত
+   মূল রং/গ্রেডিয়েন্ট আগের থিমের (--grad, --a1) সাথে মিলিয়ে রাখা
+   ===================================================== */
+@media screen {
+  :root {
+    --b-ease:cubic-bezier(.22,.9,.3,1);
+    --b-surface:#fff; --b-border:#DDE1F3; --b-border-hover:#B8BFEA;
+    --b-text:#2B2F77; --b-soft:#EEF0FB;
+    --b-shadow:0 1px 2px rgba(43,47,119,.08), 0 2px 6px rgba(43,47,119,.06);
+    --b-shadow-hover:0 8px 20px -6px rgba(79,70,229,.35);
+  }
+
+  /* ---------- সব বাটনের সাধারণ আচরণ ---------- */
+  .toolbar button, .btn, .dlg-x, .ix, #msg .msg-btn {
+    transition:background .22s var(--b-ease), color .22s var(--b-ease), border-color .22s var(--b-ease),
+               box-shadow .22s var(--b-ease), transform .18s var(--b-ease), filter .22s;
+    -webkit-tap-highlight-color:transparent; user-select:none;
+  }
+  .toolbar button svg, .btn svg { transition:transform .25s var(--b-ease); }
+
+  /* ---------- প্রাইমারি: প্রিন্ট করুন ---------- */
+  .toolbar .group.actions > button.primary, .btn.primary, #msg .msg-btn {
+    position:relative; overflow:hidden; isolation:isolate; color:#fff; border:none !important;
+    background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 55%,#A855F7 100%) !important;
+    box-shadow:0 10px 24px -8px rgba(124,58,237,.65), inset 0 1px 0 rgba(255,255,255,.35), inset 0 -2px 0 rgba(0,0,0,.10);
+    border-radius:14px !important; font-weight:700; letter-spacing:.2px;
+  }
+  .toolbar .group.actions > button.primary::after, .btn.primary::after {
+    content:""; position:absolute; inset:0; z-index:-1; transform:translateX(-120%);
+    background:linear-gradient(105deg, transparent 30%, rgba(255,255,255,.38) 50%, transparent 70%);
+    transition:transform .7s var(--b-ease);
+  }
+  .toolbar .group.actions > button.primary:hover:not(:disabled), .btn.primary:hover:not(:disabled), #msg .msg-btn:hover {
+    transform:translateY(-2px); filter:saturate(1.12) brightness(1.05);
+    box-shadow:0 16px 30px -8px rgba(124,58,237,.7), inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 0 rgba(0,0,0,.10);
+  }
+  .toolbar .group.actions > button.primary:hover:not(:disabled)::after, .btn.primary:hover:not(:disabled)::after { transform:translateX(120%); }
+  .toolbar .group.actions > button.primary:hover:not(:disabled) svg { transform:translateY(-1px) scale(1.08); }
+  .toolbar .group.actions > button.primary:active:not(:disabled), .btn.primary:active:not(:disabled), #msg .msg-btn:active {
+    transform:translateY(0) scale(.97); filter:brightness(.96); box-shadow:0 4px 12px -4px rgba(124,58,237,.6), inset 0 2px 4px rgba(0,0,0,.18);
+  }
+
+  /* ---------- সেকেন্ডারি: এডিট, সব কক্ষ ---------- */
+  .toolbar .group.actions > button:not(.primary):not(.icon), .toolbar .seg button, .dlg-foot .btn:not(.primary) {
+    background:var(--b-surface) !important; color:var(--b-text);
+    border:1px solid var(--b-border) !important; box-shadow:var(--b-shadow); border-radius:14px !important;
+  }
+  .toolbar .group.actions > button:not(.primary):not(.icon):hover:not(:disabled), .toolbar .seg button:hover:not(:disabled),
+  .dlg-foot .btn:not(.primary):hover:not(:disabled) {
+    background:#fff !important; color:#4F46E5; border-color:var(--b-border-hover) !important;
+    box-shadow:var(--b-shadow-hover); transform:translateY(-2px);
+  }
+  .toolbar .group.actions > button:not(.primary):not(.icon):active:not(:disabled), .toolbar .seg button:active:not(:disabled),
+  .dlg-foot .btn:not(.primary):active:not(:disabled) {
+    transform:translateY(0) scale(.97); background:var(--b-soft) !important; box-shadow:inset 0 2px 4px rgba(43,47,119,.12);
+  }
+  #btnEdit:hover:not(:disabled) svg { transform:rotate(-12deg) scale(1.1); }
+
+  /* সব কক্ষ বাটনের সংখ্যা-ব্যাজ */
+  #btnAll .badge {
+    background:linear-gradient(135deg,#4F46E5,#7C3AED) !important; color:#fff !important; border-radius:999px !important;
+    min-width:24px; height:24px; padding:0 7px; font-weight:700; box-shadow:0 3px 8px -2px rgba(79,70,229,.6);
+    transition:transform .25s var(--b-ease);
+  }
+  #btnAll:hover:not(:disabled) .badge { transform:scale(1.1); }
+
+  /* ---------- আইকন বাটন (ফিরে যান) ---------- */
+  .toolbar .group.actions > button.icon:not(.primary) {
+    background:var(--b-surface) !important; border:1px solid var(--b-border) !important; box-shadow:var(--b-shadow);
+    color:var(--b-text); border-radius:14px !important;
+  }
+  .toolbar .group.actions > button.icon:not(.primary):hover:not(:disabled) {
+    color:#4F46E5; border-color:var(--b-border-hover) !important; box-shadow:var(--b-shadow-hover); transform:translateY(-2px);
+  }
+  .toolbar .group.actions > button.icon:not(.primary):hover:not(:disabled) svg { transform:translateX(-3px); }
+  .toolbar .group.actions > button.icon:not(.primary):active:not(:disabled) { transform:scale(.94); }
+
+  /* ---------- আগের/পরের কক্ষ ও জুম ---------- */
+  .group.nav button.icon, .zoom button.icon { border-radius:12px !important; color:var(--b-text); }
+  #btnPrev:hover:not(:disabled) svg { transform:translateX(-2px); }
+  #btnNext:hover:not(:disabled) svg { transform:translateX(2px); }
+  #zoomIn:hover:not(:disabled) svg, #zoomOut:hover:not(:disabled) svg { transform:scale(1.25); }
+  .group.nav button.icon:hover:not(:disabled), .zoom button.icon:hover:not(:disabled) { color:#4F46E5; }
+  .group.nav button.icon:active:not(:disabled), .zoom button:active:not(:disabled) { transform:scale(.92) !important; }
+  .zoom button.zoom-label { border-radius:12px !important; }
+  .zoom button.zoom-label:hover:not(:disabled) { color:#4F46E5; }
+
+  /* ---------- অক্ষম অবস্থা ---------- */
+  .toolbar button:disabled, .btn:disabled {
+    opacity:.45; cursor:not-allowed; filter:grayscale(.55); box-shadow:none !important; transform:none !important;
+  }
+  .toolbar .group.actions > button.primary:disabled { background:linear-gradient(135deg,#9CA3C9,#B4B8D6) !important; }
+
+  /* ---------- ফোকাস (কিবোর্ড) ---------- */
+  .toolbar button:focus-visible, .btn:focus-visible, .dlg-x:focus-visible, #msg .msg-btn:focus-visible {
+    outline:none; box-shadow:0 0 0 3px #fff, 0 0 0 5px #6366F1 !important;
+  }
+
+  /* ---------- ডায়ালগ: ফুটার, বন্ধ, মোছা, যোগ ---------- */
+  .dlg-foot .btn { border-radius:14px; height:44px; min-height:44px; padding:0 22px; font-weight:700; }
+  .btn.ghost, .btn.ghost.sm {
+    border:1.5px dashed rgba(79,70,229,.45) !important; background:rgba(79,70,229,.06) !important; color:#4F46E5;
+    box-shadow:none; border-radius:12px !important;
+  }
+  .btn.ghost:hover:not(:disabled) {
+    background:rgba(79,70,229,.13) !important; border-style:solid !important; border-color:#6366F1 !important;
+    box-shadow:0 6px 14px -6px rgba(79,70,229,.45); transform:translateY(-1px);
+  }
+  .dlg-x { border-radius:12px; }
+  .dlg-x:hover { background:#FEE2E2; color:#DC2626; transform:rotate(90deg); }
+  .ix { border-radius:12px; }
+  .ix:hover { background:#FEE2E2; color:#DC2626; transform:scale(1.08); }
+  .ix:active { transform:scale(.92); }
+
+  /* ---------- ডার্ক মোড ---------- */
+  @media (prefers-color-scheme:dark) {
+    :root { --b-surface:rgba(255,255,255,.07); --b-border:rgba(255,255,255,.12); --b-border-hover:rgba(165,170,255,.55);
+            --b-text:#DCDEFF; --b-soft:rgba(255,255,255,.14); --b-shadow:none; --b-shadow-hover:0 8px 20px -6px rgba(99,102,241,.55); }
+    .toolbar .group.actions > button:not(.primary):not(.icon):hover:not(:disabled), .toolbar .seg button:hover:not(:disabled),
+    .dlg-foot .btn:not(.primary):hover:not(:disabled), .toolbar .group.actions > button.icon:not(.primary):hover:not(:disabled) { background:rgba(255,255,255,.14) !important; color:#fff; }
+    .toolbar button:focus-visible, .btn:focus-visible, .dlg-x:focus-visible, #msg .msg-btn:focus-visible { box-shadow:0 0 0 3px #0E0F26, 0 0 0 5px #818CF8 !important; }
+    .btn.ghost, .btn.ghost.sm { color:#C7C9FF; }
+    .dlg-x:hover, .ix:hover { background:rgba(244,63,94,.22); color:#FDA4AF; }
+  }
+
+  /* ---------- মোবাইল: বড় টাচ-এলাকা ---------- */
+  @media (max-width:720px) {
+    .toolbar .group.actions > button.primary { height:44px; min-height:44px; }
+  }
+
+  /* ---------- কম অ্যানিমেশন পছন্দ করলে ---------- */
+  @media (prefers-reduced-motion:reduce) {
+    .toolbar button, .btn, .dlg-x, .ix, .toolbar button svg { transition:none !important; }
+    .toolbar button:hover, .btn:hover, .dlg-x:hover, .ix:hover { transform:none !important; }
+    .toolbar .group.actions > button.primary::after, .btn.primary::after { display:none; }
+  }
+}
+</style>
 </head>
 <body>
 
