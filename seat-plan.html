@@ -702,6 +702,18 @@
             transition: background .15s ease, transform .15s ease;
         }
         .range-plus-btn:hover { background: rgba(35, 137, 91, 0.25); transform: scale(1.1); }
+        /* ===== Morning / Noon কক্ষ কার্ড ===== */
+        .shift-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+        .shift-card { background: var(--paper); border: 1.5px solid var(--border-soft); border-radius: var(--radius-md); padding: 14px 16px; }
+        .shift-card.on { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(29, 43, 79, 0.08); }
+        .shift-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--navy); font-size: 14.5px; }
+        .shift-head span { font-size: 12px; color: var(--ink-soft); }
+        .room-chip { display: block; width: 100%; text-align: left; margin-bottom: 6px; padding: 8px 12px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; color: var(--ink); }
+        .room-chip small { display: block; font-size: 11.5px; color: var(--ink-soft); margin-top: 2px; }
+        .room-chip:hover { border-color: var(--navy-soft); }
+        .room-chip.me { border-color: var(--navy); background: var(--navy-tint); }
+        .shift-empty { font-size: 12.5px; color: var(--ink-soft); padding: 6px 2px; }
+        @media (max-width: 700px) { .shift-cards { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -852,6 +864,8 @@
             <div class="alert alert-error" id="errorAlert"></div>
             <div class="alert alert-success" id="successAlert"></div>
             <div class="debug-info" id="debugInfo" style="display: none;"></div>
+
+            <div id="shiftCards" class="shift-cards no-print"></div>
 
             <div id="columnInputs"></div>
 
@@ -1031,10 +1045,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 const r = allData.roomInfo;
 
                 // একই ভবন+তলা+কক্ষ আবার সাবমিট করলে আগের ডেটা update হবে
-                const roomId = [r.building, r.floor, r.roomNumber]
-                    .map(s => String(s).trim())
-                    .join('_')
-                    .replace(/[\/\s]+/g, '-');
+                const roomId = window.makeRoomId(r.building, r.floor, r.roomNumber);
 
                 await sbApi('seatPlanSave', token, roomId, { ...allData, roomId: roomId });
 
@@ -1069,11 +1080,15 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 showAlert('আগে কক্ষ নম্বর দিন!', 'error');
                 return;
             }
-            const roomId = [
+            if (!window.currentShift()) {
+                showAlert('আগে পরীক্ষা শুরুর সময় নির্বাচন করুন!', 'error');
+                return;
+            }
+            const roomId = window.makeRoomId(
                 document.getElementById('buildingSelect').value,
                 document.getElementById('floorSelect').value,
                 room
-            ].map(s => String(s).trim()).join('_').replace(/[\/\s]+/g, '-');
+            );
             const url = window.withToken(PRINT_URL + '?room=' + encodeURIComponent(roomId) + '&edit=1');
             log('এডিটের জন্য প্রিন্ট পেজে যাওয়া হচ্ছে: ' + url, 'info');
             window.open(url, '_blank');
@@ -1928,14 +1943,14 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         } catch (e) { console.warn('সংরক্ষিত রুমের রোল পড়া যায়নি:', e.message); }
     }
     function currentRoomId() {
-        return [$('buildingSelect').value, $('floorSelect').value, $('roomNumber').value]
-            .map(s => String(s).trim()).join('_').replace(/[\/\s]+/g, '-');
+        return window.makeRoomId($('buildingSelect').value, $('floorSelect').value, $('roomNumber').value);
     }
     // অন্য সংরক্ষিত রুমে ব্যবহৃত রোল (এই রুম বাদে)
     function usedSaved(key) {
         const me = currentRoomId(), out = [];
         savedRows.forEach(r => {
             if (!r || r.id === '__center__' || r.id === me || !r.data) return;
+            if (window.shiftOfRow(r) !== window.currentShift()) return;   // শুধু একই শিফটের কক্ষ
             (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
                 if (rg.classKey === key && Array.isArray(rg.rolls)) rg.rolls.forEach(x => out.push(x));
             }));
@@ -2042,6 +2057,105 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         const t = setInterval(() => { if (window.__stu.st.loaded) { clearInterval(t); updateAll(); } }, 400);
         setTimeout(() => clearInterval(t), 20000);
     });
+})();
+</script>
+<script>
+// ===== Morning / Noon শিফট: পরীক্ষা শুরুর সময় অনুযায়ী কক্ষ আলাদা =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const bn = s => String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const en = s => String(s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const NAME = { morning: '🌅 Morning (সকাল)', noon: '☀️ Noon (দুপুর)' };
+
+    // সময় লেখা থেকে শিফট: সকাল/ভোর → morning; দুপুর/বিকাল → noon; উপসর্গ না থাকলে ঘণ্টা দেখে
+    function shiftOfTime(t) {
+        t = String(t || '').trim();
+        if (!t || t === '__other__') return '';
+        if (/^(সকাল|ভোর)/.test(t)) return 'morning';
+        if (/^(দুপুর|বিকাল|বিকেল|অপরাহ্ণ|অপরাহ্ন|বেলা)/.test(t)) return 'noon';
+        const m = en(t).match(/(\d{1,2})/);
+        if (!m) return '';
+        const h = parseInt(m[1], 10);
+        return (h >= 12 || h <= 5) ? 'noon' : 'morning';
+    }
+    window.currentShift = () => shiftOfTime($('examTime') && $('examTime').value);
+    // পুরোনো সংরক্ষিত কক্ষে shift না থাকলে সংরক্ষিত সময় থেকে; তাও না থাকলে morning ধরা হয়
+    window.shiftOfRow = r => (r && r.data && (r.data.shift || shiftOfTime(r.data.examStartTime))) || 'morning';
+    // কক্ষ-আইডি = ভবন_তলা_কক্ষ_শিফট (একই কক্ষ দুই শিফটে আলাদা সংরক্ষিত হবে)
+    window.makeRoomId = function (building, floor, room) {
+        const base = [building, floor, room].map(s => String(s).trim()).join('_');
+        const sh = window.currentShift();
+        return (base + (sh ? '_' + sh : '')).replace(/[\/\s]+/g, '-');
+    };
+
+    // সাবমিটের ডেটায় শিফট
+    const _collect = collectAllData;
+    collectAllData = function () { const d = _collect(); d.shift = window.currentShift(); return d; };
+
+    // শিফট না থাকলে সাবমিট হবে না
+    const _qv = quickValidation;
+    quickValidation = function () {
+        const e = _qv();
+        if (!window.currentShift()) e.push('পরীক্ষা শুরুর সময় নির্বাচন করুন (সকাল/দুপুর নির্ধারণের জন্য)');
+        return e;
+    };
+
+    // ----- কার্ড -----
+    let rows = [];
+    function countStudents(d) {
+        let n = 0;
+        (d.columnData || []).forEach(c => (c.ranges || []).forEach(rg => { if (Array.isArray(rg.rolls)) n += rg.rolls.length; }));
+        return n;
+    }
+    function label(d) {
+        const r = d.roomInfo || {};
+        return (r.roomNumber ? bn(r.roomNumber) + ' নং কক্ষ' : '—');
+    }
+    function sub(d) {
+        const r = d.roomInfo || {};
+        return [r.building, r.floor, r.gender, r.department].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
+    }
+    function render() {
+        const box = $('shiftCards'); if (!box) return;
+        const cur = window.currentShift(), me = window.makeRoomId($('buildingSelect').value, $('floorSelect').value, $('roomNumber').value);
+        const g = { morning: [], noon: [] };
+        rows.forEach(r => { if (r && r.id !== '__center__' && r.data) g[window.shiftOfRow(r)].push(r); });
+        const num = r => parseInt(en((r.data.roomInfo || {}).roomNumber), 10) || 0;
+        box.innerHTML = ['morning', 'noon'].map(k => {
+            const list = g[k].sort((a, b) => num(a) - num(b));
+            const total = list.reduce((s, r) => s + countStudents(r.data), 0);
+            return `<div class="shift-card${cur === k ? ' on' : ''}"><div class="shift-head"><b>${NAME[k]}</b>` +
+                `<span>${bn(list.length)} কক্ষ • ${bn(total)} জন</span></div>` +
+                (list.length ? list.map(r => `<button type="button" class="room-chip${r.id === me ? ' me' : ''}" data-id="${esc(r.id)}" title="প্রিন্ট পেজে এডিট করুন">` +
+                    `<b>${esc(label(r.data))}</b><small>${esc(sub(r.data))}</small></button>`).join('')
+                    : '<div class="shift-empty">কোনো কক্ষ সংরক্ষিত নেই</div>') + '</div>';
+        }).join('');
+    }
+    async function reload() {
+        try {
+            const { api: sbApi, token } = await window.fbReady;
+            const list = await sbApi('seatPlanList', token);
+            rows = Array.isArray(list) ? list : [];
+        } catch (e) { console.warn('কক্ষের কার্ড লোড হয়নি:', e.message); }
+        render();
+    }
+    $('shiftCards').addEventListener('click', e => {
+        const b = e.target.closest('.room-chip'); if (!b) return;
+        window.open(window.withToken(PRINT_URL + '?room=' + encodeURIComponent(b.dataset.id) + '&edit=1'), '_blank');
+    });
+
+    // সময় বদলালে: কার্ড হালনাগাদ + পরের রোল নতুন শিফট অনুযায়ী
+    $('examTime').addEventListener('change', () => {
+        render();
+        const r = $('roomNumber'); if (r) r.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    ['roomNumber', 'buildingSelect', 'floorSelect'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', render); });
+
+    const _fg = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () { await _fg(); await reload(); };
+    window.fbReady.then(reload);
+    render();
 })();
 </script>
 </body>
