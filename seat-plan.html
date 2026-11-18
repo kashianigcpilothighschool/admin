@@ -1623,6 +1623,8 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                             count: seatCount
                         };
                         if (isDoor) { rangeObj.startRoll = 'DOOR'; rangeObj.door = true; }
+                        // শুরুর রোলে শুধু x / X লিখলে ওই সিটগুলোতে xxxxxx বসবে
+                        if (/^x$/i.test(String(startRollInput.value).trim())) { rangeObj.startRoll = 'xxxxxx'; rangeObj.xmark = true; rangeObj.text = 'xxxxxx'; }
                         colRanges.push(rangeObj);
                         log(`কলাম ${col} রেঞ্জ ${j + 1}: ${startRoll} থেকে ${seatCount} টি সিট`);
                     }
@@ -2264,6 +2266,33 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     quickValidation = function () {
         const e = _qv();
         if (!window.currentShift()) e.push('পরীক্ষা শুরুর সময় নির্বাচন করুন (সকাল/দুপুর নির্ধারণের জন্য)');
+        // একই শিফটে একই রোল একাধিকবার ব্যবহার করা যাবে না (এই ফর্মের ভেতরে + আগে সংরক্ষিত অন্য কক্ষে)
+        try {
+            const S = window.__stu;
+            if (S && S.st.loaded) {
+                const seen = {}, dup = [];
+                document.querySelectorAll('#columnInputs .range-item').forEach(div => {
+                    const sel = div.querySelector('.stu-class'); if (!sel || !sel.value) return;
+                    const a = parseInt(div.querySelector('input[id^="start_roll_"]').value);
+                    const c = parseInt(div.querySelector('input[id^="seat_count_"]').value);
+                    if (isNaN(a) || isNaN(c) || c <= 0) return;
+                    const key = sel.value;
+                    let other = null;
+                    try { other = new Set(window.__usedSavedRolls(key)); } catch (x) {}
+                    S.matched(key, a, c).forEach(v => {
+                        const id = key + '|' + v;
+                        const lab = S.prefixOf(key) + '-' + S.rollLabel(key, v);
+                        if (seen[id]) dup.push(lab + ' (এই ফর্মে একাধিকবার)');
+                        else if (other && other.has(v)) dup.push(lab + ' (আগের কক্ষে ব্যবহৃত)');
+                        seen[id] = 1;
+                    });
+                });
+                if (dup.length) {
+                    const bnx = s => String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+                    e.push('একই শিফটে একই রোল দুইবার দেওয়া যাবে না: ' + bnx(dup.slice(0, 6).join(', ')) + (dup.length > 6 ? ' …আরও ' + bnx(dup.length - 6) + 'টি' : ''));
+                }
+            }
+        } catch (x) { console.error(x); }
         return e;
     };
 
@@ -2491,7 +2520,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                     const lbl = (window.__stu && window.__stu.st.map[rg.classKey] && window.__stu.st.map[rg.classKey].label) || ('শ্রেণি ' + rg.classKey);
                     setSelect(sel, rg.classKey, lbl);
                 }
-                a.value = (rg.door || rg.startRoll === 'DOOR') ? 'D' : (rg.startRoll ? rg.startRoll : '');
+                a.value = (rg.door || rg.startRoll === 'DOOR') ? 'D' : (rg.xmark ? 'x' : (rg.startRoll ? rg.startRoll : ''));
                 delete a.dataset.autoRoll;
                 s.value = rg.count != null ? rg.count : '';
                 a.dispatchEvent(new Event('input', { bubbles: true }));
