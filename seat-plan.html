@@ -1781,7 +1781,12 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             if (!k || !st.map[k] || !row) return;
             const a = row.querySelector('.start-roll'), b = row.querySelector('.end-roll');
             if (a.value || b.value) return;
-            const rolls = [...st.map[k].rolls]; a.value = Math.min(...rolls); b.value = Math.max(...rolls);
+            const rolls = [...st.map[k].rolls];
+            const nx = window.__nextAfterSaved ? window.__nextAfterSaved(k) : undefined;
+            if (nx === null) { showAlert('এই শ্রেণির সব রোল আগের কক্ষগুলোতে ব্যবহার হয়ে গেছে', 'error'); return; }
+            a.value = (nx === undefined) ? Math.min(...rolls) : nx;
+            b.value = Math.max(...rolls);
+            row.dataset.autoRoll = '1';   // রুম/সময় বদলালে আবার নতুন "পরের রোল" বসবে
             updateStudentCount(row);
         });
         const _addNewRow = addNewRow;
@@ -2078,6 +2083,17 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         const mx = Math.max.apply(null, used);
         return all.find(r => r > mx) || null;   // null = সব রোল শেষ
     }
+    // বিদ্যালয়ের তথ্যের সারির জন্য: আগের সংরক্ষিত কক্ষে ব্যবহৃত সর্বোচ্চ রোলের পরের রোল
+    // undefined = Students এখনো লোড হয়নি, null = সব রোল শেষ
+    window.__nextAfterSaved = function (key) {
+        const st = window.__stu.st;
+        if (!st.loaded || !st.map[key]) return undefined;
+        const all = [...st.map[key].rolls].sort((a, b) => a - b);
+        const used = usedSaved(key);
+        if (!used.length) return all[0];
+        const mx = Math.max.apply(null, used);
+        return all.find(r => r > mx) || null;
+    };
     function fillStart(div, auto) {
         const sel = div.querySelector('.stu-class'), a = div.querySelector('input[id^="start_roll_"]');
         if (!sel || !a || !sel.value) return;
@@ -2130,7 +2146,25 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         setTimeout(updateAll, 0);
     });
     // রুম বদলালে (পরের রুম) স্বয়ংক্রিয়ভাবে বসানো রেঞ্জগুলো নতুন "পরের রোল"-এ বদলাবে
+    function refillSchoolRows() {
+        document.querySelectorAll('#schoolForms .form-row').forEach(row => {
+            if (row.dataset.autoRoll !== '1') return;
+            const o = row.querySelector('.school-select').selectedOptions[0], k = o && o.dataset.k;
+            if (!k) return;
+            const nx = window.__nextAfterSaved(k);
+            if (nx === undefined) return;
+            const a = row.querySelector('.start-roll'), b = row.querySelector('.end-roll');
+            if (nx === null) { a.value = ''; b.value = ''; }
+            else { a.value = nx; b.value = Math.max.apply(null, [...window.__stu.st.map[k].rolls]); }
+            updateStudentCount(row);
+        });
+    }
+    $('schoolForms').addEventListener('input', e => {
+        const t = e.target, row = t.closest && t.closest('.form-row');
+        if (row && e.isTrusted && t.classList && (t.classList.contains('start-roll') || t.classList.contains('end-roll') || t.classList.contains('student-count'))) delete row.dataset.autoRoll;
+    });
     function onRoomChange() {
+        refillSchoolRows();
         document.querySelectorAll('#columnInputs .range-item').forEach(div => {
             const a = div.querySelector('input[id^="start_roll_"]');
             if (a && a.dataset.autoRoll === '1') fillStart(div, true);
