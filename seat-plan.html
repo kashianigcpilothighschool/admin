@@ -2719,6 +2719,12 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 '<td style="padding:6px 8px;min-width:90px"><div style="height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden">' +
                 '<i style="display:block;height:100%;width:' + pct + '%;background:' + color + '"></i></div></td></tr>';
         }).join('');
+        // স্ট্যাটাস বার্তার শেষ অংশ বদলে মোট/ব্যবহৃত/বাকি দেখানো
+        const ss = $('stuStatus');
+        if (ss && ss.textContent.indexOf('শিক্ষার্থী লোড হয়েছে') > -1) {
+            const nt = ss.textContent.replace(/।.*$/, '') + '। মোট ' + bnN(tTotal) + ' জন • ব্যবহৃত ' + bnN(tUsed) + ' জন • বাকি ' + bnN(tTotal - tUsed) + ' জন';
+            if (ss.textContent !== nt) ss.textContent = nt;
+        }
         const eye = '<button type="button" id="stuUsageEye" title="' + (open ? 'হিসাব লুকান' : 'হিসাব দেখুন') + '" ' +
             'aria-expanded="' + open + '" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;' +
             'border:1px solid var(--gold);background:rgba(214,162,78,.15);color:#F1E2C3;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">' +
