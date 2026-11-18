@@ -1122,6 +1122,28 @@
 }
 /* ছোট স্ক্রিনে ব্র্যান্ড আইকন লুকিয়ে জায়গা বাঁচানো */
 @media screen and (min-width:721px) and (max-width:1440px) { .toolbar .brand { display:none; } }
+
+/* =====================================================
+   এডিট বাটন — সিট প্ল্যান পেজের "এডিট" বাটনের ন্যায় (সোনালি আউটলাইন)
+   ===================================================== */
+@media screen {
+  .toolbar .group.actions > #btnEdit {
+    background:transparent !important; color:#8A5A12; border:1px solid #B9822E !important;
+    border-radius:8px !important; font-weight:600; box-shadow:none !important;
+  }
+  .toolbar .group.actions > #btnEdit:hover:not(:disabled) {
+    background:rgba(184,134,43,.15) !important; color:#7A4E0E; border-color:#B9822E !important;
+    box-shadow:none !important; transform:none;
+  }
+  .toolbar .group.actions > #btnEdit:active:not(:disabled) { background:rgba(184,134,43,.24) !important; transform:scale(.97); box-shadow:none !important; }
+  .toolbar .group.actions > #btnEdit:disabled { opacity:.5; filter:none; border-color:rgba(185,130,46,.55) !important; }
+  .toolbar .group.actions > #btnEdit:focus-visible { box-shadow:0 0 0 3px #fff, 0 0 0 5px #D6A24E !important; }
+  @media (prefers-color-scheme:dark) {
+    .toolbar .group.actions > #btnEdit { color:#F1E2C3; border-color:#D6A24E !important; }
+    .toolbar .group.actions > #btnEdit:hover:not(:disabled) { background:rgba(214,162,78,.18) !important; color:#fff; }
+    .toolbar .group.actions > #btnEdit:focus-visible { box-shadow:0 0 0 3px #0E0F26, 0 0 0 5px #D6A24E !important; }
+  }
+}
 </style>
 </head>
 <body>
