@@ -716,27 +716,70 @@
         .shift-empty { font-size: 12.5px; color: var(--ink-soft); padding: 6px 2px; }
         @media (max-width: 700px) { .shift-cards { grid-template-columns: 1fr; } }
 
-        /* ===== প্রিন্টের আগে Morning / Noon বেছে নেওয়ার ডায়ালগ ===== */
-        .pp-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
-        .pp-overlay.open { display: flex; }
-        .pp-box { background: var(--paper, #fff); border-radius: 16px; padding: 20px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
-        .pp-box h3 { margin: 0 0 4px; color: var(--navy, #1d2b4f); font-size: 17px; }
-        .pp-box p { margin: 0 0 14px; font-size: 13px; color: var(--ink-soft, #667); }
+        /* ===== প্রিন্টের আগে Morning / Noon বেছে নেওয়ার ডায়ালগ (আধুনিক) ===== */
+        .pp-overlay { --pp-bg:#fff; --pp-ink:#16203a; --pp-soft:#6b7488; --pp-line:#e4e8f1; --pp-card:#f7f8fc; --pp-acc:#3b5bdb;
+            position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 9999;
+            background: rgba(12, 18, 38, .45); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+            opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s; }
+        .pp-overlay.open { opacity: 1; visibility: visible; }
+        @media (prefers-color-scheme: dark) { .pp-overlay { --pp-bg:#151b2e; --pp-ink:#eef1fb; --pp-soft:#9aa4bd; --pp-line:#2a3350; --pp-card:#1b2340; --pp-acc:#7c93ff; } }
+        .pp-box { position: relative; width: 100%; max-width: 560px; background: var(--pp-bg); color: var(--pp-ink); border: 1px solid var(--pp-line);
+            border-radius: 24px; padding: 22px; box-shadow: 0 30px 80px rgba(8,12,30,.35);
+            transform: translateY(14px) scale(.97); transition: transform .28s cubic-bezier(.2,.9,.3,1.2); }
+        .pp-overlay.open .pp-box { transform: none; }
+        .pp-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+        .pp-ico { flex: none; width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; color: #fff;
+            background: linear-gradient(135deg, #4f6bff, #8a5cff); box-shadow: 0 8px 20px rgba(79,107,255,.35); }
+        .pp-ico svg { width: 24px; height: 24px; }
+        .pp-head h3 { margin: 0; font-size: 18px; font-weight: 700; color: var(--pp-ink); }
+        .pp-head p { margin: 3px 0 0; font-size: 13px; color: var(--pp-soft); }
+        .pp-x { margin-left: auto; flex: none; width: 34px; height: 34px; border-radius: 50%; border: none; background: var(--pp-card); color: var(--pp-soft); cursor: pointer; display: grid; place-items: center; transition: background .15s, color .15s; }
+        .pp-x:hover { background: var(--pp-line); color: var(--pp-ink); }
+        .pp-x svg { width: 16px; height: 16px; }
         .pp-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .pp-opt { font-family: inherit; text-align: left; cursor: pointer; background: var(--paper, #fff); border: 1.5px solid var(--border-soft, #d9dde6); border-radius: 12px; padding: 14px; color: var(--navy, #1d2b4f); transition: border-color .15s, box-shadow .15s, transform .15s; }
-        .pp-opt:hover:not(:disabled) { border-color: var(--navy, #1d2b4f); box-shadow: 0 0 0 3px rgba(29,43,79,.1); transform: translateY(-1px); }
+        .pp-opt { position: relative; font-family: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 10px;
+            background: var(--pp-card); border: 1.5px solid var(--pp-line); border-radius: 18px; padding: 14px; color: var(--pp-ink);
+            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+        .pp-opt:hover:not(:disabled) { transform: translateY(-3px); border-color: var(--tone); box-shadow: 0 14px 30px -12px var(--tone); }
+        .pp-opt:active:not(:disabled) { transform: translateY(-1px) scale(.985); }
         .pp-opt:disabled { opacity: .5; cursor: not-allowed; }
-        .pp-opt b { display: block; font-size: 15px; margin-bottom: 6px; }
-        .pp-opt span { font-size: 12.5px; color: var(--ink-soft, #667); }
-        .pp-cancel { margin-top: 14px; width: 100%; font-family: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--border-soft, #d9dde6); background: transparent; cursor: pointer; }
-        .pp-opt.last { border-color: var(--navy, #1d2b4f); background: rgba(29,43,79,.04); }
-        .pp-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: rgba(29,43,79,.1); color: var(--navy, #1d2b4f); vertical-align: middle; }
-        .pp-opt:focus-visible, .pp-all:focus-visible, .pp-cancel:focus-visible { outline: 3px solid rgba(29,43,79,.35); outline-offset: 2px; }
-        .pp-all { margin-top: 12px; width: 100%; font-family: inherit; padding: 10px; border-radius: 10px; border: 1px dashed var(--border-soft, #c5cad6); background: transparent; color: var(--ink-soft, #667); cursor: pointer; font-size: 13px; }
-        .pp-all:hover { color: var(--navy, #1d2b4f); border-color: var(--navy, #1d2b4f); }
-        .pp-overlay.open .pp-box { animation: ppIn .18s ease-out; }
-        @keyframes ppIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-        @media (max-width: 480px) { .pp-opts { grid-template-columns: 1fr; } }
+        .pp-opt.morning { --tone: #f59f00; --grad: linear-gradient(135deg, #ffb84d, #ff7a45); }
+        .pp-opt.noon { --tone: #3b82f6; --grad: linear-gradient(135deg, #38bdf8, #4f6bff); }
+        .pp-opt.last { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 8%, var(--pp-card)); }
+        .pp-top { display: flex; align-items: center; gap: 10px; }
+        .pp-sun { flex: none; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--grad); }
+        .pp-sun svg { width: 21px; height: 21px; }
+        .pp-name { font-size: 15px; font-weight: 700; line-height: 1.2; }
+        .pp-name small { display: block; font-size: 12px; font-weight: 500; color: var(--pp-soft); margin-top: 2px; }
+        .pp-kbd { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--pp-soft); border: 1px solid var(--pp-line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; background: var(--pp-bg); }
+        .pp-stat { display: flex; align-items: baseline; gap: 6px; }
+        .pp-stat b { font-size: 28px; line-height: 1; font-weight: 800; letter-spacing: -.5px; }
+        .pp-stat span { font-size: 12.5px; color: var(--pp-soft); }
+        .pp-bar { height: 6px; border-radius: 999px; background: var(--pp-line); overflow: hidden; }
+        .pp-bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--grad); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+        .pp-meta { font-size: 12px; color: var(--pp-soft); }
+        .pp-chips { display: flex; flex-wrap: wrap; gap: 5px; min-height: 22px; }
+        .pp-chip { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--pp-bg); border: 1px solid var(--pp-line); color: var(--pp-ink); }
+        .pp-chip.more { color: var(--pp-soft); border-style: dashed; }
+        .pp-tags { display: flex; gap: 6px; flex-wrap: wrap; min-height: 20px; }
+        .pp-tag { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; color: #fff; background: var(--grad); }
+        .pp-tag.soft { color: var(--pp-ink); background: var(--pp-line); }
+        .pp-empty { font-size: 13px; color: var(--pp-soft); padding: 6px 0; }
+        .pp-foot { display: flex; gap: 10px; margin-top: 14px; }
+        .pp-all, .pp-cancel { font-family: inherit; font-size: 13.5px; font-weight: 600; padding: 11px 14px; border-radius: 12px; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+        .pp-all { flex: 1; border: 1.5px dashed var(--pp-line); background: transparent; color: var(--pp-soft); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pp-all:hover:not(:disabled) { border-color: var(--pp-acc); color: var(--pp-acc); }
+        .pp-all:disabled { opacity: .5; cursor: not-allowed; }
+        .pp-cancel { border: none; background: var(--pp-card); color: var(--pp-ink); }
+        .pp-cancel:hover { background: var(--pp-line); }
+        .pp-opt:focus-visible, .pp-all:focus-visible, .pp-cancel:focus-visible, .pp-x:focus-visible { outline: 3px solid color-mix(in srgb, var(--pp-acc) 55%, transparent); outline-offset: 2px; }
+        @media (max-width: 560px) {
+            .pp-overlay { align-items: flex-end; padding: 0; }
+            .pp-box { max-width: none; border-radius: 24px 24px 0 0; padding: 18px 16px calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); }
+            .pp-opts { grid-template-columns: 1fr; }
+            .pp-kbd { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) { .pp-overlay, .pp-box, .pp-opt, .pp-bar i { transition: none !important; } }
     </style>
 </head>
 <body>
@@ -920,13 +963,21 @@
         </div>
     </div>
 
-    <div class="pp-overlay no-print" id="printPick" role="dialog" aria-modal="true" aria-labelledby="printPickTitle">
+    <div class="pp-overlay no-print" id="printPick" role="dialog" aria-modal="true" aria-labelledby="printPickTitle" aria-hidden="true">
         <div class="pp-box">
-            <h3 id="printPickTitle">কোন কার্ডের কক্ষ প্রিন্ট করবেন?</h3>
-            <p>একটি শিফট বেছে নিন — শুধু সেই শিফটের কক্ষগুলো প্রিন্ট পেজে খুলবে।</p>
+            <div class="pp-head">
+                <div class="pp-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/></svg></div>
+                <div>
+                    <h3 id="printPickTitle">কোন কার্ড প্রিন্ট করবেন?</h3>
+                    <p>শিফট বেছে নিন — শুধু সেই শিফটের কক্ষ প্রিন্ট পেজে খুলবে</p>
+                </div>
+                <button type="button" class="pp-x" id="printPickX" aria-label="বন্ধ করুন"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </div>
             <div class="pp-opts" id="printPickOpts"></div>
-            <button type="button" class="pp-all" id="printPickAll">দুই শিফটের সব কক্ষ একসাথে খুলুন</button>
-            <button type="button" class="pp-cancel" id="printPickCancel">বাতিল</button>
+            <div class="pp-foot">
+                <button type="button" class="pp-all" id="printPickAll"><span>দুই শিফট একসাথে খুলুন</span><span class="pp-kbd">A</span></button>
+                <button type="button" class="pp-cancel" id="printPickCancel">বাতিল</button>
+            </div>
         </div>
     </div>
     <script>
@@ -2186,22 +2237,49 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 
 
     // ----- প্রিন্ট: Morning / Noon কার্ড বেছে নিয়ে প্রিন্ট পেজ খোলা -----
-    function pickStats() {
-        const g = { morning: { n: 0, s: 0 }, noon: { n: 0, s: 0 } };
-        rows.forEach(r => { if (r && r.id !== '__center__' && r.data) { const k = window.shiftOfRow(r); g[k].n++; g[k].s += countStudents(r.data); } });
-        return g;
-    }
+    const ICON = {
+        morning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 2v7M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M8 6l4-4 4 4"/></svg>',
+        noon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+    };
+    const TITLE = { morning: ['Morning', 'সকালের শিফট'], noon: ['Noon', 'দুপুরের শিফট'] };
     const LAST_KEY = 'seatPlan.lastPrintShift';
     const lastShift = () => { try { return localStorage.getItem(LAST_KEY) || ''; } catch (e) { return ''; } };
+    const num = r => parseInt(en(((r.data.roomInfo || {}).roomNumber) || ''), 10) || 0;
+
+    function pickStats() {
+        const g = { morning: { n: 0, s: 0, rooms: [] }, noon: { n: 0, s: 0, rooms: [] } };
+        rows.forEach(r => { if (r && r.id !== '__center__' && r.data) { const k = window.shiftOfRow(r); g[k].n++; g[k].s += countStudents(r.data); g[k].rooms.push(r); } });
+        ['morning', 'noon'].forEach(k => g[k].rooms.sort((a, b) => num(a) - num(b)));
+        return g;
+    }
     function renderPick() {
         const g = pickStats(), cur = window.currentShift(), last = lastShift();
-        $('printPickOpts').innerHTML = ['morning', 'noon'].map(k =>
-            `<button type="button" class="pp-opt${last === k ? ' last' : ''}" data-shift="${k}"${g[k].n ? '' : ' disabled'}>` +
-            `<b>${NAME[k]}${cur === k ? '<i class="pp-tag">এখন নির্বাচিত</i>' : ''}</b>` +
-            `<span>${g[k].n ? bn(g[k].n) + ' কক্ষ • ' + bn(g[k].s) + ' জন' : 'কোনো কক্ষ সংরক্ষিত নেই'}</span></button>`).join('');
+        const grand = (g.morning.s + g.noon.s) || 1;
+        $('printPickOpts').innerHTML = ['morning', 'noon'].map((k, i) => {
+            const x = g[k], has = x.n > 0, pct = Math.round(x.s / grand * 100);
+            const chips = x.rooms.slice(0, 6).map(r => `<span class="pp-chip">${esc(bn((r.data.roomInfo || {}).roomNumber || '—'))}</span>`).join('') +
+                (x.n > 6 ? `<span class="pp-chip more">+${bn(x.n - 6)}</span>` : '');
+            const tags = (cur === k ? '<span class="pp-tag">এখন নির্বাচিত</span>' : '') + (last === k ? '<span class="pp-tag soft">শেষবার প্রিন্ট</span>' : '');
+            return `<button type="button" class="pp-opt ${k}${last === k ? ' last' : ''}" data-shift="${k}"${has ? '' : ' disabled'}>` +
+                `<div class="pp-top"><div class="pp-sun">${ICON[k]}</div><div class="pp-name">${TITLE[k][0]}<small>${TITLE[k][1]}</small></div><span class="pp-kbd">${bn(i + 1)}</span></div>` +
+                (has
+                    ? `<div class="pp-stat"><b>${bn(x.n)}</b><span>কক্ষ • ${bn(x.s)} জন</span></div>` +
+                      `<div class="pp-bar" aria-hidden="true"><i data-w="${pct}"></i></div>` +
+                      `<div class="pp-chips">${chips}</div>`
+                    : '<div class="pp-empty">কোনো কক্ষ সংরক্ষিত নেই</div>') +
+                `<div class="pp-tags">${tags}</div></button>`;
+        }).join('');
         $('printPickAll').disabled = !(g.morning.n + g.noon.n);
+        requestAnimationFrame(() => requestAnimationFrame(() => $('printPickOpts').querySelectorAll('.pp-bar i').forEach(el => { el.style.width = el.dataset.w + '%'; })));
     }
-    function closePick() { $('printPick').classList.remove('open'); }
+    const pickEl = () => $('printPick');
+    const isOpen = () => pickEl().classList.contains('open');
+    let opener = null;
+    function closePick() {
+        pickEl().classList.remove('open'); pickEl().setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        if (opener && opener.focus) { try { opener.focus(); } catch (e) {} }
+    }
     function goPrint(shift) {
         closePick();
         if (shift) { try { localStorage.setItem(LAST_KEY, shift); } catch (e) {} }
@@ -2210,19 +2288,34 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     }
     window.openPrintPage = async function () {
         if (!PRINT_URL || PRINT_URL.indexOf('এখানে') !== -1) { showAlert('প্রিন্ট URL এখনো সেট করা হয়নি!', 'error'); return; }
-        $('printPick').classList.add('open');
+        opener = document.activeElement;
         renderPick();
+        pickEl().classList.add('open'); pickEl().setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
         const first = $('printPickOpts').querySelector('.pp-opt:not(:disabled)'); if (first) first.focus();
-        if (!rows.length) { await reload(); renderPick(); }
+        if (!rows.length) { await reload(); if (isOpen()) renderPick(); }
     };
     $('printPickOpts').addEventListener('click', e => {
         const b = e.target.closest('.pp-opt'); if (!b || b.disabled) return;
         goPrint(b.dataset.shift);
     });
     $('printPickAll').addEventListener('click', () => goPrint(''));
-    document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('printPick').classList.contains('open')) closePick(); });
+    $('printPickX').addEventListener('click', closePick);
     $('printPickCancel').addEventListener('click', closePick);
-    $('printPick').addEventListener('click', e => { if (e.target.id === 'printPick') closePick(); });
+    pickEl().addEventListener('click', e => { if (e.target === pickEl()) closePick(); });
+    document.addEventListener('keydown', e => {
+        if (!isOpen()) return;
+        if (e.key === 'Escape') { closePick(); return; }
+        if (e.key === '1' || e.key === '১') { const b = $('printPickOpts').querySelector('.pp-opt.morning:not(:disabled)'); if (b) goPrint('morning'); }
+        else if (e.key === '2' || e.key === '২') { const b = $('printPickOpts').querySelector('.pp-opt.noon:not(:disabled)'); if (b) goPrint('noon'); }
+        else if ((e.key === 'a' || e.key === 'A') && !$('printPickAll').disabled) goPrint('');
+        else if (e.key === 'Tab') {   // ফোকাস ডায়ালগের ভেতরেই ঘুরবে
+            const f = [...pickEl().querySelectorAll('button:not(:disabled)')]; if (!f.length) return;
+            const i = f.indexOf(document.activeElement);
+            if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+            else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+        }
+    });
 
     const _fg = fastGenerateSeatPlan;
     fastGenerateSeatPlan = async function () { await _fg(); await reload(); };
