@@ -2663,84 +2663,297 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 })();
 </script>
 <script>
-// ===== শ্রেণিভিত্তিক ব্যবহৃত / বাকি শিক্ষার্থীর হিসাব =====
+// ===== শ্রেণিভিত্তিক হিসাব: স্মার্ট রিপোর্ট (ফিল্টার • সার্চ • শিফট • বাকি রোল • ডুপ্লিকেট সতর্কতা) + A4 প্রিন্ট =====
 (function () {
     const $ = id => document.getElementById(id);
     const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const STAT = { done: '✔ সম্পূর্ণ', part: '◐ চলমান', none: '○ শুরু হয়নি' };
     let saved = [];
-    let open = false;   // শুরুতে লুকানো; চোখ বাটনে দেখা যাবে
+    let open = false;      // শুরুতে লুকানো; চোখ বাটনে দেখা যাবে
+    let filter = 'all';    // all | left | done | none
+    let query = '';
+    let last = null;       // সর্বশেষ হিসাব (স্ক্রিন ও প্রিন্ট একই ডেটা ব্যবহার করে)
+
+    // ---------- স্টাইল (স্ক্রিন + প্রিন্ট) ----------
+    function injectCss() {
+        if ($('suStyle')) return;
+        const s = document.createElement('style');
+        s.id = 'suStyle';
+        s.textContent = `
+        #stuUsage .su-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        #stuUsage .su-title { font-weight:700; color:#F1E2C3; margin-right:2px; }
+        #stuUsage .su-btn { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px;
+            border:1px solid var(--gold); background:rgba(214,162,78,.15); color:#F1E2C3; font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:background .15s; }
+        #stuUsage .su-btn:hover { background:rgba(214,162,78,.32); }
+        #stuUsage .su-btn.pri { background:var(--gold-bright); color:#101A33; border-color:var(--gold-bright); }
+        #stuUsage .su-btn.pri:hover { background:#e6b765; }
+        #stuUsage .su-cards { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:10px 0 8px; }
+        #stuUsage .su-card { background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:8px 6px; text-align:center; }
+        #stuUsage .su-card b { display:block; font-size:19px; line-height:1.25; }
+        #stuUsage .su-card span { font-size:11.5px; color:#c9cfdb; }
+        #stuUsage .su-card.used b { color:#9ee6bd; }
+        #stuUsage .su-card.left b { color:#f0a89e; }
+        #stuUsage .su-card.pct b { color:#F1E2C3; }
+        #stuUsage .su-bar { height:8px; border-radius:99px; background:rgba(255,255,255,.15); overflow:hidden; }
+        #stuUsage .su-bar i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,#23895B,#9ee6bd); transition:width .4s ease; }
+        #stuUsage .su-shift { display:flex; gap:14px; flex-wrap:wrap; margin:8px 0 2px; color:#c9cfdb; font-size:12px; }
+        #stuUsage .su-warn { margin:8px 0; padding:8px 10px; border-radius:10px; background:rgba(192,57,43,.2); border:1px solid rgba(240,168,158,.5); color:#ffd3cc; font-size:12px; line-height:1.6; }
+        #stuUsage .su-tools { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:10px 0 8px; }
+        #stuUsage .su-pill { padding:4px 11px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:transparent; color:#e6eaf3; font:inherit; font-size:12px; cursor:pointer; }
+        #stuUsage .su-pill.on { background:var(--gold-bright); color:#101A33; border-color:var(--gold-bright); font-weight:700; }
+        #stuUsage .su-search { flex:1; min-width:130px; padding:5px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.22); background:rgba(255,255,255,.08); color:#fff; font:inherit; font-size:12.5px; }
+        #stuUsage .su-search::placeholder { color:rgba(255,255,255,.5); }
+        #stuUsage .su-search:focus { outline:none; border-color:var(--gold-bright); box-shadow:0 0 0 3px rgba(214,162,78,.25); }
+        #stuUsage .su-wrap { max-height:340px; overflow:auto; border:1px solid rgba(255,255,255,.12); border-radius:10px; }
+        #stuUsage .su-tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+        #stuUsage .su-tbl th { position:sticky; top:0; z-index:1; padding:7px 8px; background:#26365f; color:#F1E2C3; font-weight:600; }
+        #stuUsage .su-tbl td { padding:6px 8px; border-top:1px solid rgba(255,255,255,.1); vertical-align:top; }
+        #stuUsage .su-tbl td.c, #stuUsage .su-tbl th.c { text-align:center; }
+        #stuUsage .su-rem { display:block; margin-top:2px; font-size:11px; color:#c9cfdb; line-height:1.5; }
+        #stuUsage .su-badge { display:inline-block; padding:1px 9px; border-radius:99px; font-size:11px; font-weight:700; white-space:nowrap; }
+        #stuUsage .su-badge.done { background:rgba(158,230,189,.18); color:#9ee6bd; }
+        #stuUsage .su-badge.part { background:rgba(241,226,195,.18); color:#F1E2C3; }
+        #stuUsage .su-badge.none { background:rgba(201,207,219,.15); color:#c9cfdb; }
+        #stuUsage .su-mini { height:5px; margin-top:5px; border-radius:99px; background:rgba(255,255,255,.15); overflow:hidden; min-width:70px; }
+        #stuUsage .su-mini i { display:block; height:100%; }
+        #stuUsage .su-empty { padding:16px; text-align:center; color:#c9cfdb; }
+        @media (max-width:600px) { #stuUsage .su-cards { grid-template-columns:repeat(2,1fr); } }
+
+        /* ===== প্রিন্ট শিট (শুধু প্রিন্টের সময় দেখায়) ===== */
+        #suSheet { display:none; }
+        .su-sheet { font-family:'SolaimanLipi','Hind Siliguri','Kalpurush',sans-serif; color:#000; font-size:11pt; line-height:1.5;
+            -webkit-print-color-adjust:exact; print-color-adjust:exact; page:su; }
+        .su-sheet h1 { font-size:17pt; margin:0; text-align:center; color:#1D2B4F; font-weight:700; }
+        .su-sheet .sub { text-align:center; font-size:12pt; margin:2px 0 0; font-weight:600; }
+        .su-sheet .meta { display:flex; justify-content:space-between; gap:10px; font-size:9.5pt; color:#333; border-top:2px solid #1D2B4F; border-bottom:1px solid #999; padding:4px 0; margin:8px 0 10px; }
+        .su-sheet .sum { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+        .su-sheet .sum div { border:1px solid #444; border-radius:4px; padding:4px 6px; text-align:center; font-size:9.5pt; }
+        .su-sheet .sum b { display:block; font-size:14pt; line-height:1.3; }
+        .su-sheet .shifts { font-size:9.5pt; margin-bottom:8px; color:#222; }
+        .su-sheet table { width:100%; border-collapse:collapse; font-size:10pt; }
+        .su-sheet th, .su-sheet td { border:1px solid #555; padding:3px 5px; vertical-align:top; }
+        .su-sheet th { background:#E4E8F2 !important; text-align:center; font-weight:700; }
+        .su-sheet thead { display:table-header-group; }
+        .su-sheet tfoot { display:table-row-group; }
+        .su-sheet tr { page-break-inside:avoid; break-inside:avoid; }
+        .su-sheet td.c { text-align:center; }
+        .su-sheet td.rem { font-size:9pt; color:#222; }
+        .su-sheet tfoot td { font-weight:700; background:#F3F0E6 !important; }
+        .su-sheet .bar { height:6px; border:1px solid #555; border-radius:99px; overflow:hidden; margin-top:2px; }
+        .su-sheet .bar i { display:block; height:100%; background:#23895B; }
+        .su-sheet .warn { margin-top:10px; border:1px solid #C0392B; background:#FCEDEB !important; padding:5px 8px; font-size:9.5pt; break-inside:avoid; }
+        .su-sheet .sign { display:flex; justify-content:space-around; margin-top:42px; font-size:10pt; break-inside:avoid; }
+        .su-sheet .sign span { border-top:1px solid #000; padding-top:3px; min-width:150px; text-align:center; }
+        .su-sheet .foot { margin-top:10px; font-size:8.5pt; color:#555; text-align:center; }
+        @page su { size:A4 portrait; margin:14mm 12mm 16mm; }
+        @media print {
+            body.su-printing { background:#fff !important; padding:0 !important; }
+            body.su-printing > *:not(#suSheet) { display:none !important; }
+            body.su-printing #suSheet { display:block !important; position:static !important; }
+            body.su-printing #suSheet, body.su-printing #suSheet * { visibility:visible !important; }
+        }`;
+        document.head.appendChild(s);
+    }
 
     function ensureBox() {
         let b = $('stuUsage');
         if (!b) {
             const s = $('stuStatus'); if (!s) return null;
+            injectCss();
             b = document.createElement('div');
             b.id = 'stuUsage';
             b.style.cssText = 'margin-top:12px;font-size:12.5px;color:#fff';
             s.insertAdjacentElement('afterend', b);
             b.addEventListener('click', e => {
-                if (e.target.closest('#stuUsageEye')) { open = !open; render(); }
+                if (e.target.closest('#stuUsageEye')) { open = !open; draw(); return; }
+                if (e.target.closest('#suPrint')) { printReport(); return; }
+                const f = e.target.closest('[data-sf]');
+                if (f) {
+                    filter = f.dataset.sf;
+                    b.querySelectorAll('[data-sf]').forEach(x => { const on = x.dataset.sf === filter; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+                    drawRows();
+                }
             });
+            b.addEventListener('input', e => { if (e.target.id === 'suQ') { query = e.target.value; drawRows(); } });
         }
         return b;
     }
 
-    // সংরক্ষিত সব কক্ষ (সকাল + দুপুর) থেকে প্রতিটি শ্রেণির ব্যবহৃত রোলের সেট
-    function usedMap() {
-        const out = {}, S = window.__stu;
+    // ---------- হিসাব ----------
+    // সংরক্ষিত সব কক্ষ (সকাল + দুপুর) থেকে শ্রেণি-ভিত্তিক ব্যবহৃত রোল, শিফটসহ
+    function compute() {
+        const S = window.__stu, st = S && S.st;
+        if (!st || !st.loaded) return null;
+        const per = {}, roomSet = { morning: new Set(), noon: new Set() };
         saved.forEach(r => {
             if (!r || r.id === '__center__' || !r.data) return;
+            const sh = (window.shiftOfRow ? window.shiftOfRow(r) : 'morning') === 'noon' ? 'noon' : 'morning';
+            const room = String(((r.data.roomInfo || {}).roomNumber) || '').trim();
+            let any = false;
             (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
-                if (!rg.classKey || !Array.isArray(rg.rolls)) return;
-                const set = out[rg.classKey] || (out[rg.classKey] = new Set());
-                rg.rolls.forEach(x => { const v = S.fromSaved(rg.classKey, x); if (!isNaN(v)) set.add(v); });
+                if (!rg.classKey || !Array.isArray(rg.rolls) || !st.map[rg.classKey]) return;
+                const p = per[rg.classKey] || (per[rg.classKey] = { morning: new Set(), noon: new Set(), occ: {} });
+                rg.rolls.forEach(x => {
+                    const v = S.fromSaved(rg.classKey, x); if (isNaN(v)) return;
+                    p[sh].add(v); any = true;
+                    (p.occ[sh + '|' + v] = p.occ[sh + '|' + v] || []).push(room);
+                });
             }));
+            if (any) roomSet[sh].add(r.id);
         });
-        return out;
+
+        const lab = (k, v) => bnN(S.rollLabel(k, v));
+        const pctOf = (u, t) => !t ? 0 : (u >= t ? 100 : Math.min(99, Math.round(u / t * 100)));
+        let tTotal = 0, tUsed = 0, tMor = 0, tNoon = 0;
+        const dups = [];
+        const rows = st.keys.map(k => {
+            const g = st.map[k], p = per[k] || { morning: new Set(), noon: new Set(), occ: {} };
+            const usedSet = new Set();
+            let mor = 0, noon = 0;
+            p.morning.forEach(v => { if (g.rolls.has(v)) { usedSet.add(v); mor++; } });
+            p.noon.forEach(v => { if (g.rolls.has(v)) { usedSet.add(v); noon++; } });
+            const total = g.n, used = usedSet.size, left = total - used;
+            // বাকি রোল: Students-এ থাকা রোলের ক্রমে পরপর বাকিগুলো এক রেঞ্জে (যেমন ০১২–০২০)
+            const runs = []; let a = null, z = null;
+            [...g.rolls].sort((x, y) => x - y).forEach(v => {
+                if (usedSet.has(v)) { if (a !== null) { runs.push(a === z ? lab(k, a) : lab(k, a) + '–' + lab(k, z)); a = z = null; } }
+                else { if (a === null) a = v; z = v; }
+            });
+            if (a !== null) runs.push(a === z ? lab(k, a) : lab(k, a) + '–' + lab(k, z));
+            // একই শিফটে একই রোল একাধিক কক্ষে বসানো হলে সতর্কতা
+            const label = g.label.replace('শ্রেণি: ', '');
+            Object.keys(p.occ).forEach(key => {
+                const list = p.occ[key]; if (list.length < 2) return;
+                const [sh, v] = key.split('|');
+                dups.push({ cls: label, roll: window.__stu.prefixOf(k) + '-' + lab(k, Number(v)), shift: sh === 'noon' ? 'দুপুর' : 'সকাল',
+                            rooms: [...new Set(list)].map(x => bnN(x || '?')) });
+            });
+            tTotal += total; tUsed += used; tMor += mor; tNoon += noon;
+            const cls = left === 0 ? 'done' : (used === 0 ? 'none' : 'part');
+            return { key: k, label, total, mor, noon, used, left, pct: pctOf(used, total), cls, runs };
+        });
+        return {
+            rows, dups, tTotal, tUsed, tLeft: tTotal - tUsed, tMor, tNoon,
+            pct: pctOf(tUsed, tTotal), roomsMor: roomSet.morning.size, roomsNoon: roomSet.noon.size
+        };
     }
 
-    function render() {
-        const box = ensureBox(); if (!box) return;
-        const st = window.__stu && window.__stu.st;
-        if (!st || !st.loaded) { box.innerHTML = ''; return; }
-        const um = usedMap();
-        let tTotal = 0, tUsed = 0;
-        const rows = st.keys.map(k => {
-            const g = st.map[k], set = um[k] || new Set();
-            let used = 0; set.forEach(v => { if (g.rolls.has(v)) used++; });
-            const total = g.n, left = total - used, pct = total ? Math.round(used / total * 100) : 0;
-            tTotal += total; tUsed += used;
-            const color = left === 0 ? '#9ee6bd' : (used === 0 ? '#c9cfdb' : '#F1E2C3');
-            return '<tr style="border-top:1px solid rgba(255,255,255,.1)">' +
-                '<td style="padding:6px 8px;text-align:left">' + g.label.replace('শ্রেণি: ', '') + '</td>' +
-                '<td style="padding:6px 8px;text-align:center">' + bnN(total) + '</td>' +
-                '<td style="padding:6px 8px;text-align:center;color:#9ee6bd;font-weight:700">' + bnN(used) + '</td>' +
-                '<td style="padding:6px 8px;text-align:center;color:' + (left ? '#f0a89e' : '#9ee6bd') + ';font-weight:700">' + (left ? bnN(left) : '✔ ০') + '</td>' +
-                '<td style="padding:6px 8px;min-width:90px"><div style="height:6px;border-radius:99px;background:rgba(255,255,255,.15);overflow:hidden">' +
-                '<i style="display:block;height:100%;width:' + pct + '%;background:' + color + '"></i></div></td></tr>';
-        }).join('');
-        // স্ট্যাটাস বার্তার শেষ অংশ বদলে মোট/ব্যবহৃত/বাকি দেখানো
+    function updateStatus(d) {
         const ss = $('stuStatus');
         if (ss && ss.textContent.indexOf('শিক্ষার্থী লোড হয়েছে') > -1) {
-            const nt = ss.textContent.replace(/।.*$/, '') + '। মোট ' + bnN(tTotal) + ' জন • ব্যবহৃত ' + bnN(tUsed) + ' জন • বাকি ' + bnN(tTotal - tUsed) + ' জন';
+            const nt = ss.textContent.replace(/।.*$/, '') + '। মোট ' + bnN(d.tTotal) + ' জন • ব্যবহৃত ' + bnN(d.tUsed) + ' জন • বাকি ' + bnN(d.tLeft) + ' জন';
             if (ss.textContent !== nt) ss.textContent = nt;
         }
-        const eye = '<button type="button" id="stuUsageEye" title="' + (open ? 'হিসাব লুকান' : 'হিসাব দেখুন') + '" ' +
-            'aria-expanded="' + open + '" style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;' +
-            'border:1px solid var(--gold);background:rgba(214,162,78,.15);color:#F1E2C3;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer">' +
-            (open ? '🙈 লুকান' : '👁 দেখুন') + '</button>';
-        const head = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:' + (open ? '8' : '0') + 'px">' +
-            '<span style="font-weight:700;color:#F1E2C3">📊 শ্রেণিভিত্তিক হিসাব</span>' + eye + '</div>';
+    }
+
+    // ---------- স্ক্রিন ----------
+    function rowBar(r) { return r.cls === 'done' ? '#9ee6bd' : (r.cls === 'none' ? '#c9cfdb' : '#F1E2C3'); }
+
+    function drawRows() {
+        const body = $('suBody'); if (!body || !last) return;
+        const q = bnN(query.trim()).toLowerCase();
+        const list = last.rows.filter(r =>
+            (filter === 'all' || (filter === 'left' && r.left > 0) || (filter === 'done' && r.left === 0) || (filter === 'none' && r.used === 0)) &&
+            (!q || bnN(r.label).toLowerCase().indexOf(q) > -1));
+        body.innerHTML = list.length ? list.map(r => {
+            const MAX = 5, shown = r.runs.slice(0, MAX).join(', ') + (r.runs.length > MAX ? ' …+' + bnN(r.runs.length - MAX) + 'টি' : '');
+            return '<tr><td>' + esc(r.label) +
+                (r.left ? '<span class="su-rem" title="' + esc(r.runs.join(', ')) + '">বাকি রোল: ' + esc(shown) + '</span>' : '') + '</td>' +
+                '<td class="c">' + bnN(r.total) + '</td>' +
+                '<td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>' +
+                '<td class="c" style="color:#9ee6bd;font-weight:700">' + bnN(r.used) + '</td>' +
+                '<td class="c" style="color:' + (r.left ? '#f0a89e' : '#9ee6bd') + ';font-weight:700">' + (r.left ? bnN(r.left) : '✔ ০') + '</td>' +
+                '<td class="c"><span class="su-badge ' + r.cls + '">' + STAT[r.cls] + '</span>' +
+                '<div class="su-mini"><i style="width:' + r.pct + '%;background:' + rowBar(r) + '"></i></div></td></tr>';
+        }).join('') : '<tr><td colspan="7" class="su-empty">এই শর্তে কোনো শ্রেণি পাওয়া যায়নি</td></tr>';
+        const c = $('suCount'); if (c) c.textContent = bnN(list.length) + '/' + bnN(last.rows.length) + 'টি শ্রেণি';
+    }
+
+    function draw() {
+        const box = ensureBox(); if (!box) return;
+        const d = compute();
+        if (!d) { box.innerHTML = ''; last = null; return; }
+        last = d;
+        updateStatus(d);
+        const head = '<div class="su-head"><span class="su-title">📊 শ্রেণিভিত্তিক হিসাব</span>' +
+            '<button type="button" class="su-btn" id="stuUsageEye" title="' + (open ? 'হিসাব লুকান' : 'হিসাব দেখুন') + '" aria-expanded="' + open + '">' + (open ? '🙈 লুকান' : '👁 দেখুন') + '</button>' +
+            '<button type="button" class="su-btn pri" id="suPrint" title="A4 পাতায় রিপোর্ট প্রিন্ট / PDF">🖨 রিপোর্ট প্রিন্ট</button></div>';
         if (!open) { box.innerHTML = head; return; }
+
+        const cnt = { all: d.rows.length, left: d.rows.filter(r => r.left > 0).length, done: d.rows.filter(r => r.left === 0).length, none: d.rows.filter(r => r.used === 0).length };
+        const pill = (k, t) => '<button type="button" class="su-pill' + (filter === k ? ' on' : '') + '" data-sf="' + k + '" aria-pressed="' + (filter === k) + '">' + t + ' (' + bnN(cnt[k]) + ')</button>';
+        const warn = d.dups.length
+            ? '<div class="su-warn">⚠ <b>ডুপ্লিকেট রোল ' + bnN(d.dups.length) + 'টি:</b> একই শিফটে একই রোল একাধিক কক্ষে আছে — ' +
+              d.dups.slice(0, 6).map(x => esc(x.cls) + ' ' + esc(x.roll) + ' (' + x.shift + ', কক্ষ ' + x.rooms.join('/') + ')').join('; ') +
+              (d.dups.length > 6 ? ' …আরও ' + bnN(d.dups.length - 6) + 'টি' : '') + '</div>'
+            : '';
         box.innerHTML = head +
-            '<div style="font-weight:600;margin-bottom:6px;color:#F1E2C3">মোট ' + bnN(tTotal) +
-            ' জন • ব্যবহৃত ' + bnN(tUsed) + ' জন • বাকি ' + bnN(tTotal - tUsed) + ' জন</div>' +
-            '<div style="max-height:260px;overflow:auto;border:1px solid rgba(255,255,255,.12);border-radius:10px">' +
-            '<table style="width:100%;border-collapse:collapse;font-size:12.5px">' +
-            '<thead><tr style="color:#F1E2C3;background:rgba(255,255,255,.06)">' +
-            '<th style="padding:7px 8px;text-align:left">শ্রেণি</th><th style="padding:7px 8px">মোট</th>' +
-            '<th style="padding:7px 8px">ব্যবহৃত</th><th style="padding:7px 8px">বাকি</th><th></th></tr></thead>' +
-            '<tbody>' + rows + '</tbody></table></div>';
+            '<div class="su-cards">' +
+            '<div class="su-card"><b>' + bnN(d.tTotal) + '</b><span>মোট শিক্ষার্থী</span></div>' +
+            '<div class="su-card used"><b>' + bnN(d.tUsed) + '</b><span>ব্যবহৃত</span></div>' +
+            '<div class="su-card left"><b>' + bnN(d.tLeft) + '</b><span>বাকি</span></div>' +
+            '<div class="su-card pct"><b>' + bnN(d.pct) + '%</b><span>অগ্রগতি</span></div></div>' +
+            '<div class="su-bar"><i style="width:' + d.pct + '%"></i></div>' +
+            '<div class="su-shift"><span>🌅 সকাল: ' + bnN(d.roomsMor) + 'টি কক্ষ • ' + bnN(d.tMor) + ' জন</span><span>☀️ দুপুর: ' + bnN(d.roomsNoon) + 'টি কক্ষ • ' + bnN(d.tNoon) + ' জন</span></div>' +
+            warn +
+            '<div class="su-tools">' + pill('all', 'সব') + pill('left', 'বাকি আছে') + pill('done', 'সম্পূর্ণ') + pill('none', 'শুরু হয়নি') +
+            '<input type="search" class="su-search" id="suQ" placeholder="🔍 শ্রেণি খুঁজুন (যেমন: ৯ম, বালিকা)" value="' + esc(query) + '">' +
+            '<span id="suCount" style="font-size:11.5px;color:#c9cfdb"></span></div>' +
+            '<div class="su-wrap"><table class="su-tbl"><thead><tr><th style="text-align:left">শ্রেণি</th><th class="c">মোট</th><th class="c">🌅 সকাল</th><th class="c">☀️ দুপুর</th>' +
+            '<th class="c">ব্যবহৃত</th><th class="c">বাকি</th><th class="c">অবস্থা</th></tr></thead><tbody id="suBody"></tbody></table></div>';
+        drawRows();
+    }
+
+    // ---------- A4 প্রিন্ট রিপোর্ট ----------
+    function sheetHtml(d) {
+        const val = id => ($(id) && $(id).value) || '';
+        const exam = [val('examName'), val('examYear') ? bnN(val('examYear')) : ''].filter(Boolean).join(' ');
+        let time = val('examTime'); if (time === '__other__') time = '';
+        const sess = val('stuSession');
+        let when;
+        try { when = new Date().toLocaleString('bn-BD', { dateStyle: 'long', timeStyle: 'short' }); } catch (e) { when = bnN(new Date().toLocaleString()); }
+
+        const body = d.rows.map((r, i) =>
+            '<tr><td class="c">' + bnN(i + 1) + '</td><td>' + esc(r.label) + '</td>' +
+            '<td class="c">' + bnN(r.total) + '</td><td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>' +
+            '<td class="c"><b>' + bnN(r.used) + '</b></td><td class="c"><b>' + bnN(r.left) + '</b></td>' +
+            '<td class="c">' + STAT[r.cls] + '<div class="bar"><i style="width:' + r.pct + '%"></i></div></td>' +
+            '<td class="rem">' + (r.left ? esc(r.runs.join(', ')) : '—') + '</td></tr>').join('');
+        const warn = d.dups.length
+            ? '<div class="warn"><b>⚠ ডুপ্লিকেট রোল (' + bnN(d.dups.length) + 'টি):</b> ' +
+              d.dups.map(x => esc(x.cls) + ' ' + esc(x.roll) + ' (' + x.shift + ', কক্ষ ' + x.rooms.join('/') + ')').join('; ') + '</div>'
+            : '';
+        return '<div class="su-sheet">' +
+            '<h1>শ্রেণিভিত্তিক পরীক্ষার্থী ব্যবহার রিপোর্ট</h1>' +
+            (exam ? '<div class="sub">' + esc(exam) + (time ? ' • শুরু: ' + esc(time) : '') + '</div>' : '') +
+            '<div class="meta"><span>সেশন: ' + (sess ? bnN(esc(sess)) : '—') + '</span><span>প্রিন্টের সময়: ' + esc(when) + '</span></div>' +
+            '<div class="sum"><div><b>' + bnN(d.tTotal) + '</b>মোট শিক্ষার্থী</div><div><b>' + bnN(d.tUsed) + '</b>সিটে বসানো হয়েছে</div>' +
+            '<div><b>' + bnN(d.tLeft) + '</b>বাকি</div><div><b>' + bnN(d.pct) + '%</b>অগ্রগতি</div></div>' +
+            '<div class="shifts">🌅 সকাল শিফট: ' + bnN(d.roomsMor) + 'টি কক্ষ, ' + bnN(d.tMor) + ' জন &nbsp;|&nbsp; ☀️ দুপুর শিফট: ' + bnN(d.roomsNoon) + 'টি কক্ষ, ' + bnN(d.tNoon) + ' জন</div>' +
+            '<table><thead><tr><th style="width:5%">ক্রম</th><th>শ্রেণি</th><th style="width:7%">মোট</th><th style="width:7%">সকাল</th><th style="width:7%">দুপুর</th>' +
+            '<th style="width:8%">ব্যবহৃত</th><th style="width:7%">বাকি</th><th style="width:13%">অবস্থা</th><th style="width:22%">বাকি রোল</th></tr></thead>' +
+            '<tbody>' + body + '</tbody>' +
+            '<tfoot><tr><td colspan="2" class="c">সর্বমোট</td><td class="c">' + bnN(d.tTotal) + '</td><td class="c">' + bnN(d.tMor) + '</td><td class="c">' + bnN(d.tNoon) + '</td>' +
+            '<td class="c">' + bnN(d.tUsed) + '</td><td class="c">' + bnN(d.tLeft) + '</td><td class="c">' + bnN(d.pct) + '%</td><td></td></tr></tfoot></table>' +
+            warn +
+            '<div class="sign"><span>প্রস্তুতকারী</span><span>কেন্দ্র সচিব</span></div>' +
+            '<div class="foot">সিট প্ল্যান সিস্টেম থেকে স্বয়ংক্রিয়ভাবে তৈরি • ' + esc(when) + '</div></div>';
+    }
+
+    function printReport() {
+        const d = compute();
+        if (!d) { if (typeof showAlert === 'function') showAlert('আগে Students লোড করুন, তারপর রিপোর্ট প্রিন্ট করুন।', 'error'); return; }
+        injectCss();
+        let sh = $('suSheet');
+        if (!sh) { sh = document.createElement('div'); sh.id = 'suSheet'; document.body.appendChild(sh); }
+        sh.innerHTML = sheetHtml(d);
+        document.body.classList.add('su-printing');
+        window.addEventListener('afterprint', function done() {
+            document.body.classList.remove('su-printing');
+            window.removeEventListener('afterprint', done);
+        });
+        setTimeout(() => window.print(), 60);
     }
 
     async function loadSaved() {
@@ -2749,12 +2962,12 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             const list = await sbApi('seatPlanList', token);
             saved = Array.isArray(list) ? list : [];
         } catch (e) { console.warn('ব্যবহৃত রোলের হিসাব আনা যায়নি:', e.message); }
-        render();
+        draw();
     }
 
     // Students লোড হলে (স্ট্যাটাস বার্তা বদলালে) আবার আঁকবে
     const s = $('stuStatus');
-    if (s) new MutationObserver(render).observe(s, { childList: true, characterData: true, subtree: true });
+    if (s) new MutationObserver(draw).observe(s, { childList: true, characterData: true, subtree: true });
 
     // সাবমিটের পর হালনাগাদ
     const _fg = fastGenerateSeatPlan;
