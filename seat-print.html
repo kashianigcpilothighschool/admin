@@ -1075,10 +1075,53 @@
 }
 
 /* ---- টুলবার পর্দার বাইরে চলে যাওয়া ঠিক: জায়গা না হলে দ্বিতীয় সারিতে নামবে ---- */
-@media screen and (min-width:721px) and (max-width:1700px) {
+@media screen and (min-width:721px) and (max-width:1180px) {
   .toolbar { flex-wrap:wrap !important; justify-content:center; width:auto !important; max-width:calc(100% - 24px); row-gap:8px; }
   .toolbar .group.actions { margin-left:0 !important; padding-left:0 !important; border-left:none !important; flex-wrap:wrap; justify-content:center; }
 }
+
+/* =====================================================
+   কমপ্যাক্ট একলাইন টুলবার (v4.1) — ছোট ও আধুনিক বাটন
+   ===================================================== */
+@media screen and (min-width:721px) {
+  :root { --btn-h:34px; --in-h:30px; }
+  .toolbar { flex-wrap:nowrap; width:fit-content; max-width:calc(100% - 16px); padding:6px 8px !important; gap:8px !important; border-radius:18px; }
+  .brand .mark { width:32px; height:32px; border-radius:11px; }
+  .brand .mark svg { width:16px; height:16px; }
+
+  /* সাধারণ বাটন */
+  .toolbar button { font-size:13px; padding:0 12px; gap:6px; border-radius:11px !important; }
+  .toolbar button.icon { width:var(--btn-h); padding:0; }
+  .toolbar button svg { width:16px; height:16px; }
+  .group.nav, .group:not(.nav):not(.actions) { padding:2px; border-radius:14px; gap:1px; }
+  .group.nav button, .group:not(.nav):not(.actions) button, .group.nav select, .group:not(.nav):not(.actions) select { border-radius:11px; font-size:13px; }
+  .group.nav button.icon, .zoom button.icon { width:var(--in-h); }
+  .toolbar select.room-sel { width:150px; }
+  .toolbar #paperSelect { width:78px; }
+  .counter { min-width:44px; padding:0 8px; font-size:12px; border-radius:10px; }
+  .zoom button.zoom-label { min-width:62px; font-size:12px; padding:0 6px; }
+  .toolbar .search { width:130px; }
+  .toolbar .search:focus-within { width:180px; }
+  .search-wrap { height:34px; padding:0 4px 0 10px; gap:6px; }
+  .search-wrap input { font-size:13px; }
+  .search-kbd { display:none; }
+
+  /* অ্যাকশন গ্রুপ */
+  .toolbar .group.actions { gap:6px !important; flex-wrap:nowrap; padding-left:8px; margin-left:0; }
+  .toolbar .group.actions > button.primary { padding:0 14px; border-radius:11px !important; }
+  .toolbar .group.actions > button:not(.primary):not(.icon), .toolbar .seg button { border-radius:11px !important; }
+  .toolbar .group.actions > button.icon:not(.primary) { border-radius:11px !important; }
+  .toolbar .seg button { padding:0 6px 0 12px !important; gap:7px !important; height:var(--btn-h) !important; min-height:var(--btn-h) !important; }
+  .badge { min-width:20px; height:20px; font-size:11px; }
+  #btnAll .badge { min-width:20px; height:20px; padding:0 6px; }
+
+  /* শিফট বাটন */
+  #shiftSeg { padding:2px !important; gap:2px; }
+  #shiftSeg button { height:28px !important; min-height:28px !important; padding:0 9px !important; gap:5px !important; font-size:12.5px !important; border-radius:999px !important; }
+  #shiftSeg .badge { min-width:18px; height:18px; padding:0 5px !important; font-size:11px; line-height:18px; }
+}
+/* ছোট স্ক্রিনে ব্র্যান্ড আইকন লুকিয়ে জায়গা বাঁচানো */
+@media screen and (min-width:721px) and (max-width:1440px) { .toolbar .brand { display:none; } }
 </style>
 </head>
 <body>
