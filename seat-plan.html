@@ -1695,7 +1695,25 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     (function () {
         const COLS = ['C', 'D', 'F', 'G', 'I', 'J'];
         const st = { map: {}, keys: [], loaded: false };
-        window.__stu = { st: st, matched: function (k, a, c) { return matched(k, a, c); }, prefixOf: function (k) { return prefixOf(k); } };
+        window.__stu = { st: st, matched: function (k, a, c) { return matched(k, a, c); }, prefixOf: function (k) { return prefixOf(k); },
+            rollLabel: function (k, v) { return rollLabel(k, v); }, toSaved: function (k, v) { return toSaved(k, v); }, fromSaved: function (k, x) { return fromSaved(k, x); }, baseOf: function (v) { return baseOf(v); } };
+        // ---- রোল: "002", "002 (H)", "002 (ক)" — সাফিক্সসহ রোলও আলাদা রোল হিসেবে গণনা ----
+        // ভেতরে সংখ্যা: 2 = "002", 2.001 = প্রথম সাফিক্স রোল, 2.002 = দ্বিতীয় … (সাজানো ক্রম ঠিক থাকে)
+        function pad3(n) { return String(n).padStart(3, '0'); }
+        function baseOf(v) { return Math.floor(Number(v) + 1e-9); }
+        function normRoll(raw) {
+            const t = String(raw == null ? '' : raw).trim(), m = t.match(/^(\d+)\s*(.*)$/);
+            if (m) return { base: parseInt(m[1], 10), suf: m[2].replace(/\s+/g, ' ').trim() };
+            const d = t.replace(/\D/g, ''); return d ? { base: parseInt(d, 10), suf: '' } : null;
+        }
+        function rollLabel(k, v) { const g = st.map[k]; return (g && g.v2l[v]) || pad3(baseOf(v)); }
+        function toSaved(k, v) { const lab = rollLabel(k, v); return /\D/.test(lab) ? lab : baseOf(v); }   // সাধারণ রোল সংখ্যা, সাফিক্স রোল লেখা (যেমন "002 (H)")
+        function fromSaved(k, x) {
+            if (typeof x === 'number') return x;
+            const n = normRoll(x); if (!n) return NaN;
+            const g = st.map[k], lab = pad3(n.base) + (n.suf ? ' ' + n.suf : '');
+            return (g && g.l2v[lab] !== undefined) ? g.l2v[lab] : n.base;
+        }
         const $$ = id => document.getElementById(id);
         const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
 
@@ -1732,9 +1750,12 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         // শুরুর রোল থেকে ক্রমানুসারে Students-এ থাকা পরবর্তী রোলগুলো (সিট সংখ্যা পর্যন্ত); মাঝের না থাকা রোল বাদ যায়
         function matched(key, start, count) {
             const g = st.map[key]; if (!g) return [];
-            return [...g.rolls].filter(r => r >= start).sort((a, b) => a - b).slice(0, count);
+            // একই নম্বরের সাফিক্স রোল (যেমন 002 (H)) থাকলে, আগের কক্ষে ব্যবহৃত ওই নম্বরের রোল বাদ যাবে
+            let used = null;
+            if (g.hasVar[start] && window.__usedSavedRolls) { try { used = new Set(window.__usedSavedRolls(key)); } catch (e) {} }
+            return [...g.rolls].filter(r => r >= start && !(used && baseOf(r) === start && used.has(r))).sort((a, b) => a - b).slice(0, count);
         }
-        const fmt = (key, roll) => prefixOf(key) + '-' + String(roll).padStart(3, '0');
+        const fmt = (key, roll) => prefixOf(key) + '-' + rollLabel(key, roll);
         function refresh(div) {
             const note = div.querySelector('.stu-note'), sel = div.querySelector('.stu-class');
             if (!note || !sel) return;
@@ -1744,7 +1765,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             if (!key || !st.loaded || isNaN(start) || isNaN(count) || count <= 0) { note.textContent = ''; return; }
             const ok = matched(key, start, count);
             const endEl = div.querySelector('input[id^="end_roll_"]');
-            if (endEl && ok.length) endEl.value = ok[ok.length - 1];
+            if (endEl && ok.length) endEl.value = baseOf(ok[ok.length - 1]);
             note.style.color = ok.length < count ? '#f0a89e' : '#9ee6bd';
             note.textContent = ok.length
                 ? '✔ ' + fmt(key, ok[0]) + ' থেকে ' + fmt(key, ok[ok.length - 1]) + ' (' + bnN(ok.length) + ' জন)' +
@@ -1784,8 +1805,8 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             const rolls = [...st.map[k].rolls];
             const nx = window.__nextAfterSaved ? window.__nextAfterSaved(k) : undefined;
             if (nx === null) { showAlert('এই শ্রেণির সব রোল আগের কক্ষগুলোতে ব্যবহার হয়ে গেছে', 'error'); return; }
-            a.value = (nx === undefined) ? Math.min(...rolls) : nx;
-            b.value = Math.max(...rolls);
+            a.value = baseOf((nx === undefined) ? Math.min(...rolls) : nx);
+            b.value = baseOf(Math.max(...rolls));
             row.dataset.autoRoll = '1';   // রুম/সময় বদলালে আবার নতুন "পরের রোল" বসবে
             updateStudentCount(row);
         });
@@ -1798,7 +1819,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         function rowCount(row) {
             const sel = row.querySelector('.school-select'), o = sel && sel.selectedOptions[0], k = o && o.dataset.k;
             const a = parseInt(row.querySelector('.start-roll').value), b = parseInt(row.querySelector('.end-roll').value);
-            if (k && st.loaded && st.map[k] && !isNaN(a) && !isNaN(b)) return [...st.map[k].rolls].filter(r => r >= a && r <= b).length;
+            if (k && st.loaded && st.map[k] && !isNaN(a) && !isNaN(b)) return [...st.map[k].rolls].filter(r => r >= a && r < b + 1).length;
             return calculateStudents(row.querySelector('.start-roll').value, row.querySelector('.end-roll').value);
         }
         // সংখ্যা ঘর: ইনপুট হলে (mode='count') ব্যবহারকারীর দেওয়া সংখ্যা বদলায় না; শেষ রোল হাতে বদলালে (mode='end') সংখ্যা নিজে হিসাব হয়
@@ -1852,14 +1873,27 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                 const { api: sbApi, token } = await window.fbReady;
                 const list = await sbApi('listStudents', token, { session: sess });
                 if (!Array.isArray(list) || !list.length) throw new Error(sess + ' session-এ কোনো শিক্ষার্থী নেই।');
-                const map = {};
+                const map = {}, pend = {};
                 list.forEach(r => {
-                    const roll = parseInt(String(r.roll).replace(/\D/g, ''), 10); if (isNaN(roll)) return;
+                    const nr = normRoll(r.roll); if (!nr || isNaN(nr.base)) return;
                     const k = keyOf(r); if (!k) return;
-                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0, label: labelFor(r) });
-                    if (!map[k].rolls.has(roll)) { map[k].rolls.add(roll); map[k].n++; }
-                    map[k].names[roll] = r.name_bn || r.name_en || '';
+                    (map[k] = map[k] || { rolls: new Set(), names: {}, n: 0, label: labelFor(r), v2l: {}, l2v: {}, hasVar: {} });
+                    const lab = pad3(nr.base) + (nr.suf ? ' ' + nr.suf : '');
+                    ((pend[k] = pend[k] || {})[nr.base] = pend[k][nr.base] || {})[lab] = { suf: nr.suf, name: r.name_bn || r.name_en || '' };
                 });
+                // প্রতিটি নম্বরের সাধারণ রোল আগে, তারপর সাফিক্স রোলগুলো (বর্ণক্রমে)
+                Object.keys(pend).forEach(k => Object.keys(pend[k]).forEach(b => {
+                    const base = parseInt(b, 10), items = pend[k][b], g = map[k];
+                    let ord = 0;
+                    Object.keys(items).sort((x, y) => {
+                        const sx = items[x].suf, sy = items[y].suf;
+                        if (sx === sy) return 0; if (sx === '') return -1; if (sy === '') return 1; return sx.localeCompare(sy, 'bn');
+                    }).forEach(lab => {
+                        const o = items[lab].suf === '' ? 0 : ++ord, v = Number((base + o / 1000).toFixed(3));
+                        g.rolls.add(v); g.n++; g.v2l[v] = lab; g.l2v[lab] = v; g.names[v] = items[lab].name;
+                        if (o > 0) g.hasVar[base] = true;
+                    });
+                }));
                 st.map = map; st.loaded = true;
                 st.keys = Object.keys(map).sort((a, b) => parseFloat(a) - parseFloat(b) || a.localeCompare(b));
                 document.querySelectorAll('#columnInputs .stu-class').forEach(fillSelect);
@@ -1886,7 +1920,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             let end = start + n - 1;
             if (k && st.loaded && st.map[k]) {
                 const ok = matched(k, start, n);            // মাঝের না থাকা রোল বাদ দিয়ে ক্রমানুসারে n-তম রোল
-                if (ok.length) end = ok[ok.length - 1];
+                if (ok.length) end = baseOf(ok[ok.length - 1]);
                 if (ok.length < n) {
                     c.style.borderColor = '#e0a030';
                     c.title = 'Students-এ ' + start + ' থেকে মাত্র ' + ok.length + ' জন আছে';
@@ -1928,7 +1962,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
                         if (isNaN(sc) || sc <= 0) return;
                         const rg = out[n++], sel = rd.querySelector('.stu-class');
                         const sr = parseInt(rd.querySelector('input[id^="start_roll_"]').value);
-                        if (rg && sel && sel.value && st.loaded && !isNaN(sr) && sr > 0) { rg.classKey = sel.value; rg.prefix = prefixOf(sel.value); rg.rolls = matched(sel.value, sr, sc); }
+                        if (rg && sel && sel.value && st.loaded && !isNaN(sr) && sr > 0) { rg.classKey = sel.value; rg.prefix = prefixOf(sel.value); rg.rolls = matched(sel.value, sr, sc).map(v => toSaved(sel.value, v)); }
                     });
                 });
             } catch (e) { console.error(e); }
@@ -2034,7 +2068,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 (function () {
     const $ = id => document.getElementById(id);
     const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
-    const fmt = (key, roll) => window.__stu.prefixOf(key) + '-' + String(roll).padStart(3, '0');
+    const fmt = (key, roll) => window.__stu.prefixOf(key) + '-' + window.__stu.rollLabel(key, roll);
     let savedRows = [];
 
     async function loadSaved() {
@@ -2054,7 +2088,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             if (!r || r.id === '__center__' || r.id === me || !r.data) return;
             if (window.shiftOfRow(r) !== window.currentShift()) return;   // শুধু একই শিফটের কক্ষ
             (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
-                if (rg.classKey === key && Array.isArray(rg.rolls)) rg.rolls.forEach(x => out.push(x));
+                if (rg.classKey === key && Array.isArray(rg.rolls)) rg.rolls.forEach(x => { const v = window.__stu.fromSaved(key, x); if (!isNaN(v)) out.push(v); });
             }));
         });
         return out;
@@ -2085,6 +2119,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     }
     // বিদ্যালয়ের তথ্যের সারির জন্য: আগের সংরক্ষিত কক্ষে ব্যবহৃত সর্বোচ্চ রোলের পরের রোল
     // undefined = Students এখনো লোড হয়নি, null = সব রোল শেষ
+    window.__usedSavedRolls = function (key) { return usedSaved(key); };
     window.__nextAfterSaved = function (key) {
         const st = window.__stu.st;
         if (!st.loaded || !st.map[key]) return undefined;
@@ -2099,7 +2134,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         if (!sel || !a || !sel.value) return;
         const nx = nextRoll(sel.value, div);
         if (!nx) return;
-        a.value = nx;
+        a.value = window.__stu.baseOf(nx);
         if (auto) a.dataset.autoRoll = '1';
         a.dispatchEvent(new Event('input', { bubbles: true }));
     }
@@ -2121,7 +2156,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         if (nx === undefined) return;
         if (nx === null) { h.textContent = '✔ এই শ্রেণির সব রোল আগের রুমগুলোতে ব্যবহার হয়ে গেছে'; return; }
         const a = div.querySelector('input[id^="start_roll_"]');
-        if (parseInt(a.value) === nx) { h.textContent = '➡ পরের অব্যবহৃত রোল: ' + fmt(key, nx) + ' (বসানো আছে)'; return; }
+        if (parseInt(a.value) === window.__stu.baseOf(nx)) { h.textContent = '➡ পরের অব্যবহৃত রোল: ' + fmt(key, nx) + ' (বসানো আছে)'; return; }
         h.appendChild(document.createTextNode('➡ পরের অব্যবহৃত রোল: ' + fmt(key, nx) + ' '));
         const b = document.createElement('button');
         b.type = 'button'; b.textContent = 'শুরুর রোলে বসান';
@@ -2155,7 +2190,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
             if (nx === undefined) return;
             const a = row.querySelector('.start-roll'), b = row.querySelector('.end-roll');
             if (nx === null) { a.value = ''; b.value = ''; }
-            else { a.value = nx; b.value = Math.max.apply(null, [...window.__stu.st.map[k].rolls]); }
+            else { a.value = window.__stu.baseOf(nx); b.value = window.__stu.baseOf(Math.max.apply(null, [...window.__stu.st.map[k].rolls])); }
             updateStudentCount(row);
         });
     }
