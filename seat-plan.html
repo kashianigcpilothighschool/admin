@@ -703,7 +703,8 @@
         }
         .range-plus-btn:hover { background: rgba(35, 137, 91, 0.25); transform: scale(1.1); }
         /* ===== Morning / Noon কক্ষ কার্ড ===== */
-        .shift-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+        .shift-cards { display: none !important; }   /* কার্ড পেজে লুকানো — প্রিন্টের সময় ডায়ালগে বেছে নিতে হয় */
+        .shift-cards-unused { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
         .shift-card { background: var(--paper); border: 1.5px solid var(--border-soft); border-radius: var(--radius-md); padding: 14px 16px; }
         .shift-card.on { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(29, 43, 79, 0.08); }
         .shift-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--navy); font-size: 14.5px; }
@@ -714,6 +715,21 @@
         .room-chip.me { border-color: var(--navy); background: var(--navy-tint); }
         .shift-empty { font-size: 12.5px; color: var(--ink-soft); padding: 6px 2px; }
         @media (max-width: 700px) { .shift-cards { grid-template-columns: 1fr; } }
+
+        /* ===== প্রিন্টের আগে Morning / Noon বেছে নেওয়ার ডায়ালগ ===== */
+        .pp-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, .55); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+        .pp-overlay.open { display: flex; }
+        .pp-box { background: var(--paper, #fff); border-radius: 16px; padding: 20px; width: 100%; max-width: 520px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+        .pp-box h3 { margin: 0 0 4px; color: var(--navy, #1d2b4f); font-size: 17px; }
+        .pp-box p { margin: 0 0 14px; font-size: 13px; color: var(--ink-soft, #667); }
+        .pp-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .pp-opt { font-family: inherit; text-align: left; cursor: pointer; background: var(--paper, #fff); border: 1.5px solid var(--border-soft, #d9dde6); border-radius: 12px; padding: 14px; color: var(--navy, #1d2b4f); transition: border-color .15s, box-shadow .15s, transform .15s; }
+        .pp-opt:hover:not(:disabled) { border-color: var(--navy, #1d2b4f); box-shadow: 0 0 0 3px rgba(29,43,79,.1); transform: translateY(-1px); }
+        .pp-opt:disabled { opacity: .5; cursor: not-allowed; }
+        .pp-opt b { display: block; font-size: 15px; margin-bottom: 6px; }
+        .pp-opt span { font-size: 12.5px; color: var(--ink-soft, #667); }
+        .pp-cancel { margin-top: 14px; width: 100%; font-family: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--border-soft, #d9dde6); background: transparent; cursor: pointer; }
+        @media (max-width: 480px) { .pp-opts { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -897,6 +913,14 @@
         </div>
     </div>
 
+    <div class="pp-overlay no-print" id="printPick">
+        <div class="pp-box">
+            <h3>কোন কার্ডের কক্ষ প্রিন্ট করবেন?</h3>
+            <p>একটি শিফট বেছে নিন — শুধু সেই শিফটের কক্ষগুলো প্রিন্ট পেজে খুলবে।</p>
+            <div class="pp-opts" id="printPickOpts"></div>
+            <button type="button" class="pp-cancel" id="printPickCancel">বাতিল</button>
+        </div>
+    </div>
     <script>
 // ===== Supabase (হাবের একই সার্ভার ফাংশন) =====
 const API_URL  = "https://xemvwhqqpbxsdkqcscrg.supabase.co/functions/v1/attendance";
@@ -2151,6 +2175,34 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         const r = $('roomNumber'); if (r) r.dispatchEvent(new Event('change', { bubbles: true }));
     });
     ['roomNumber', 'buildingSelect', 'floorSelect'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', render); });
+
+
+    // ----- প্রিন্ট: Morning / Noon কার্ড বেছে নিয়ে প্রিন্ট পেজ খোলা -----
+    function pickStats() {
+        const g = { morning: { n: 0, s: 0 }, noon: { n: 0, s: 0 } };
+        rows.forEach(r => { if (r && r.id !== '__center__' && r.data) { const k = window.shiftOfRow(r); g[k].n++; g[k].s += countStudents(r.data); } });
+        return g;
+    }
+    function renderPick() {
+        const g = pickStats(), cur = window.currentShift();
+        $('printPickOpts').innerHTML = ['morning', 'noon'].map(k =>
+            `<button type="button" class="pp-opt" data-shift="${k}"${g[k].n ? '' : ' disabled'}>` +
+            `<b>${NAME[k]}${cur === k ? ' ✓' : ''}</b><span>${g[k].n ? bn(g[k].n) + ' কক্ষ • ' + bn(g[k].s) + ' জন' : 'কোনো কক্ষ সংরক্ষিত নেই'}</span></button>`).join('');
+    }
+    window.openPrintPage = async function () {
+        if (!PRINT_URL || PRINT_URL.indexOf('এখানে') !== -1) { showAlert('প্রিন্ট URL এখনো সেট করা হয়নি!', 'error'); return; }
+        $('printPick').classList.add('open');
+        renderPick();
+        if (!rows.length) { await reload(); renderPick(); }
+    };
+    $('printPickOpts').addEventListener('click', e => {
+        const b = e.target.closest('.pp-opt'); if (!b || b.disabled) return;
+        $('printPick').classList.remove('open');
+        log('প্রিন্ট পেজে যাওয়া হচ্ছে (' + b.dataset.shift + ')', 'info');
+        window.open(window.withToken(PRINT_URL + '?shift=' + b.dataset.shift), '_blank');
+    });
+    $('printPickCancel').addEventListener('click', () => $('printPick').classList.remove('open'));
+    $('printPick').addEventListener('click', e => { if (e.target.id === 'printPick') $('printPick').classList.remove('open'); });
 
     const _fg = fastGenerateSeatPlan;
     fastGenerateSeatPlan = async function () { await _fg(); await reload(); };
