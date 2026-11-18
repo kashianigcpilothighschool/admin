@@ -2423,49 +2423,76 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
         return [i.building, i.floor, sh].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
     }
 
-    window.openEditRoom = async function () {
-        const input = prompt('যে কক্ষের তথ্য এডিট করবেন তার কক্ষ নং লিখুন:');
-        if (input === null) return;
-        const want = en(input);
-        if (!want) { showAlert('কক্ষ নম্বর দিন!', 'error'); return; }
+    // ---- ড্রপডাউন ডায়ালগ: শিফট (সকাল / দুপুর-বিকাল) → সেই শিফটের কক্ষ ----
+    const SH_LABEL = { morning: '🌅 সকাল', noon: '☀️ দুপুর / বিকাল' };
+    const numOf = r => parseInt(en((r.data.roomInfo || {}).roomNumber), 10) || 0;
 
+    window.openEditRoom = async function () {
+        if ($('editDlg')) return;
         const btn = $('editPrintBtn');
         if (btn) btn.disabled = true;
+        let rows = [];
         try {
             const { api: sbApi, token } = await window.fbReady;
             const list = await sbApi('seatPlanList', token);
-            let found = (Array.isArray(list) ? list : []).filter(r =>
-                r && r.id !== '__center__' && r.data && r.data.roomInfo &&
-                en(r.data.roomInfo.roomNumber) === want);
-
-            if (!found.length) { showAlert(bn(want) + ' নং কক্ষের কোনো সংরক্ষিত তথ্য পাওয়া যায়নি!', 'error'); return; }
-
-            // শিফট নির্বাচিত থাকলে আগে সেই শিফটের কক্ষ দেখাবে
-            const cur = window.currentShift();
-            if (cur && found.length > 1) {
-                const same = found.filter(r => window.shiftOfRow(r) === cur);
-                if (same.length) found = same;
-            }
-
-            let pick = found[0];
-            if (found.length > 1) {
-                const msg = found.map((r, i) => (i + 1) + ') ' + describe(r)).join('\n');
-                const ans = parseInt(en(prompt(bn(want) + ' নং কক্ষ একাধিক পাওয়া গেছে। নম্বর লিখুন:\n\n' + msg) || ''), 10);
-                if (!ans || ans < 1 || ans > found.length) return;
-                pick = found[ans - 1];
-            }
-
-            fill(pick.data);
-            if (typeof updateAll === 'function') try { updateAll(); } catch (e) {}
-            showAlert(bn(want) + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
-            log('এডিটের জন্য লোড: ' + pick.id, 'success');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            rows = (Array.isArray(list) ? list : []).filter(r => r && r.id !== '__center__' && r.data && r.data.roomInfo);
         } catch (e) {
             showAlert('তথ্য আনতে ত্রুটি: ' + e.message, 'error');
-            log('এডিট লোড ত্রুটি: ' + e.message, 'error');
-        } finally {
             if (btn) btn.disabled = false;
+            return;
         }
+        if (btn) btn.disabled = false;
+        if (!rows.length) { showAlert('কোনো সংরক্ষিত কক্ষ পাওয়া যায়নি!', 'error'); return; }
+
+        const ov = document.createElement('div');
+        ov.id = 'editDlg';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;font-family:inherit';
+        const st = 'width:100%;padding:10px;border-radius:8px;border:1.5px solid #bbb;font-family:inherit;font-size:15px;margin:4px 0 12px;background:#fff;color:#1E2330';
+        ov.innerHTML =
+            '<div style="background:#fff;color:#1E2330;border-radius:14px;padding:20px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.4)">' +
+            '<div style="font-weight:700;font-size:17px;margin-bottom:12px">কক্ষের তথ্য এডিট করুন</div>' +
+            '<label style="font-size:13px">শিফট</label>' +
+            '<select id="editShift" style="' + st + '"><option value="morning">' + SH_LABEL.morning + '</option><option value="noon">' + SH_LABEL.noon + '</option></select>' +
+            '<label style="font-size:13px">কক্ষ নং</label>' +
+            '<select id="editRoomSel" style="' + st + '"></select>' +
+            '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+            '<button type="button" id="editCancel" style="padding:9px 16px;border-radius:8px;border:1px solid #bbb;background:#f3f3f3;cursor:pointer;font-family:inherit">বাতিল</button>' +
+            '<button type="button" id="editLoad" style="padding:9px 18px;border-radius:8px;border:0;background:#1E2330;color:#fff;cursor:pointer;font-family:inherit">লোড করুন</button>' +
+            '</div></div>';
+        document.body.appendChild(ov);
+
+        const shSel = $('editShift'), roomSel = $('editRoomSel');
+        shSel.value = window.currentShift() || 'morning';
+
+        function fillRooms() {
+            const sh = shSel.value;
+            const list = rows.filter(r => window.shiftOfRow(r) === sh).sort((x, y) => numOf(x) - numOf(y));
+            roomSel.innerHTML = list.length
+                ? list.map(r => {
+                    const i = r.data.roomInfo;
+                    const t = bn(en(i.roomNumber)) + ' নং কক্ষ — ' + [i.building, i.floor].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
+                    return '<option value="' + String(r.id).replace(/"/g, '&quot;') + '">' + t + '</option>';
+                }).join('')
+                : '<option value="">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</option>';
+            $('editLoad').disabled = !list.length;
+        }
+        shSel.addEventListener('change', fillRooms);
+        fillRooms();
+
+        const close = () => ov.remove();
+        $('editCancel').onclick = close;
+        ov.addEventListener('click', e => { if (e.target === ov) close(); });
+        $('editLoad').onclick = () => {
+            const pick = rows.find(r => r.id === roomSel.value);
+            if (!pick) return;
+            fill(pick.data);
+            try { if (typeof updateAll === 'function') updateAll(); } catch (e) {}
+            close();
+            const rn = bn(en(pick.data.roomInfo.roomNumber));
+            showAlert(rn + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
+            log('এডিটের জন্য লোড: ' + pick.id, 'success');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
     };
 })();
 </script>
