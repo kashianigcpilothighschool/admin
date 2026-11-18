@@ -1073,6 +1073,12 @@
   .toolbar .search { width:170px; }
   .toolbar .search:focus-within { width:210px; }
 }
+
+/* ---- টুলবার পর্দার বাইরে চলে যাওয়া ঠিক: জায়গা না হলে দ্বিতীয় সারিতে নামবে ---- */
+@media screen and (min-width:721px) and (max-width:1700px) {
+  .toolbar { flex-wrap:wrap !important; justify-content:center; width:auto !important; max-width:calc(100% - 24px); row-gap:8px; }
+  .toolbar .group.actions { margin-left:0 !important; padding-left:0 !important; border-left:none !important; flex-wrap:wrap; justify-content:center; }
+}
 </style>
 </head>
 <body>
