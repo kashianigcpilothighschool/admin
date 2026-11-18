@@ -950,7 +950,7 @@
                     <button type="button" class="print-btn no-print" onclick="openPrintPage()">
                         প্রিন্ট করুন
                     </button>
-                    <button type="button" class="print-btn no-print" id="editPrintBtn" onclick="openEditPage()" title="প্রিন্ট পেজে এই কক্ষের তথ্য এডিট করুন">
+                    <button type="button" class="print-btn no-print" id="editPrintBtn" onclick="openEditRoom()" title="কক্ষ নম্বর দিয়ে সংরক্ষিত তথ্য ফর্মে ফিরিয়ে আনুন">
                         এডিট
                     </button>
                     <button type="button" class="print-btn no-print" id="localTestBtn" onclick="testDataCollection()">
@@ -2321,6 +2321,152 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     fastGenerateSeatPlan = async function () { await _fg(); await reload(); };
     window.fbReady.then(reload);
     render();
+})();
+</script>
+<script>
+// ===== এডিট বাটন: কক্ষ নং চাইবে → সংরক্ষিত ডেটা ফর্মের সব ঘরে ফিরিয়ে আনবে =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const COLS = ['C', 'D', 'F', 'G', 'I', 'J'];
+    const en = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)).trim();
+    const bn = s => String(s).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const SHIFT_NAME = { morning: 'সকাল', noon: 'দুপুর' };
+
+    // select-এ মান বসায়; তালিকায় না থাকলে নতুন option যোগ করে
+    function setSelect(sel, val, label) {
+        if (!sel || val == null || val === '') return;
+        val = String(val);
+        if (![...sel.options].some(o => o.value === val)) {
+            const o = document.createElement('option');
+            o.value = val; o.textContent = label || val;
+            const other = sel.querySelector('option[value="__other__"]');
+            sel.insertBefore(o, other || null);
+        }
+        sel.value = val;
+    }
+    function setInput(id, v) { const el = $(id); if (el && v != null) el.value = v; }
+
+    function fill(data) {
+        const r = data.roomInfo || {};
+
+        // ১. পরীক্ষার নাম, সাল ও সময়
+        if (data.examName) setSelect($('examName'), data.examName);
+        if (data.examYear) setSelect($('examYear'), data.examYear, bn(data.examYear));
+        if (data.examStartTime) {
+            setSelect($('examTime'), data.examStartTime);
+            $('examTime').dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        // ২. কক্ষের তথ্য
+        setInput('roomNumber', r.roomNumber);
+        setSelect($('genderSelect'), r.gender);
+        setSelect($('departmentSelect'), r.department);
+        setSelect($('buildingSelect'), r.building);
+        setSelect($('floorSelect'), r.floor);
+        if (r.benchCount) setInput('benchCount', r.benchCount);
+        $('directionSelect').value = (r.direction && r.direction !== 'নির্বাচিত নয়') ? r.direction : '';
+        if (typeof updateDirectionInfo === 'function') updateDirectionInfo();
+
+        // ৩. শ্রেণি / শুরুর রোল / শেষ রোল (ওপরের সারিগুলো)
+        const wrap = $('schoolForms');
+        const schools = Array.isArray(data.schools) ? data.schools : [];
+        while (wrap.querySelectorAll('.form-row').length > 1) wrap.querySelector('.form-row:last-child').remove();
+        const first = wrap.querySelector('.form-row');
+        ['.start-roll', '.end-roll', '.student-count'].forEach(q => { first.querySelector(q).value = ''; });
+        first.querySelector('.school-select').value = '';
+        delete first.dataset.mode;
+        schools.forEach((sc, i) => {
+            if (i > 0) addNewRow();
+            const row = wrap.querySelectorAll('.form-row')[i];
+            const sel = row.querySelector('.school-select');
+            setSelect(sel, sc.name);
+            const opt = sel.selectedOptions[0];
+            if (opt && sc.classKey && !opt.dataset.k) opt.dataset.k = sc.classKey;
+            row.querySelector('.start-roll').value = sc.startRoll != null ? sc.startRoll : '';
+            row.querySelector('.end-roll').value = sc.endRoll != null ? sc.endRoll : '';
+            const c = row.querySelector('.student-count');
+            if (c) { c.value = sc.studentCount != null ? sc.studentCount : ''; row.dataset.mode = 'count'; }
+        });
+        if (typeof updateTotal === 'function') updateTotal();
+
+        // ৪. ৬টি কলামের রেঞ্জ (শ্রেণি, শুরুর রোল, সিট সংখ্যা, শেষ রোল)
+        COLS.forEach((col, ci) => {
+            const cont = $('ranges_' + col);
+            if (!cont) return;
+            const ranges = (data.columnData && data.columnData[ci] && data.columnData[ci].ranges) || [];
+            cont.innerHTML = '';
+            rangeCounters[col] = 1;
+            const n = Math.max(ranges.length, 1);
+            for (let k = 0; k < n; k++) addRange(col);
+            ranges.forEach((rg, k) => {
+                const div = cont.children[k];
+                if (!div) return;
+                const a = div.querySelector('input[id^="start_roll_"]');
+                const s = div.querySelector('input[id^="seat_count_"]');
+                const sel = div.querySelector('.stu-class');
+                if (sel && rg.classKey) {
+                    const lbl = (window.__stu && window.__stu.st.map[rg.classKey] && window.__stu.st.map[rg.classKey].label) || ('শ্রেণি ' + rg.classKey);
+                    setSelect(sel, rg.classKey, lbl);
+                }
+                a.value = (rg.door || rg.startRoll === 'DOOR') ? 'D' : (rg.startRoll ? rg.startRoll : '');
+                delete a.dataset.autoRoll;
+                s.value = rg.count != null ? rg.count : '';
+                a.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+    }
+
+    // কক্ষ নং দিয়ে সংরক্ষিত সারি খোঁজা
+    function describe(r) {
+        const i = (r.data && r.data.roomInfo) || {};
+        const sh = SHIFT_NAME[window.shiftOfRow(r)] || '';
+        return [i.building, i.floor, sh].map(x => String(x || '').trim()).filter(Boolean).join(' • ');
+    }
+
+    window.openEditRoom = async function () {
+        const input = prompt('যে কক্ষের তথ্য এডিট করবেন তার কক্ষ নং লিখুন:');
+        if (input === null) return;
+        const want = en(input);
+        if (!want) { showAlert('কক্ষ নম্বর দিন!', 'error'); return; }
+
+        const btn = $('editPrintBtn');
+        if (btn) btn.disabled = true;
+        try {
+            const { api: sbApi, token } = await window.fbReady;
+            const list = await sbApi('seatPlanList', token);
+            let found = (Array.isArray(list) ? list : []).filter(r =>
+                r && r.id !== '__center__' && r.data && r.data.roomInfo &&
+                en(r.data.roomInfo.roomNumber) === want);
+
+            if (!found.length) { showAlert(bn(want) + ' নং কক্ষের কোনো সংরক্ষিত তথ্য পাওয়া যায়নি!', 'error'); return; }
+
+            // শিফট নির্বাচিত থাকলে আগে সেই শিফটের কক্ষ দেখাবে
+            const cur = window.currentShift();
+            if (cur && found.length > 1) {
+                const same = found.filter(r => window.shiftOfRow(r) === cur);
+                if (same.length) found = same;
+            }
+
+            let pick = found[0];
+            if (found.length > 1) {
+                const msg = found.map((r, i) => (i + 1) + ') ' + describe(r)).join('\n');
+                const ans = parseInt(en(prompt(bn(want) + ' নং কক্ষ একাধিক পাওয়া গেছে। নম্বর লিখুন:\n\n' + msg) || ''), 10);
+                if (!ans || ans < 1 || ans > found.length) return;
+                pick = found[ans - 1];
+            }
+
+            fill(pick.data);
+            if (typeof updateAll === 'function') try { updateAll(); } catch (e) {}
+            showAlert(bn(want) + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
+            log('এডিটের জন্য লোড: ' + pick.id, 'success');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (e) {
+            showAlert('তথ্য আনতে ত্রুটি: ' + e.message, 'error');
+            log('এডিট লোড ত্রুটি: ' + e.message, 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    };
 })();
 </script>
 </body>
