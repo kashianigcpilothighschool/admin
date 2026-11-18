@@ -1067,6 +1067,12 @@
     .toolbar .group.actions > button.primary::after, .btn.primary::after { display:none; }
   }
 }
+
+/* ---- কক্ষ সার্চ বক্স ছোট (শুধু বড় পর্দায়) ---- */
+@media screen and (min-width:721px) {
+  .toolbar .search { width:170px; }
+  .toolbar .search:focus-within { width:210px; }
+}
 </style>
 </head>
 <body>
