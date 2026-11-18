@@ -910,11 +910,22 @@
   .page table.info { box-shadow:0 6px 16px rgba(29,43,79,.10); }
 }
 
-  /* ===== শিফট বদলানোর বাটন ===== */
+  /* ===== শিফট বদলানোর বাটন (আধুনিক পিল) ===== */
   #shiftSeg[hidden] { display:none; }
-  #shiftSeg button { cursor:pointer; white-space:nowrap; }
-  #shiftSeg button.on, #shiftSeg button.on:hover:not(:disabled) { background:#1d2b4f !important; color:#fff !important; }
-  #shiftSeg button.on .badge { background:rgba(255,255,255,.22) !important; color:#fff !important; }
+  #shiftSeg { display:inline-flex; gap:3px; padding:3px !important; border-radius:999px !important; border:1px solid var(--line) !important;
+    background:rgba(120,130,160,.10) !important; box-shadow:none !important; overflow:visible; }
+  #shiftSeg button { cursor:pointer; white-space:nowrap; border:none !important; border-radius:999px !important; min-height:32px !important; height:32px !important;
+    padding:0 12px !important; gap:7px !important; background:transparent !important; color:inherit; font-weight:600; transition:background .2s, color .2s, box-shadow .2s, transform .15s; }
+  #shiftSeg button + button { border-left:none !important; }
+  #shiftSeg button:hover:not(.on):not(:disabled) { background:rgba(99,102,241,.14) !important; }
+  #shiftSeg button:active { transform:scale(.96); }
+  #shiftSeg button.on, #shiftSeg button.on:hover:not(:disabled) { color:#fff !important; box-shadow:0 4px 14px -4px rgba(79,70,229,.7); background:linear-gradient(135deg,#4f6bff,#7c5cff) !important; }
+  #shiftSeg button[data-shift="morning"].on { background:linear-gradient(135deg,#ffb84d,#ff7a45) !important; box-shadow:0 4px 14px -4px rgba(255,122,69,.7); }
+  #shiftSeg button[data-shift="noon"].on { background:linear-gradient(135deg,#38bdf8,#4f6bff) !important; box-shadow:0 4px 14px -4px rgba(59,130,246,.7); }
+  #shiftSeg .badge { min-width:20px; text-align:center; border-radius:999px !important; padding:0 6px !important; background:rgba(120,130,160,.22) !important; color:inherit !important; font-size:11.5px; }
+  #shiftSeg button.on .badge { background:rgba(255,255,255,.28) !important; color:#fff !important; }
+  #shiftSeg button:focus-visible { outline:3px solid rgba(99,102,241,.5); outline-offset:1px; }
+  @media (max-width:700px) { #shiftSeg button { padding:0 9px !important; } }
   @media print { #shiftSeg { display:none !important; } }
 </style>
 </head>
