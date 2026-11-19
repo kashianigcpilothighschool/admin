@@ -1201,6 +1201,155 @@
   }
 }
 </style>
+<style id="modernBtn5">
+/* =====================================================
+   বাটন v5 — একই নকশা-ভাষা, স্পষ্ট অবস্থা (hover / চাপ / ফোকাস / অক্ষম); শুধু পর্দা
+   ===================================================== */
+@media screen {
+  :root { --k-ink:#2B2F77; --k-a:#4F46E5; --k-b:#7C3AED; --k-line:#D9DDF2; --k-line-h:#AEB5EA; --k-tint:#F1F2FD; }
+  .toolbar button { font-family:inherit; }
+
+  /* ---- প্রিন্ট (প্রধান বাটন) ---- */
+  body .toolbar .group.actions > button.primary {
+    height:38px; min-height:38px; padding:0 18px 0 14px; gap:8px; border-radius:12px !important;
+    background:linear-gradient(135deg,#4338CA 0%,#6D3FE8 60%,#8B4DF0 100%) !important;
+    box-shadow:0 10px 22px -8px rgba(109,63,232,.7), inset 0 1px 0 rgba(255,255,255,.38), inset 0 -2px 0 rgba(0,0,0,.12);
+  }
+  body .toolbar .group.actions > button.primary svg { width:17px; height:17px; stroke-width:2.2; }
+  body .toolbar .group.actions > button.primary:hover:not(:disabled) {
+    transform:translateY(-2px); filter:brightness(1.07) saturate(1.1);
+    box-shadow:0 16px 30px -8px rgba(109,63,232,.75), inset 0 1px 0 rgba(255,255,255,.45), inset 0 -2px 0 rgba(0,0,0,.12);
+  }
+  body .toolbar .group.actions > button.primary:active:not(:disabled) {
+    transform:translateY(0) scale(.97); filter:brightness(.95);
+    box-shadow:0 4px 10px -4px rgba(109,63,232,.6), inset 0 2px 5px rgba(0,0,0,.22);
+  }
+
+  /* ---- গৌণ বাটন: সব কক্ষ, ফিরে যান ---- */
+  body .toolbar .group.actions > button:not(.primary),
+  body .toolbar .seg button {
+    height:38px !important; min-height:38px !important; border-radius:12px !important; color:var(--k-ink);
+    background:linear-gradient(180deg,#fff,#F6F7FD) !important; border:1px solid var(--k-line) !important;
+    box-shadow:0 1px 2px rgba(43,47,119,.07), inset 0 1px 0 #fff;
+  }
+  body .toolbar .group.actions > button:not(.primary):hover:not(:disabled),
+  body .toolbar .seg button:hover:not(:disabled) {
+    color:var(--k-a); border-color:var(--k-line-h) !important; background:linear-gradient(180deg,#fff,var(--k-tint)) !important;
+    box-shadow:0 10px 20px -10px rgba(79,70,229,.5), inset 0 1px 0 #fff; transform:translateY(-2px);
+  }
+  body .toolbar .group.actions > button:not(.primary):active:not(:disabled),
+  body .toolbar .seg button:active:not(:disabled) {
+    transform:translateY(0) scale(.97); background:#E9EBFB !important; box-shadow:inset 0 2px 4px rgba(43,47,119,.16);
+  }
+  #btnAll { gap:8px !important; }
+  #btnAll svg { width:16px; height:16px; stroke-width:2.1; transition:transform .25s cubic-bezier(.22,.9,.3,1); }
+  #btnAll:hover:not(:disabled) svg { transform:translate(-1px,-1px) scale(1.1); }
+  #btnAll .badge { box-shadow:0 3px 8px -2px rgba(79,70,229,.55); }
+
+  /* ---- আগের/পরের কক্ষ ও জুম: ছোট গোল-কোণা বাটন ---- */
+  .group.nav button.icon, .zoom button { border-radius:10px !important; transition:background .18s, color .18s, transform .15s, box-shadow .18s; }
+  .group.nav button.icon:hover:not(:disabled), .zoom button:hover:not(:disabled) {
+    background:#fff !important; color:var(--k-a); box-shadow:0 4px 12px -4px rgba(79,70,229,.4);
+  }
+  .group.nav button.icon:active:not(:disabled), .zoom button:active:not(:disabled) { transform:scale(.9) !important; background:#E9EBFB !important; box-shadow:none; }
+  .zoom button.zoom-label { font-variant-numeric:tabular-nums; letter-spacing:.1px; }
+
+  /* ---- অক্ষম অবস্থা: স্পষ্ট কিন্তু শান্ত ---- */
+  .toolbar button:disabled { opacity:.4; cursor:not-allowed; filter:grayscale(.6); box-shadow:none !important; transform:none !important; }
+
+  /* ---- কিবোর্ড ফোকাস: সবার জন্য একই রিং ---- */
+  .toolbar button:focus-visible, .toolbar select:focus-visible { outline:none; box-shadow:0 0 0 3px #fff, 0 0 0 5px var(--k-a) !important; }
+
+  @media (prefers-color-scheme:dark) {
+    :root { --k-ink:#DCDEFF; --k-line:rgba(255,255,255,.14); --k-line-h:rgba(165,170,255,.55); --k-tint:rgba(255,255,255,.1); }
+    body .toolbar .group.actions > button:not(.primary), body .toolbar .seg button {
+      background:rgba(255,255,255,.07) !important; box-shadow:none; }
+    body .toolbar .group.actions > button:not(.primary):hover:not(:disabled), body .toolbar .seg button:hover:not(:disabled) {
+      background:rgba(255,255,255,.15) !important; color:#fff; }
+    body .toolbar .group.actions > button:not(.primary):active:not(:disabled), body .toolbar .seg button:active:not(:disabled) { background:rgba(255,255,255,.22) !important; }
+    .group.nav button.icon:hover:not(:disabled), .zoom button:hover:not(:disabled) { background:rgba(255,255,255,.16) !important; color:#fff; }
+    .toolbar button:focus-visible, .toolbar select:focus-visible { box-shadow:0 0 0 3px #0E0F26, 0 0 0 5px #818CF8 !important; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .toolbar button, #btnAll svg { transition:none !important; }
+    .toolbar button:hover, .toolbar button:active { transform:none !important; }
+  }
+}
+</style>
+<style id="benchV2">
+/* =====================================================
+   বেঞ্চ v2 — নম্বর আরও স্পষ্ট (হালকা প্লেটের আভা), কাঠের গিঁট ও স্ক্রু লেখার জায়গা থেকে সরানো,
+   তক্তার আলো-ছায়া আরও বাস্তব। মাপ ও বিন্যাস অপরিবর্তিত। পর্দা ও প্রিন্ট দুটিতেই।
+   ===================================================== */
+table.seat td.l, table.seat td.rt {
+  color:#150A02; text-shadow:0 1px 0 rgba(255,244,214,.55);
+  background:
+    radial-gradient(ellipse 46% 58% at 50% 46%, rgba(255,247,226,.93) 0 52%, rgba(255,247,226,.55) 74%, rgba(255,247,226,0) 100%),
+    radial-gradient(circle at 4.5% 50%, #2f2519 0 .9pt, #9c978c 1pt 1.5pt, transparent 1.7pt),
+    radial-gradient(circle at 95.5% 50%, #2f2519 0 .9pt, #9c978c 1pt 1.5pt, transparent 1.7pt),
+    repeating-linear-gradient(180deg, rgba(95,52,16,.16) 0 .5pt, transparent .5pt 2.1mm),
+    repeating-linear-gradient(180deg, rgba(255,240,205,.22) 0 .4pt, transparent .4pt 1.05mm),
+    linear-gradient(180deg,#F6D9A4 0%,#E4B97C 20%,#D4A263 64%,#BE8A4B 100%);
+}
+table.seat tr.even td.l:not(.blank), table.seat tr.even td.rt:not(.blank) {
+  background:
+    radial-gradient(ellipse 46% 58% at 50% 46%, rgba(255,247,226,.93) 0 52%, rgba(255,247,226,.55) 74%, rgba(255,247,226,0) 100%),
+    radial-gradient(circle at 4.5% 50%, #2f2519 0 .9pt, #9c978c 1pt 1.5pt, transparent 1.7pt),
+    radial-gradient(circle at 95.5% 50%, #2f2519 0 .9pt, #9c978c 1pt 1.5pt, transparent 1.7pt),
+    repeating-linear-gradient(180deg, rgba(95,52,16,.18) 0 .5pt, transparent .5pt 2.5mm),
+    repeating-linear-gradient(180deg, rgba(255,240,205,.18) 0 .4pt, transparent .4pt 1.25mm),
+    linear-gradient(180deg,#EDC98F 0%,#D8AA6C 20%,#C8964F 64%,#B27E3F 100%);
+}
+/* বেঞ্চের উপরের ধারে স্পষ্ট বেভেল, নিচের ধারে গভীরতা */
+table.seat td.l:not(.blank) {
+  box-shadow: inset 0 1.8pt 0 rgba(255,249,230,.65), inset 1pt 0 0 rgba(255,244,214,.35), inset 0 -2.6pt 2pt -1pt rgba(70,35,8,.42), inset -1.6pt 0 1.6pt -.5pt rgba(60,30,6,.4), 0 2.4pt 2pt -1pt rgba(0,0,0,.4);
+}
+table.seat td.rt:not(.blank) {
+  box-shadow: inset 0 1.8pt 0 rgba(255,249,230,.65), inset -1pt 0 0 rgba(60,30,6,.25), inset 0 -2.6pt 2pt -1pt rgba(70,35,8,.42), inset 1.6pt 0 1.6pt -.5pt rgba(255,240,210,.4), 0 2.4pt 2pt -1pt rgba(0,0,0,.4);
+}
+/* পায়া: একটু চওড়া, ধাতব হাইলাইটসহ */
+table.seat td.l:not(.blank)::after, table.seat td.rt:not(.blank)::after {
+  width:3.8mm; background:linear-gradient(90deg,#241204 0%,#7A4A1E 38%,#B98448 50%,#7A4A1E 62%,#241204 100%);
+}
+table.seat td.blank { background:repeating-linear-gradient(135deg,#F4ECDD 0 3pt,#EDE3D0 3pt 6pt) !important; }
+</style>
+<style id="benchV3">
+/* =====================================================
+   বেঞ্চ v3 — পরিষ্কার "নম্বর প্লেট" (ক্রিম জমিন + গাঢ় কালো লেখা), উন্নত কাঠের রং।
+   সাদা-কালো প্রিন্টেও রোল স্পষ্ট পড়া যায়। মাপ ও বিন্যাস অপরিবর্তিত।
+   ===================================================== */
+table.seat td.l, table.seat td.rt {
+  isolation:isolate;
+  color:#000; text-shadow:none; font-weight:700;
+  font-variant-numeric:lining-nums tabular-nums; letter-spacing:0;
+  border-color:#4A2A0E;
+  background:
+    repeating-linear-gradient(180deg, rgba(110,62,20,.13) 0 .5pt, transparent .5pt 2.2mm),
+    repeating-linear-gradient(180deg, rgba(255,244,214,.20) 0 .4pt, transparent .4pt 1.1mm),
+    linear-gradient(180deg,#EBC78F 0%,#DDB075 22%,#D0A062 66%,#BD8A4D 100%);
+}
+table.seat tr.even td.l:not(.blank), table.seat tr.even td.rt:not(.blank) {
+  background:
+    repeating-linear-gradient(180deg, rgba(110,62,20,.15) 0 .5pt, transparent .5pt 2.6mm),
+    repeating-linear-gradient(180deg, rgba(255,244,214,.16) 0 .4pt, transparent .4pt 1.3mm),
+    linear-gradient(180deg,#DDB075 0%,#CC9B5C 22%,#BD8B4B 66%,#A87638 100%);
+}
+/* নম্বর প্লেট: লেখার পেছনে পরিষ্কার ক্রিম আয়তক্ষেত্র */
+table.seat td.l:not(.blank)::before, table.seat td.rt:not(.blank)::before {
+  content:""; position:absolute; z-index:-1; left:4%; right:4%; top:10%; bottom:16%;
+  background:linear-gradient(180deg,#FFFEF9 0%,#FFF8E6 100%);
+  border:.8pt solid rgba(63,34,9,.6); border-radius:4px;
+  box-shadow:inset 0 .8pt 0 #fff, 0 .6pt 0 rgba(255,236,200,.55);
+}
+/* ফাঁকা সিটে প্লেট নেই */
+table.seat td.blank::before { display:none; }
+table.seat td.blank { border-color:#A89574; }
+/* ২ কলামে লেখা আরও বড় ও স্পষ্ট */
+table.seat.two td.l, table.seat.two td.rt { letter-spacing:.3pt; }
+@media print {
+  table.seat td.l, table.seat td.rt { text-shadow:none !important; color:#000 !important; }
+}
+</style>
 </head>
 <body>
 
@@ -1252,17 +1401,13 @@
   </div>
 
   <div class="group actions">
-    <button class="primary" onclick="window.print()" title="বর্তমান কক্ষ প্রিন্ট করুন">
+    <button class="primary" id="btnPrint" onclick="window.print()" title="বর্তমান কক্ষ প্রিন্ট করুন (Ctrl+P)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2"/><rect x="6" y="14" width="12" height="7"/></svg>
       প্রিন্ট করুন
     </button>
-    <button id="btnEdit" disabled title="কেন্দ্র, কক্ষ, স্কুল ও সিটের তথ্য এডিট করুন">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-      এডিট
-    </button>
     <div class="seg shiftseg" id="shiftSeg" role="group" aria-label="শিফট বেছে নিন" hidden></div>
     <div class="seg" role="group" aria-label="একসাথে অনেক কক্ষ প্রিন্ট">
-      <button id="btnAll" onclick="printAll()">সব কক্ষ <span class="badge" id="cntAll">০</span></button>
+      <button id="btnAll" onclick="printAll()" title="সব কক্ষ একসাথে প্রিন্ট করুন"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="13" height="13" rx="2"/><path d="M16 21H5a2 2 0 0 1-2-2V8"/></svg>সব কক্ষ <span class="badge" id="cntAll">০</span></button>
     </div>
     <button class="icon" onclick="window.location.href='seat-plan.html'" title="ফিরে যান" aria-label="ফিরে যান">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -1274,34 +1419,6 @@
 <div id="msg" class="loading" role="status">লোড হচ্ছে...</div>
 <div id="sheets"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<dialog class="dlg" id="editDlg" aria-labelledby="editTitle">
-  <form id="editForm" novalidate>
-    <div class="dlg-head">
-      <div>
-        <h2 id="editTitle">তথ্য এডিট</h2>
-        <p id="editSub"></p>
-      </div>
-      <button type="button" class="dlg-x" id="editClose" aria-label="বন্ধ করুন">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div class="tabs" id="editTabs" role="tablist">
-      <button type="button" role="tab" data-tab="room" aria-selected="true">কক্ষ</button>
-      <button type="button" role="tab" data-tab="schools" aria-selected="false">শ্রেণি ও রোল</button>
-      <button type="button" role="tab" data-tab="seats" aria-selected="false">সিট (কলাম)</button>
-      <button type="button" role="tab" data-tab="center" aria-selected="false">কেন্দ্র</button>
-    </div>
-    <div class="dlg-body" id="editBody"></div>
-    <p class="dlg-err" id="editErr" role="alert"></p>
-    <div class="dlg-foot">
-      <span class="dlg-note">কেন্দ্রের তথ্য এই ব্রাউজারে সংরক্ষিত হয়। কক্ষ, স্কুল ও সিটের তথ্য সার্ভারে (Supabase) সংরক্ষিত হয় এবং শুধু এই কক্ষে প্রযোজ্য।</span>
-      <a class="btn" id="editLink" href="seat-plan.html">সিট প্লান পেজে যান</a>
-      <button type="button" class="btn" id="editCancel">বাতিল</button>
-      <button type="submit" class="btn primary" id="editSave">সংরক্ষণ</button>
-    </div>
-  </form>
-</dialog>
 
 <dialog class="dlg" id="examDlg" aria-labelledby="examTitle" style="width:min(520px, calc(100% - 24px))">
   <form id="examForm" novalidate>
@@ -1498,8 +1615,19 @@ const bnGroup = g => { const t = String(g || '').trim(), l = t.toLowerCase();
 const bnSection = s => { const t = String(s || '').trim(), l = t.toLowerCase();
   if (!t) return ''; if (/^(boys?|male|বালক)$/.test(l)) return 'বালক'; if (/^(girls?|female|বালিকা)$/.test(l)) return 'বালিকা'; return t; };
 // লেবেল: শ্রেণি: ৯ম (বিজ্ঞান- বালক) | শ্রেণি: ৬ষ্ঠ (B) | শ্রেণি: ৭ম
+// শাখার অক্ষর (ইংরেজি → বাংলা); প্রয়োজনে এখানে আরও যোগ করুন
+const SEC_BN = { A: 'ক', B: 'খ', C: 'গ' };
+const isKnownGroup = t => /^(sci|hum|bus|com)|বিজ্ঞান|মানবিক|ব্যবসায়/i.test(String(t || '').trim());
 const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b;
-  const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
+  // "6 -C Boys" ধরনের: বিজ্ঞান/মানবিক/ব্যবসায় গ্রুপ ছাড়া একটি অক্ষর থাকলে → "৬ষ্ঠ -ক ( বালক)"
+  const toks = [r.grp, r.section].map(x => String(x || '').trim()).filter(Boolean).join(' ').split(/[\s\-]+/).filter(Boolean);
+  const letter = toks.find(t => /^[A-Za-z]$/.test(t) || /^[\u0995-\u0999]$/.test(t));
+  const gender = toks.map(bnSection).find(t => t === 'বালক' || t === 'বালিকা');
+  if (letter && !toks.some(isKnownGroup)) {
+    return 'শ্রেণি: ' + n + ' -' + (SEC_BN[letter.toUpperCase()] || letter) + (gender ? ' ( ' + gender + ')' : '');
+  }
+  return labelOld(r); };
+const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b; const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
   return 'শ্রেণি: ' + n + (parts.length ? ' (' + parts.join('- ') + ')' : ''); };
 async function refreshCounts() {
   try {
@@ -1513,7 +1641,7 @@ async function refreshCounts() {
         const label = labelBn(r);
         const label2 = 'শ্রেণি: ' + String(r.class_base).trim() + (([r.grp && 'গ্রুপ -' + String(r.grp).trim(), r.section && 'শাখা -' + String(r.section).trim()].filter(Boolean)).length ? ' ( ' + [r.grp && 'গ্রুপ -' + String(r.grp).trim(), r.section && 'শাখা -' + String(r.section).trim()].filter(Boolean).join(', ') + ')' : '');   // আগের ফরম্যাট
         const oldLabel = ['শ্রেণি ' + String(r.class_base).trim(), r.section && 'শাখা ' + String(r.section).trim(), r.grp && 'গ্রুপ ' + String(r.grp).trim()].filter(Boolean).join(' · ');   // আগের সংরক্ষিত কক্ষের পুরোনো লেবেলও মেলে
-        [label, label2, oldLabel].forEach(lb => (m[lb] = m[lb] || new Set()).add(roll));
+        [label, labelOld(r), label2, oldLabel].forEach(lb => (m[lb] = m[lb] || new Set()).add(roll));
       });
       maps[s] = m;
     }
@@ -1606,7 +1734,6 @@ async function loadPlans() {
   $('cntAll').textContent = bn(plans.length);
   sInput.disabled = false;
   sInput.placeholder = 'কক্ষ, রোল বা স্কুল';
-  $('btnEdit').disabled = false;
 
   const wanted = new URLSearchParams(location.search).get('room');
   const start = plans.find(p => p.id === wanted) ? wanted : latestId;
@@ -1614,13 +1741,6 @@ async function loadPlans() {
   fitPages();
   if (window.__shiftLabel) toast(window.__shiftLabel + ' — ' + bn(plans.length) + 'টি কক্ষ');
 
-  // সিট প্লান পেজের "এডিট করুন" বোতাম থেকে এলে (?room=...&edit=1) সরাসরি এডিট ডায়ালগ খুলবে
-  const sp = new URLSearchParams(location.search);
-  if (sp.get('edit') === '1') {
-    try { history.replaceState(null, '', location.pathname + (wanted ? '?room=' + encodeURIComponent(wanted) : '') + (wantShift ? (wanted ? '&' : '?') + 'shift=' + wantShift : '')); } catch (_) {}
-    if (plans.find(p => p.id === wanted)) openEdit('room');
-    else toast('এই কক্ষটি এখনো সাবমিট করা হয়নি। আগে সিট প্লান পেজে সাবমিট করুন।');
-  }
 }
 
 // ---- একটি কক্ষ দেখানো + নেভিগেশন ও তথ্য-পট্টি হালনাগাদ ----
@@ -1774,36 +1894,6 @@ document.addEventListener('keydown', e => {
   sInput.focus(); sInput.select();
 });
 
-// ================= এডিট: কেন্দ্র / কক্ষ / স্কুল ও রোল / সিট =================
-const editDlg = $('editDlg'), editForm = $('editForm'), editBody = $('editBody');
-const CENTER_FIELDS = [
-  ['exam', 'পরীক্ষার নাম'], ['name', 'কেন্দ্রের নাম'], ['school', 'স্কুলের নাম (বন্ধনীসহ)'], ['place', 'স্থান'],
-  ['code', 'কেন্দ্র কোড'], ['mobile', 'মোবাইল নম্বর'], ['time', 'পরীক্ষা শুরুর সময়']
-];
-const ROOM_FIELDS = [
-  ['roomNumber', 'কক্ষ নং'], ['gender', 'বালক / বালিকা'], ['direction', 'বসার দিক'], ['department', 'বিভাগ'],
-  ['building', 'ভবন'], ['floor', 'তলা'], ['benchCount', 'বেঞ্চের সংখ্যা']
-];
-// সিট প্লান পেজের (seat-plan.html) ড্রপডাউনের সাথে হুবহু একই তালিকা
-const ROOM_OPTIONS = {
-  gender: ['বালক', 'বালিকা', 'বালক ও বালিকা'],
-  department: ['বিজ্ঞান', 'মানবিক', 'ব্যবসায় শিক্ষা', 'বিজ্ঞান ও মানবিক', 'সকল বিভাগ'],
-  building: ['পশ্চিম পার্শ্বের ভবন', 'পূর্ব পার্শ্বের ভবন', 'উত্তর পার্শ্বের ভবন', 'দক্ষিণ পার্শ্বের ভবন', 'প্রধান ভবন'],
-  floor: [' নিচতলা', '২য় তলা', '৩য় তলা', '৪র্থ তলা'],
-  direction: ['উত্তর মুখী', 'দক্ষিণ মুখী', 'পূর্ব মুখী', 'পশ্চিম মুখী']
-};
-const SELECT_FIELDS = Object.keys(ROOM_OPTIONS);
-const ICON_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
-let draft = null, editId = null, editDirty = false, editTab = 'room';
-
-const toNum = v => { const t = bnToEn(v).trim(); return /^\d+$/.test(t) ? Number(t) : NaN; };
-const stable = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v))
-  ? Object.keys(v).sort().reduce((a, x) => (a[x] = v[x], a), {}) : v);
-const setPath = (obj, path, val) => {
-  const ks = path.split('.'); let o = obj;
-  for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]];
-  o[ks[ks.length - 1]] = val;
-};
 const byRoom = (a, b) => String(a.roomInfo?.roomNumber || '').localeCompare(String(b.roomInfo?.roomNumber || ''), 'bn', { numeric: true });
 
 // তথ্য বদলের পর সব পাতা ও তালিকা নতুন করে সাজানো
@@ -1820,147 +1910,6 @@ function rebuildAll(keepId) {
   fitPages();
 }
 
-function makeDraft(p) {
-  const r = p.roomInfo || {};
-  const room = {};
-  ROOM_FIELDS.forEach(([k]) => { room[k] = r[k] ?? ''; });
-  return {
-    center: { ...CENTER },
-    room,
-    schools: (p.schools || []).map((s, i) => ({ _o: i, name: s.name ?? '', startRoll: s.startRoll ?? '', endRoll: s.endRoll ?? '', studentCount: s.studentCount ?? '' })),
-    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: (rg.door || /^door$/i.test(String(rg.startRoll ?? '').trim())) ? 'D' : ((rg.xmark || /^x+$/i.test(String(rg.startRoll ?? '').trim())) ? 'x' : (rg.startRoll ?? 0)), count: rg.count ?? 0 }))),
-    total: p.totals?.totalStudents ?? 0
-  };
-}
-
-function renderEdit() {
-  const d = draft;
-  const fld = (path, val, attrs) => '<input data-path="' + path + '" value="' + esc(val) + '" ' + (attrs || '') + '>';
-  const delBtn = (act, i, c) => '<button type="button" class="ix" data-act="' + act + '" data-i="' + i + '"' + (c !== undefined ? ' data-c="' + c + '"' : '') + ' aria-label="সারিটি মুছুন">' + ICON_X + '</button>';
-
-  // ড্রপডাউনের তালিকায় বর্তমান মান না থাকলে (পুরোনো ডেটা) সেটি যোগ করা হয়, যাতে ভুলে বদলে না যায়
-  const roomCtl = k => {
-    if (!SELECT_FIELDS.includes(k)) return fld('room.' + k, d.room[k], k === 'benchCount' ? 'inputmode="numeric"' : '');
-    const cur = String(d.room[k] ?? '');
-    const list = (cur === '' || ROOM_OPTIONS[k].includes(cur)) ? ROOM_OPTIONS[k] : [cur].concat(ROOM_OPTIONS[k]);
-    return '<select data-path="room.' + k + '">' + (cur === '' ? '<option value="" selected>নির্বাচন করুন</option>' : '') +
-      list.map(o => '<option value="' + esc(o) + '"' + (o === cur ? ' selected' : '') + '>' + esc(String(o).trim()) + '</option>').join('') + '</select>';
-  };
-  const room = '<div class="fg">' + ROOM_FIELDS.map(([k, l]) =>
-      '<label class="fl">' + l + roomCtl(k) + '</label>').join('') + '</div>' +
-    '<p class="hint">বেঞ্চের সংখ্যা শুধু পাতার তথ্য-ঘরে ছাপা হয়। সিটের সারি তৈরি হয় "সিট (কলাম)" ট্যাবের সংখ্যা থেকে।<br>' +
-    'সতর্কতা: কক্ষ নং, ভবন বা তলা বদলালে সিট প্লান পেজ থেকে একই কক্ষ আবার সাবমিট করলে আলাদা নতুন কক্ষ তৈরি হবে, কারণ কক্ষের আইডি এই তিনটি থেকে তৈরি হয়।</p>';
-
-  const schools = '<div class="rows"><div class="rh sch"><span>শ্রেণি / শাখা / গ্রুপ</span><span>শুরু রোল</span><span>শেষ রোল</span><span>সংখ্যা</span><span></span></div>' +
-    d.schools.map((s, i) => '<div class="rw sch">' +
-      fld('schools.' + i + '.name', s.name, 'placeholder="শ্রেণি / শাখা / গ্রুপ" aria-label="শ্রেণি, শাখা, গ্রুপ"') +
-      fld('schools.' + i + '.startRoll', s.startRoll, 'inputmode="numeric" placeholder="শুরু" aria-label="শুরু রোল"') +
-      fld('schools.' + i + '.endRoll', s.endRoll, 'inputmode="numeric" placeholder="শেষ" aria-label="শেষ রোল"') +
-      fld('schools.' + i + '.studentCount', s.studentCount, 'inputmode="numeric" placeholder="সংখ্যা" aria-label="পরীক্ষার্থীর সংখ্যা"') +
-      delBtn('delSchool', i) + '</div>').join('') +
-    '<button type="button" class="btn ghost sm" data-act="addSchool">+ স্কুল যোগ করুন</button></div>' +
-    '<label class="fl total-fl">মোট পরীক্ষার্থী' + fld('total', d.total, 'id="totalInp" inputmode="numeric"') + '</label>' +
-    '<p class="hint">শুরু ও শেষ রোল লিখলে সংখ্যা এবং মোট নিজে থেকে হিসাব হয়। রোল ধারাবাহিক না হলে সংখ্যা হাতে ঠিক করুন।</p>';
-
-  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুরু রোলে শুধু D লিখলে ওই সিটে DOOR, শুধু x লিখলে xxxxxx বসে। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
-    COLUMNS.map((c, ci) => {
-      const sum = d.cols[ci].reduce((a, rg) => a + (toNum(rg.count) || 0), 0);
-      return '<div class="col"><div class="col-h"><strong>কলাম ' + c + '</strong><span>' + (ci % 2 ? 'ডান' : 'বাঁ') + ' · জোড়া ' + bn(Math.floor(ci / 2) + 1) +
-        '</span><span class="pill" data-coltotal="' + ci + '">' + bn(sum) + ' সিট</span></div>' +
-        d.cols[ci].map((rg, ri) => '<div class="rw rg">' +
-          fld('cols.' + ci + '.' + ri + '.startRoll', rg.startRoll, 'inputmode="numeric" placeholder="শুরু রোল" aria-label="শুরু রোল"') +
-          fld('cols.' + ci + '.' + ri + '.count', rg.count, 'inputmode="numeric" placeholder="সিট" aria-label="সিট সংখ্যা"') +
-          delBtn('delRange', ri, ci) + '</div>').join('') +
-        '<button type="button" class="btn ghost sm" data-act="addRange" data-c="' + ci + '">+ রেঞ্জ যোগ করুন</button></div>';
-    }).join('') + '</div>';
-
-  const center = '<div class="fg">' + CENTER_FIELDS.map(([k, l]) =>
-      '<label class="fl">' + l + fld('center.' + k, d.center[k]) + '</label>').join('') + '</div>' +
-    '<p class="hint">এই তথ্য সব কক্ষের পাতার উপরের অংশে ছাপা হয়। এটি শুধু এই ব্রাউজারে সংরক্ষিত থাকে।</p>' +
-    '<button type="button" class="btn ghost sm" data-act="resetCenter" style="margin-top:10px">ডিফল্ট তথ্যে ফেরান</button>';
-
-  const pane = (name, html) => '<section class="pane" data-pane="' + name + '"' + (editTab === name ? '' : ' hidden') + '>' + html + '</section>';
-  const sc = editBody.scrollTop;
-  editBody.innerHTML = pane('room', room) + pane('schools', schools) + pane('seats', seats) + pane('center', center);
-  editBody.scrollTop = sc;
-  document.querySelectorAll('#editTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === editTab ? 'true' : 'false'));
-}
-
-function switchTab(name) {
-  editTab = name;
-  editBody.querySelectorAll('.pane').forEach(el => { el.hidden = el.dataset.pane !== name; });
-  document.querySelectorAll('#editTabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
-  editBody.scrollTop = 0;
-}
-
-function syncTotal() {
-  draft.total = String(draft.schools.reduce((a, s) => a + (toNum(s.studentCount) || 0), 0));
-  const el = $('totalInp'); if (el) el.value = draft.total;
-}
-function updateColTotal(ci) {
-  const sum = draft.cols[ci].reduce((a, rg) => a + (toNum(rg.count) || 0), 0);
-  const el = editForm.querySelector('[data-coltotal="' + ci + '"]');
-  if (el) el.textContent = bn(sum) + ' সিট';
-}
-
-function openEdit(tab) {
-  const p = plans.find(x => x.id === roomSel.value);
-  if (!p) return;
-  editId = p.id; draft = makeDraft(p); editDirty = false; editTab = tab || 'room';
-  $('editSub').textContent = 'কক্ষ ' + bn(p.roomInfo?.roomNumber ?? '') + (p.roomInfo?.building ? ' — ' + p.roomInfo.building : '');
-  $('editErr').textContent = '';
-  $('editLink').href = 'seat-plan.html';
-  renderEdit();
-  editDlg.showModal();
-}
-function requestClose() {
-  if (editDirty && !confirm('সংরক্ষণ না করা পরিবর্তন বাদ যাবে। বন্ধ করবেন?')) return;
-  editDlg.close();
-}
-
-editForm.addEventListener('input', e => {
-  const path = e.target.dataset && e.target.dataset.path;
-  if (!path) return;
-  setPath(draft, path, e.target.value);
-  editDirty = true;
-  $('editErr').textContent = '';
-  let m;
-  if ((m = path.match(/^schools\.(\d+)\.(startRoll|endRoll)$/))) {
-    const s = draft.schools[Number(m[1])];
-    const a = toNum(s.startRoll), b = toNum(s.endRoll);
-    if (!isNaN(a) && !isNaN(b) && b >= a) {
-      s.studentCount = String(b - a + 1);
-      const el = editForm.querySelector('[data-path="schools.' + m[1] + '.studentCount"]');
-      if (el) el.value = s.studentCount;
-      syncTotal();
-    }
-  } else if (/^schools\.\d+\.studentCount$/.test(path)) {
-    syncTotal();
-  } else if ((m = path.match(/^cols\.(\d+)\./))) {
-    updateColTotal(Number(m[1]));
-  }
-});
-editForm.addEventListener('click', e => {
-  const t = e.target.closest('[data-act]');
-  if (!t) return;
-  const a = t.dataset.act, i = Number(t.dataset.i), c = Number(t.dataset.c);
-  let focusPath = '';
-  if (a === 'addSchool') { draft.schools.push({ name: '', startRoll: '', endRoll: '', studentCount: '' }); focusPath = 'schools.' + (draft.schools.length - 1) + '.name'; }
-  else if (a === 'delSchool') { draft.schools.splice(i, 1); }
-  else if (a === 'addRange') { draft.cols[c].push({ startRoll: '', count: '' }); focusPath = 'cols.' + c + '.' + (draft.cols[c].length - 1) + '.startRoll'; }
-  else if (a === 'delRange') { draft.cols[c].splice(i, 1); }
-  else if (a === 'resetCenter') { draft.center = { ...CENTER_DEFAULT }; }
-  else return;
-  if (a === 'addSchool' || a === 'delSchool') syncTotal();
-  editDirty = true;
-  renderEdit();
-  if (focusPath) { const el = editForm.querySelector('[data-path="' + focusPath + '"]'); if (el) el.focus(); }
-});
-$('editTabs').addEventListener('click', e => {
-  const b = e.target.closest('button[data-tab]');
-  if (b) switchTab(b.dataset.tab);
-});
-$('btnEdit').addEventListener('click', () => openEdit('room'));
 const EXAM_TYPES = ['অর্ধ-বার্ষিক পরীক্ষা', 'বার্ষিক পরীক্ষা', 'প্রাক-নির্বাচনী পরীক্ষা', 'নির্বাচনী পরীক্ষা'];
 const TIME_OPTIONS = ['সকাল ১০:০০টা', 'বিকাল ২:০০টা', 'সকাল ৯:০০টা', 'সকাল ১১:০০টা'];
 const examDlg = $('examDlg'), examTime = $('examTime'), examOther = $('examTimeOther');
@@ -2012,129 +1961,6 @@ $('examForm').addEventListener('submit', async e => {
   catch (err) { toast('এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + err.message); }
   if (plans.length) rebuildAll(roomSel.value);
 });
-$('editClose').addEventListener('click', requestClose);
-$('editCancel').addEventListener('click', requestClose);
-editDlg.addEventListener('cancel', e => {
-  if (editDirty && !confirm('সংরক্ষণ না করা পরিবর্তন বাদ যাবে। বন্ধ করবেন?')) e.preventDefault();
-});
-
-async function saveEdit() {
-  const err = m => { $('editErr').textContent = m; };
-  const fail = (tab, m) => { switchTab(tab); err(m); };
-  const orig = plans.find(p => p.id === editId);
-  if (!orig) return err('কক্ষটি পাওয়া যায়নি। পেজ রিলোড করুন।');
-  const d = draft;
-
-  // কক্ষ
-  const room = {};
-  // ড্রপডাউনের মান হুবহু রাখা হয় (সিট প্লান পেজের মতো); বাকিগুলোর দুই পাশের ফাঁকা বাদ
-  ROOM_FIELDS.forEach(([k]) => { room[k] = SELECT_FIELDS.includes(k) ? String(d.room[k] ?? '') : String(d.room[k] ?? '').trim(); });
-  if (!room.roomNumber) return fail('room', 'কক্ষ নং লিখুন।');
-  const bench = room.benchCount === '' ? 0 : toNum(room.benchCount);
-  if (isNaN(bench)) return fail('room', 'বেঞ্চের সংখ্যা সংখ্যায় লিখুন।');
-
-  // স্কুল ও রোল
-  const schools = [];
-  for (let i = 0; i < d.schools.length; i++) {
-    const s = d.schools[i];
-    const name = String(s.name ?? '').trim();
-    const a = toNum(s.startRoll), b = toNum(s.endRoll), n = toNum(s.studentCount);
-    const row = ' (স্কুল সারি ' + bn(i + 1) + ')';
-    if (!name) return fail('schools', 'শ্রেণি / শাখা / গ্রুপ লিখুন' + row + '।');
-    if (isNaN(a) || isNaN(b) || a > b) return fail('schools', 'শুরু ও শেষ রোল ঠিকভাবে লিখুন; শুরু শেষের চেয়ে বড় হবে না' + row + '।');
-    if (isNaN(n)) return fail('schools', 'পরীক্ষার্থীর সংখ্যা সংখ্যায় লিখুন' + row + '।');
-    schools.push({ _o: s._o, name, startRoll: a, endRoll: b, studentCount: n });
-  }
-  const total = toNum(d.total);
-  if (isNaN(total)) return fail('schools', 'মোট পরীক্ষার্থীর সংখ্যা সংখ্যায় লিখুন।');
-
-  // সিট
-  const cols = [], seatRolls = [];
-  for (let ci = 0; ci < COLUMNS.length; ci++) {
-    const rs = [];
-    for (let ri = 0; ri < d.cols[ci].length; ri++) {
-      const rg = d.cols[ci][ri];
-      const isDoor = /^d(oor)?$/i.test(String(rg.startRoll ?? '').trim());
-      const isX = /^x+$/i.test(String(rg.startRoll ?? '').trim());
-      const a = (isDoor || isX) ? 0 : toNum(rg.startRoll), n = toNum(rg.count);
-      const row = ' (কলাম ' + COLUMNS[ci] + ', সারি ' + bn(ri + 1) + ')';
-      if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০, দরজার জন্য D, xxxxxx-এর জন্য x দিন' + row + '।');
-      if (isNaN(n) || n < 1) return fail('seats', 'সিট সংখ্যা ১ বা তার বেশি হতে হবে' + row + '।');
-      rs.push({ _o: rg._o, startRoll: isDoor ? 'DOOR' : (isX ? 'xxxxxx' : a), count: n, door: isDoor, xmark: isX });
-      if (a > 0) for (let k = 0; k < n; k++) seatRolls.push(a + k);
-    }
-    cols.push(rs);
-  }
-  const seen = new Set(), dups = new Set();
-  seatRolls.forEach(r => { if (seen.has(r)) dups.add(r); else seen.add(r); });
-  if (dups.size && !confirm('এই রোলগুলো একাধিক সিটে আছে: ' + [...dups].slice(0, 8).map(bn).join(', ') + (dups.size > 8 ? ' ...' : '') + '।\nতবুও সংরক্ষণ করবেন?')) return;
-
-  // কী কী বদলেছে (বদলানো অংশ পুরোনো ডেটার উপর বসিয়ে সংরক্ষণ হবে; অন্য ফিল্ড অক্ষত থাকবে)
-  const updates = {};
-  ROOM_FIELDS.forEach(([k]) => {
-    const o = orig.roomInfo?.[k];
-    let v = k === 'benchCount' ? bench : room[k];
-    if (k === 'roomNumber' && typeof o === 'number' && /^\d+$/.test(bnToEn(v))) v = Number(bnToEn(v));
-    if (String(o ?? '') !== String(v)) updates['roomInfo.' + k] = v;
-  });
-  // নতুন যোগ করা স্কুলের id বসে (পুরোনোগুলোর id অপরিবর্তিত)
-  const newSchools = schools.map((s, i) => ({ ...(s._o === undefined ? { id: i + 1 } : ((orig.schools || [])[s._o] || {})), name: s.name, startRoll: s.startRoll, endRoll: s.endRoll, studentCount: s.studentCount }));
-  if (stable(newSchools) !== stable(orig.schools || [])) updates.schools = newSchools;
-  if (total !== (orig.totals?.totalStudents ?? 0)) updates['totals.totalStudents'] = total;
-  const totalSeats = cols.reduce((a, rs) => a + rs.reduce((b, rg) => b + rg.count, 0), 0);
-  if (totalSeats !== (orig.totals?.totalSeats ?? 0)) updates['totals.totalSeats'] = totalSeats;
-  const newCols = COLUMNS.map((_, ci) => {
-    const oc = (orig.columnData || [])[ci] || {};
-    return { ...oc, ranges: cols[ci].map(rg => { const o0 = (oc.ranges || [])[rg._o] || {}; const n0 = { ...o0, startRoll: rg.startRoll, count: rg.count }; if (rg.door) n0.door = true; else delete n0.door; if (rg.xmark) { n0.xmark = true; n0.text = 'xxxxxx'; } else { delete n0.xmark; delete n0.text; } if (o0.startRoll !== rg.startRoll || o0.count !== rg.count || !!o0.door !== rg.door || !!o0.xmark !== rg.xmark) { delete n0.rolls; delete n0.classKey; } return n0; }) };
-  });
-  if (stable(newCols) !== stable(orig.columnData || [])) updates.columnData = newCols;
-
-  // কেন্দ্র
-  const cNew = {};
-  CENTER_FIELDS.forEach(([k]) => { cNew[k] = String(d.center[k] ?? '').trim(); });
-  const centerChanged = CENTER_FIELDS.some(([k]) => cNew[k] !== CENTER[k]);
-  const hasDb = Object.keys(updates).length > 0;
-
-  if (!hasDb && !centerChanged) { editDirty = false; editDlg.close(); toast('কোনো পরিবর্তন নেই।'); return; }
-
-  // কক্ষের আইডি (ভবন_তলা_কক্ষ) বদলে গেলে সিট প্লান পেজের সাথে গরমিল হতে পারে — আগে জানিয়ে নেওয়া
-  if (['roomInfo.roomNumber', 'roomInfo.building', 'roomInfo.floor'].some(k => k in updates) &&
-      !confirm('কক্ষ নং / ভবন / তলা বদলানো হচ্ছে।\nসিট প্লান পেজ থেকে এই কক্ষ আবার সাবমিট করলে আলাদা নতুন কক্ষ তৈরি হবে।\nতবুও সংরক্ষণ করবেন?')) return;
-
-  const btn = $('editSave');
-  btn.disabled = true; btn.textContent = 'সংরক্ষণ হচ্ছে…';
-  try {
-    if (hasDb) {
-      // "roomInfo.roomNumber" ধরনের পথ ধরে পুরোনো ডেটায় বদল বসিয়ে পুরো ডেটা সংরক্ষণ
-      const base = JSON.parse(JSON.stringify(orig)); delete base.id; delete base.updatedAt;
-      Object.keys(updates).forEach(k => {
-        const parts = k.split('.'); let o = base;
-        parts.slice(0, -1).forEach(q => { if (typeof o[q] !== 'object' || o[q] === null) o[q] = {}; o = o[q]; });
-        o[parts[parts.length - 1]] = updates[k];
-      });
-      base.roomId = editId;
-      await api('seatPlanSave', TOKEN, editId, base);
-      const idx = plans.findIndex(q => q.id === editId);
-      if (idx >= 0) plans[idx] = { ...base, id: editId, updatedAt: Date.now() };
-    }
-    if (centerChanged) {
-      Object.assign(CENTER, cNew);
-      try { localStorage.setItem('centerInfo', JSON.stringify(cNew)); } catch (_) {}
-      try { await api('seatPlanSave', TOKEN, '__center__', { center: { ...CENTER } }); } catch (e) { console.error(e); toast('কেন্দ্রের তথ্য এই ব্রাউজারে সংরক্ষিত হয়েছে, সার্ভারে নয়: ' + e.message); }
-    }
-    editDirty = false;
-    editDlg.close();
-    rebuildAll(editId);
-    toast('সংরক্ষণ হয়েছে।');
-  } catch (e) {
-    console.error(e);
-    err('সংরক্ষণ করা যায়নি: ' + (e.message || 'অজানা ত্রুটি'));
-  } finally {
-    btn.disabled = false; btn.textContent = 'সংরক্ষণ';
-  }
-}
-editForm.addEventListener('submit', e => { e.preventDefault(); saveEdit(); });
-
 // নির্দিষ্ট ধরনের (২ বা ৩ কলাম) সব কক্ষ একসাথে প্রিন্ট
 window.printType = function (type) {
   const pages = document.querySelectorAll('.page.' + type);
