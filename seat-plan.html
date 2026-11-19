@@ -3235,7 +3235,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         if (!st || !st.loaded || !sh) { note.textContent = ''; detail.innerHTML = ''; return; }
         const ok = st.keys.filter(allowed).length;
         note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
-        renderDetail(st, sh);
+        detail.innerHTML = '';   // শ্রেণিভিত্তিক তালিকা এখানে নয় — শুধু 📊 শ্রেণিভিত্তিক হিসাব-এ দেখাবে
     }
     let tm = null;
     const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 30); };
