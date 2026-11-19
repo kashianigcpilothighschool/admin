@@ -439,7 +439,8 @@
   }
   table.seat td.door::after { display:none; }
   table.seat.two td.door { font-size:26pt; }
-  table.seat td.door.one, table.seat.two td.door.one { font-size:12.5pt; letter-spacing:2pt; text-indent:2pt; padding-right:7pt; }
+  table.seat td.door.one { font-size:12.5pt; letter-spacing:2pt; text-indent:2pt; padding-right:7pt; }
+  table.seat.two td.door.one { font-size:19pt; letter-spacing:4pt; text-indent:4pt; padding-right:9pt; }
 
   /* কাগজের মাপ টুলবারের ড্রপডাউন থেকে JS দিয়ে বসে (উপরের #pageSize স্টাইল) */
   @media print {
@@ -1827,7 +1828,7 @@ function makeDraft(p) {
     center: { ...CENTER },
     room,
     schools: (p.schools || []).map((s, i) => ({ _o: i, name: s.name ?? '', startRoll: s.startRoll ?? '', endRoll: s.endRoll ?? '', studentCount: s.studentCount ?? '' })),
-    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: (rg.door || /^door$/i.test(String(rg.startRoll ?? '').trim())) ? 'D' : (rg.startRoll ?? 0), count: rg.count ?? 0 }))),
+    cols: COLUMNS.map((_, ci) => ((p.columnData || [])[ci]?.ranges || []).map((rg, ri) => ({ _o: ri, startRoll: (rg.door || /^door$/i.test(String(rg.startRoll ?? '').trim())) ? 'D' : ((rg.xmark || /^x+$/i.test(String(rg.startRoll ?? '').trim())) ? 'x' : (rg.startRoll ?? 0)), count: rg.count ?? 0 }))),
     total: p.totals?.totalStudents ?? 0
   };
 }
@@ -1861,7 +1862,7 @@ function renderEdit() {
     '<label class="fl total-fl">মোট পরীক্ষার্থী' + fld('total', d.total, 'id="totalInp" inputmode="numeric"') + '</label>' +
     '<p class="hint">শুরু ও শেষ রোল লিখলে সংখ্যা এবং মোট নিজে থেকে হিসাব হয়। রোল ধারাবাহিক না হলে সংখ্যা হাতে ঠিক করুন।</p>';
 
-  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুরু রোলে শুধু D লিখলে ওই সিটে DOOR বসে। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
+  const seats = '<p class="hint" style="margin-top:0">প্রতি কলামে সিট উপর থেকে নিচে ক্রমে বসে। শুরু রোল ০ দিলে ওই সিটগুলো ফাঁকা থাকে। শুরু রোলে শুধু D লিখলে ওই সিটে DOOR, শুধু x লিখলে xxxxxx বসে। কম সিটের কলামের উপরে ফাঁকা সারি বসে।</p><div class="cols">' +
     COLUMNS.map((c, ci) => {
       const sum = d.cols[ci].reduce((a, rg) => a + (toNum(rg.count) || 0), 0);
       return '<div class="col"><div class="col-h"><strong>কলাম ' + c + '</strong><span>' + (ci % 2 ? 'ডান' : 'বাঁ') + ' · জোড়া ' + bn(Math.floor(ci / 2) + 1) +
@@ -2054,11 +2055,12 @@ async function saveEdit() {
     for (let ri = 0; ri < d.cols[ci].length; ri++) {
       const rg = d.cols[ci][ri];
       const isDoor = /^d(oor)?$/i.test(String(rg.startRoll ?? '').trim());
-      const a = isDoor ? 0 : toNum(rg.startRoll), n = toNum(rg.count);
+      const isX = /^x+$/i.test(String(rg.startRoll ?? '').trim());
+      const a = (isDoor || isX) ? 0 : toNum(rg.startRoll), n = toNum(rg.count);
       const row = ' (কলাম ' + COLUMNS[ci] + ', সারি ' + bn(ri + 1) + ')';
-      if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০, দরজার জন্য D দিন' + row + '।');
+      if (isNaN(a)) return fail('seats', 'শুরু রোল সংখ্যায় লিখুন; ফাঁকা সিটের জন্য ০, দরজার জন্য D, xxxxxx-এর জন্য x দিন' + row + '।');
       if (isNaN(n) || n < 1) return fail('seats', 'সিট সংখ্যা ১ বা তার বেশি হতে হবে' + row + '।');
-      rs.push({ _o: rg._o, startRoll: isDoor ? 'DOOR' : a, count: n, door: isDoor });
+      rs.push({ _o: rg._o, startRoll: isDoor ? 'DOOR' : (isX ? 'xxxxxx' : a), count: n, door: isDoor, xmark: isX });
       if (a > 0) for (let k = 0; k < n; k++) seatRolls.push(a + k);
     }
     cols.push(rs);
@@ -2083,7 +2085,7 @@ async function saveEdit() {
   if (totalSeats !== (orig.totals?.totalSeats ?? 0)) updates['totals.totalSeats'] = totalSeats;
   const newCols = COLUMNS.map((_, ci) => {
     const oc = (orig.columnData || [])[ci] || {};
-    return { ...oc, ranges: cols[ci].map(rg => { const o0 = (oc.ranges || [])[rg._o] || {}; const n0 = { ...o0, startRoll: rg.startRoll, count: rg.count }; if (rg.door) n0.door = true; else delete n0.door; if (o0.startRoll !== rg.startRoll || o0.count !== rg.count || !!o0.door !== rg.door) { delete n0.rolls; delete n0.classKey; } return n0; }) };
+    return { ...oc, ranges: cols[ci].map(rg => { const o0 = (oc.ranges || [])[rg._o] || {}; const n0 = { ...o0, startRoll: rg.startRoll, count: rg.count }; if (rg.door) n0.door = true; else delete n0.door; if (rg.xmark) { n0.xmark = true; n0.text = 'xxxxxx'; } else { delete n0.xmark; delete n0.text; } if (o0.startRoll !== rg.startRoll || o0.count !== rg.count || !!o0.door !== rg.door || !!o0.xmark !== rg.xmark) { delete n0.rolls; delete n0.classKey; } return n0; }) };
   });
   if (stable(newCols) !== stable(orig.columnData || [])) updates.columnData = newCols;
 
@@ -2167,6 +2169,8 @@ function renderPlan(p) {
     ((p.columnData || [])[i]?.ranges || []).forEach(rg => {
       if (rg.door || /^door$/i.test(String(rg.startRoll ?? ''))) {   // শুরু রোলে D লেখা: প্রতিটি সিট DOOR চিহ্নিত
         for (let k = 0; k < rg.count; k++) seats.push('DOOR');
+      } else if (rg.xmark || /^x+$/i.test(String(rg.startRoll ?? '').trim())) {   // শুরু রোলে x লেখা: প্রতিটি সিটে xxxxxx
+        for (let k = 0; k < rg.count; k++) seats.push('xxxxxx');
       } else if (Array.isArray(rg.rolls)) {   // Students থেকে বাছা রোল: ক্রমানুসারে পরবর্তী বিদ্যমান রোল বসে (যেমন VI-001); কম পড়লে বাকি সিট ফাঁকা
         for (let k = 0; k < rg.count; k++) { const rl = rg.rolls[k]; seats.push(rl ? (rg.prefix ? rg.prefix + '-' + String(rl).padStart(3, '0') : rl) : null); }
       } else { for (let k = 0; k < rg.count; k++) seats.push(rg.startRoll > 0 ? rg.startRoll + k : null); }
@@ -2182,7 +2186,6 @@ function renderPlan(p) {
   const use = two ? [0, 1, 4, 5] : [0, 1, 2, 3, 4, 5];
 
   // DOOR: যে সিটের শুরু রোলে D লেখা, সেই সিটেই DOOR বসে। পাশাপাশি দুই সিট DOOR হলে একসাথে মিলে এক ঘর হয়।
-  // (শেষ জোড়ার উপরের সারিতে একটিতে D দিলেও আগের মতো পুরো জোড়া জুড়ে DOOR দেখায়)
   const isD = (ci, i) => seatsByCol[ci][i] === 'DOOR';
   let body = '';
   for (let i = 0; i < rows; i++) {
@@ -2191,11 +2194,6 @@ function renderPlan(p) {
     use.forEach((ci) => {
       if ((!two && ci === 2) || ci === 4) tr += '<td class="g"></td>';
       if (skip.has(ci)) return;
-      if (ci === 4 && i === 0 && (isD(4, i) || isD(5, i))) {
-        tr += '<td class="door" colspan="2">DOOR</td>';
-        skip.add(5);
-        return;
-      }
       if (isD(ci, i)) {
         if (ci % 2 === 0 && use.includes(ci + 1) && isD(ci + 1, i)) {
           tr += '<td class="door" colspan="2">DOOR</td>';
