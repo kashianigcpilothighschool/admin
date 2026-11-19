@@ -1321,6 +1321,21 @@ table.seat.two col:nth-child(1), table.seat.two col:nth-child(2),
 table.seat.two col:nth-child(4), table.seat.two col:nth-child(5) { width:23.5% !important; }
 table.seat.two col:nth-child(3) { width:6% !important; }
 </style>
+<style id="printFast">
+/* প্রিন্ট দ্রুত করা: শুধু ছাপার সময় ভারী প্রভাব বন্ধ (পর্দার চেহারা অপরিবর্তিত) */
+@media print {
+  *, *::before, *::after { animation:none !important; transition:none !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .page { box-shadow:none !important; outline:none !important; filter:none !important; }
+  table.seat td { box-shadow:none !important; text-shadow:none !important; }
+}
+</style>
+<style id="benchFast">
+/* প্রিন্ট দ্রুত করা: শুধু পর্দার জন্য বানানো প্রভাব (animation, blur, পাতার ছায়া) ছাপার সময় বন্ধ। বেঞ্চসহ কাগজের চেহারা অপরিবর্তিত */
+@media print {
+  *, *::before, *::after { animation:none !important; transition:none !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+  .page { box-shadow:none !important; outline:none !important; }
+}
+</style>
 </head>
 <body>
 
