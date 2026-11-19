@@ -3184,7 +3184,10 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         #shiftClsDlg .sc-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid #EDEAE0}
         #shiftClsDlg .sc-foot button{flex:1;padding:11px;border:0;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
         #shiftClsDlg .sc-cancel{background:#EEF1F8;color:#1D2B4F}
-        #shiftClsDlg .sc-save{flex:1.6!important;background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}`;
+        #shiftClsDlg .sc-save{flex:1.6!important;background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}
+        #shiftClsDlg tr.sc-cls td{background:#EEF1F8;border-top:2px solid #C9CFDB}
+        #shiftClsDlg tr.sc-cls td small{display:inline;margin-left:6px}
+        #shiftClsDlg tr[data-c] td:first-child{padding-left:22px}`;
         document.head.appendChild(s);
     }
     // সংরক্ষিত কক্ষগুলো থেকে শ্রেণি-ভিত্তিক ব্যবহৃত সংখ্যা (শিফটসহ)
@@ -3221,19 +3224,45 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             '<div class="sc-tools"><input type="search" id="scQ" placeholder="🔍 শ্রেণি খুঁজুন (যেমন: ৯ম, বালিকা)">' +
             '<button type="button" class="sc-pre" data-p="m">সব সকালে</button><button type="button" class="sc-pre" data-p="n">সব দুপুরে</button><button type="button" class="sc-pre" data-p="b">দুই শিফটেই সব</button></div>' +
             '<div class="sc-body"><table><thead><tr><th>শ্রেণি</th><th>🌅 সকাল</th><th>☀️ দুপুর</th></tr></thead><tbody>' +
-            st.keys.map(k => {
+            (function () {
+                const baseOfKey = k => String(k).trim().split(' ')[0];
+                const cnt = {}; st.keys.forEach(k => { const b = baseOfKey(k); cnt[b] = (cnt[b] || 0) + 1; });
+                const seen = {};
+                return st.keys.map(k => {
+                const b = baseOfKey(k);
+                let head = '';
+                if (cnt[b] > 1 && !seen[b]) {
+                    seen[b] = 1;
+                    const cl = (labelOf(k).split(/[\s(]/)[0]) || b;
+                    head = '<tr class="sc-cls" data-c="' + esc(b) + '" data-l="' + esc(cl) + '"><td><b>শ্রেণি: ' + esc(cl) + '</b><small>সব শাখা একসাথে</small></td>' +
+                        '<td><input type="checkbox" class="cm" title="এই শ্রেণির সব শাখা"></td><td><input type="checkbox" class="cn" title="এই শ্রেণির সব শাখা"></td></tr>';
+                }
                 const u = use[k] || { morning: 0, noon: 0 };
-                return '<tr data-k="' + esc(k) + '" data-l="' + esc(labelOf(k)) + '" data-um="' + u.morning + '" data-un="' + u.noon + '">' +
+                return head + '<tr data-k="' + esc(k) + '"' + (cnt[b] > 1 ? ' data-c="' + esc(b) + '"' : '') + ' data-l="' + esc(labelOf(k)) + '" data-um="' + u.morning + '" data-un="' + u.noon + '">' +
                     '<td><b>' + esc(labelOf(k)) + '</b><small>মোট ' + bnN(st.map[k].n) + ' জন</small><span class="sc-w"></span></td>' +
                     '<td><input type="checkbox" class="m"' + (c.noMorning.indexOf(k) === -1 ? ' checked' : '') + '>' + '<small>ব্যবহৃত ' + bnN(u.morning) + '</small></td>' +
                     '<td><input type="checkbox" class="n"' + (c.noNoon.indexOf(k) === -1 ? ' checked' : '') + '>' + '<small>ব্যবহৃত ' + bnN(u.noon) + '</small></td></tr>';
-            }).join('') +
+                }).join('');
+            })() +
             '</tbody></table></div><div class="sc-sum" id="scSum"></div>' +
             '<div class="sc-foot"><button type="button" class="sc-cancel">বাতিল</button><button type="button" class="sc-save">সংরক্ষণ করুন</button></div></div>';
         document.body.appendChild(ov);
 
-        const rows = [...ov.querySelectorAll('tbody tr')];
+        const rows = [...ov.querySelectorAll('tbody tr[data-k]')];
+        const heads = [...ov.querySelectorAll('tbody tr.sc-cls')];
+        // শ্রেণির হেডার-টিক: সব শাখা টিক থাকলে টিক, কিছু থাকলে আংশিক (—)
+        function syncHeads() {
+            heads.forEach(h => {
+                const sec = rows.filter(tr => tr.dataset.c === h.dataset.c);
+                [['cm', 'm'], ['cn', 'n']].forEach(([hc, rc]) => {
+                    const on = sec.filter(tr => tr.querySelector('.' + rc).checked).length;
+                    const box = h.querySelector('.' + hc);
+                    box.checked = on === sec.length; box.indeterminate = on > 0 && on < sec.length;
+                });
+            });
+        }
         function refresh() {
+            syncHeads();
             let m = 0, n = 0, none = 0;
             rows.forEach(tr => {
                 const cm = tr.querySelector('.m').checked, cn = tr.querySelector('.n').checked;
@@ -3251,7 +3280,13 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         const onKey = e => { if (e.key === 'Escape') close(); };
         document.addEventListener('keydown', onKey);
         ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
-        ov.addEventListener('change', e => { if (e.target.matches('input.m, input.n')) refresh(); });
+        ov.addEventListener('change', e => {
+            if (e.target.matches('input.cm, input.cn')) {   // শ্রেণির টিক → ওই শ্রেণির সব শাখা
+                const h = e.target.closest('tr'), rc = e.target.classList.contains('cm') ? 'm' : 'n';
+                rows.filter(tr => tr.dataset.c === h.dataset.c).forEach(tr => { tr.querySelector('.' + rc).checked = e.target.checked; });
+                refresh();
+            } else if (e.target.matches('input.m, input.n')) refresh();
+        });
         ov.querySelector('.sc-cancel').onclick = close;
         ov.querySelectorAll('.sc-pre').forEach(b => b.onclick = () => {
             const p = b.dataset.p;
@@ -3261,6 +3296,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         $('scQ').addEventListener('input', e => {
             const q = bnN(e.target.value.trim()).toLowerCase();
             rows.forEach(tr => { tr.style.display = (!q || bnN(tr.dataset.l).toLowerCase().indexOf(q) > -1) ? '' : 'none'; });
+            heads.forEach(h => { h.style.display = rows.some(tr => tr.dataset.c === h.dataset.c && tr.style.display !== 'none') ? '' : 'none'; });
         });
         ov.querySelector('.sc-save').onclick = () => {
             const nm = [], nn = [];
