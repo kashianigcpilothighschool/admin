@@ -1357,26 +1357,28 @@ table.seat.two td.l, table.seat.two td.rt { letter-spacing:.3pt; }
    ===================================================== */
 table.seat td.l:not(.blank), table.seat td.rt:not(.blank) {
   background:
+    linear-gradient(180deg,transparent calc(52% - .5pt),rgba(40,18,3,.8) calc(52% - .5pt) calc(52% + .4pt),rgba(255,225,170,.45) calc(52% + .4pt) calc(52% + 1.2pt),transparent calc(52% + 1.2pt)),
     radial-gradient(circle at 4.5% 50%, #2f2519 0 .9pt, #b4aea2 1pt 1.5pt, transparent 1.7pt),radial-gradient(circle at 95.5% 50%, #2f2519 0 .9pt, #b4aea2 1pt 1.5pt, transparent 1.7pt),
     radial-gradient(ellipse 7% 30% at 58% 48%, rgba(60,28,6,.75) 0 22%, rgba(90,46,12,.45) 45%, rgba(110,58,18,.18) 68%, transparent 80%),
     radial-gradient(ellipse 15% 46% at 58% 48%, rgba(100,52,14,.22) 0 40%, transparent 75%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 60' preserveAspectRatio='none'%3E%3Cfilter id='w' x='0' y='0' width='100%' height='100%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0035 0.2' numOctaves='4' seed='7'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .27  0 0 0 0 .13  0 0 0 0 .03  2.4 0 0 0 -.66'/%3E%3C/filter%3E%3Crect width='400' height='60' filter='url(%23w)'/%3E%3C/svg%3E"),
     repeating-linear-gradient(180deg, rgba(60,30,8,.10) 0 .4pt, transparent .4pt 1.6mm),
     linear-gradient(180deg,#D9A669 0%,#C98F52 18%,#B97F44 62%,#9F6A33 100%) !important;
-    background-size:auto,auto,auto,auto,100% 100%,auto,auto;
-    background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
+    background-size:100% 100%,auto,auto,auto,auto,100% 100%,auto,auto;
+    background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
   border-color:#3A1E08; border-bottom-color:#4E2B0E;
 }
 table.seat tr.even td.l:not(.blank), table.seat tr.even td.rt:not(.blank) {
   background:
+    linear-gradient(180deg,transparent calc(52% - .5pt),rgba(40,18,3,.8) calc(52% - .5pt) calc(52% + .4pt),rgba(255,225,170,.45) calc(52% + .4pt) calc(52% + 1.2pt),transparent calc(52% + 1.2pt)),
     radial-gradient(circle at 4.5% 50%, #2f2519 0 .9pt, #b4aea2 1pt 1.5pt, transparent 1.7pt),radial-gradient(circle at 95.5% 50%, #2f2519 0 .9pt, #b4aea2 1pt 1.5pt, transparent 1.7pt),
     radial-gradient(ellipse 7% 30% at 36% 54%, rgba(60,28,6,.75) 0 22%, rgba(90,46,12,.45) 45%, rgba(110,58,18,.18) 68%, transparent 80%),
     radial-gradient(ellipse 15% 46% at 36% 54%, rgba(100,52,14,.22) 0 40%, transparent 75%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 60' preserveAspectRatio='none'%3E%3Cfilter id='w' x='0' y='0' width='100%' height='100%'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0045 0.2' numOctaves='4' seed='19'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .27  0 0 0 0 .13  0 0 0 0 .03  2.4 0 0 0 -.64'/%3E%3C/filter%3E%3Crect width='400' height='60' filter='url(%23w)'/%3E%3C/svg%3E"),
     repeating-linear-gradient(180deg, rgba(60,30,8,.10) 0 .4pt, transparent .4pt 1.6mm),
     linear-gradient(180deg,#CE9A5C 0%,#BC8546 18%,#AC7640 62%,#946029 100%) !important;
-    background-size:auto,auto,auto,auto,100% 100%,auto,auto;
-    background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
+    background-size:100% 100%,auto,auto,auto,auto,100% 100%,auto,auto;
+    background-repeat:no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,no-repeat,repeat,no-repeat;
 }
 /* তক্তার ধারে বার্নিশের আলো ও গভীরতা */
 table.seat td.l:not(.blank) {
@@ -1390,6 +1392,16 @@ table.seat td.l:not(.blank)::after, table.seat td.rt:not(.blank)::after {
   background:linear-gradient(90deg,#2a1406 0%,#6e4220 40%,#a8793f 50%,#6e4220 60%,#2a1406 100%);
 }
 table.seat td.l:not(.blank)::before, table.seat td.rt:not(.blank)::before { left:7%; right:7%; top:13%; bottom:19%; }
+
+/* সামনের ধার গাঢ় ও মোটা, নম্বর পাটা ছোট হালকা-কাঠের */
+table.seat td.l:not(.blank), table.seat td.rt:not(.blank) { border-bottom-width:6pt; border-bottom-color:#5a3112; }
+table.seat td.l:not(.blank)::before, table.seat td.rt:not(.blank)::before {
+  left:13%; right:13%; top:14%; bottom:22%;
+  background:linear-gradient(180deg,#F6E3B8 0%,#EBCF98 100%);
+  border:.8pt solid rgba(70,36,10,.7); border-radius:3px;
+  box-shadow:inset 0 .8pt 0 rgba(255,250,235,.8), inset 0 -1pt 1pt rgba(120,70,20,.25), 0 .8pt 0 rgba(255,228,180,.5);
+}
+table.seat td.l:not(.blank)::after, table.seat td.rt:not(.blank)::after { width:4.2mm; height:1.35mm; }
 </style>
 </head>
 <body>
