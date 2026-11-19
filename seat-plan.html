@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ভার্সন: V12 -->
-    <meta name="version" content="V12">
     <title>পরীক্ষা কক্ষের তথ্য</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ===== সিট প্লান — ভার্সন V12 ===== */
         /* ===== সোলেমানলিপি ফন্ট: পিসিতে ইনস্টল থাকলে সেটি, নইলে ফাইলের পাশের SolaimanLipi.ttf ===== */
         @font-face {
             font-family: 'SolaimanLipi';
@@ -830,7 +827,7 @@
                     <div class="info-item">
                         <span class="info-label">কক্ষ নং:</span>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="roomNumber" value="" style="width: 55px; text-align: center;">
+                            <input type="text" id="roomNumber" value="১" style="width: 55px; text-align: center;">
                             <select id="genderSelect">
                                 <option value="বালক">বালক</option>
                                 <option value="বালিকা">বালিকা</option>
@@ -3222,20 +3219,10 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             });
         });
         const st = window.__stu && window.__stu.st, sh = window.currentShift && window.currentShift();
-        // শিক্ষার্থী তথ্য (Students টেবিল) বার: শুধু বর্তমান শিফটের শ্রেণি ও শিক্ষার্থী সংখ্যা দেখানো
-        const stMsg = $('stuStatus');
-        if (st && st.loaded && stMsg && stMsg.textContent.indexOf('✅') === 0) {
-            const keys = sh ? st.keys.filter(allowed) : st.keys;
-            const cnt = keys.reduce((a, k) => a + st.map[k].n, 0);
-            const txt = sh
-                ? '✅ ' + SHN[sh] + ' শিফট: ' + bnN(cnt) + ' জন শিক্ষার্থী (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। এখন প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন।'
-                : '✅ ' + bnN(cnt) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। শিফট অনুযায়ী দেখতে পরীক্ষা শুরুর সময় বাছুন।';
-            if (stMsg.textContent !== txt) stMsg.textContent = txt;
-        }
         if (!st || !st.loaded || !sh) { note.textContent = ''; detail.innerHTML = ''; return; }
         const ok = st.keys.filter(allowed).length;
         note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
-        detail.innerHTML = '';   // শ্রেণিভিত্তিক তালিকা এখানে নয় — শুধু 📊 শ্রেণিভিত্তিক হিসাব-এ দেখাবে
+        renderDetail(st, sh);
     }
     let tm = null;
     const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 30); };
@@ -3491,41 +3478,16 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         return /[০-৯]/.test(raw) ? toBn(out) : out;
     }
 
-    const fire = () => box.dispatchEvent(new Event('change', { bubbles: true }));
-    let touched = false;
-    box.addEventListener('input', e => { if (e.isTrusted) touched = true; });
-
-    // সংরক্ষিত কক্ষগুলোর (সার্ভার) মধ্যে বর্তমান শিফটের সর্বোচ্চ কক্ষ নং-এর পরেরটি বসানো (১০২ থাকলে ১০৩)
-    async function applyNextFromServer() {
-        if (touched || window.__editingId) return;
-        try {
-            const { api: sbApi, token } = await window.fbReady;
-            const list = await sbApi('seatPlanList', token);
-            const sh = window.currentShift && window.currentShift();
-            let best = null, bestN = -1;
-            (Array.isArray(list) ? list : []).forEach(r => {
-                if (!r || r.id === '__center__' || !r.data) return;
-                if (sh && window.shiftOfRow && window.shiftOfRow(r) !== sh) return;
-                const raw = String((r.data.roomInfo || {}).roomNumber || '').trim();
-                const m = toEn(raw).match(/(\d+)$/);
-                if (!m) return;
-                const n = parseInt(m[1], 10);
-                if (n > bestN) { bestN = n; best = raw; }
-            });
-            const nx = best ? nextRoom(best) : '';   // এই শিফটে কোনো কক্ষ না থাকলে ঘর ফাঁকা
-            if (!touched && !window.__editingId && box.value !== nx) { box.value = nx; fire(); }
-        } catch (e) { console.warn('পরের কক্ষ নং সার্ভার থেকে আনা যায়নি:', e.message); }
-    }
-
-    // লোডের সময়: আগে এই ব্রাউজারে সংরক্ষিত নম্বর (দ্রুত), তারপর সার্ভার থেকে নিশ্চিত করা
+    // লোডের সময় সংরক্ষিত পরের নম্বর বসানো
     try {
         const saved = localStorage.getItem(KEY);
-        if (saved) { box.value = saved; fire(); }
+        if (saved) {
+            box.value = saved;
+            const fire = () => box.dispatchEvent(new Event('change', { bubbles: true }));
+            fire();
+            if (window.fbReady) window.fbReady.then(fire).catch(() => {});
+        }
     } catch (e) {}
-    if (window.fbReady) window.fbReady.then(applyNextFromServer).catch(() => {});
-    // পরীক্ষার সময় (শিফট) বদলালে ওই শিফটের শেষ কক্ষের পরেরটি
-    const et = document.getElementById('examTime');
-    if (et) et.addEventListener('change', () => setTimeout(applyNextFromServer, 0));
 
     // সাবমিট সফল হলে পরের নম্বর রেখে দেওয়া (এডিটের সময় নম্বর এগোবে না)
     const _prev = fastGenerateSeatPlan;
