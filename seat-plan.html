@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ভার্সন: V12 -->
-    <meta name="version" content="V12">
+    <!-- ভার্সন: V13 -->
     <title>পরীক্ষা কক্ষের তথ্য</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* ===== সিট প্লান — ভার্সন V12 ===== */
+        /* ===== সিট প্লান ===== */
         /* ===== সোলেমানলিপি ফন্ট: পিসিতে ইনস্টল থাকলে সেটি, নইলে ফাইলের পাশের SolaimanLipi.ttf ===== */
         @font-face {
             font-family: 'SolaimanLipi';
@@ -3200,13 +3199,17 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     btn.type = 'button'; btn.className = 'add-range-btn'; btn.id = 'shiftClsBtn';
     btn.textContent = '⚙ শিফট অনুযায়ী শ্রেণি';
     loadBtn.insertAdjacentElement('afterend', btn);
+    const totals = document.createElement('div');
+    totals.id = 'shiftTotals';
+    totals.style.cssText = 'font-size:13px;margin-top:6px;color:#F1E2C3;font-weight:600';
+    $('stuStatus').insertAdjacentElement('afterend', totals);
     const note = document.createElement('div');
     note.id = 'shiftClsNote';
-    note.style.cssText = 'font-size:12.5px;margin-top:6px;color:#9ee6bd';
+    note.style.cssText = 'display:inline;font-size:12.5px;margin:6px 8px 0 0;color:#9ee6bd;font-weight:700';
     $('stuStatus').insertAdjacentElement('afterend', note);
     const detail = document.createElement('div');
     detail.id = 'shiftClsDetail';
-    detail.style.cssText = 'margin-top:8px;font-size:12px;color:#fff';
+    detail.style.cssText = 'display:inline;font-size:12px;color:#fff';
     note.insertAdjacentElement('afterend', detail);
 
     let useCache = {};
@@ -3258,10 +3261,25 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
                 : '✅ ' + bnN(cnt) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। শিফট অনুযায়ী দেখতে পরীক্ষা শুরুর সময় বাছুন।';
             if (stMsg.textContent !== txt) stMsg.textContent = txt;
         }
+        // মোট শিক্ষার্থী + সকাল শিফটে কত + দুপুর/বিকাল শিফটে কত (শিফট নির্ধারণের সেটিং অনুযায়ী)
+        if (st && st.loaded) {
+            const c = load();
+            const sum = keys => keys.reduce((a, k) => a + st.map[k].n, 0);
+            const tAll = sum(st.keys);
+            const kMor = st.keys.filter(k => c.noMorning.indexOf(k) === -1);
+            const kNoon = st.keys.filter(k => c.noNoon.indexOf(k) === -1);
+            const tx = '👥 মোট শিক্ষার্থী: ' + bnN(tAll) + ' জন • 🌅 সকাল শিফটে: ' + bnN(sum(kMor)) + ' জন (' + bnN(kMor.length) + 'টি শ্রেণি/শাখা)' +
+                ' • ☀️ দুপুর/বিকাল শিফটে: ' + bnN(sum(kNoon)) + ' জন (' + bnN(kNoon.length) + 'টি শ্রেণি/শাখা)';
+            if (totals.textContent !== tx) totals.textContent = tx;
+        } else if (totals.textContent) totals.textContent = '';
         if (!st || !st.loaded || !sh) { note.textContent = ''; detail.innerHTML = ''; return; }
         const ok = st.keys.filter(allowed).length;
         note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
-        detail.innerHTML = '';   // শ্রেণিভিত্তিক তালিকা এখানে নয় — শুধু 📊 শ্রেণিভিত্তিক হিসাব-এ দেখাবে
+        // চলতি (running) শিফটের নির্ধারিত শ্রেণিগুলোর সংখ্যা: যেমন "অষ্টম শ্রেণি: ৭৮৭ জন"
+        const rk = st.keys.filter(allowed);
+        const chip = 'display:inline-block;margin:3px 6px 0 0;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12.5px';
+        const html = rk.map(k => '<span style="' + chip + '">' + esc(labelOf(k)) + ': <b style="color:#9ee6bd">' + bnN(st.map[k].n) + ' জন</b></span>').join('');
+        if (detail.innerHTML !== html) detail.innerHTML = html;
     }
     let tm = null;
     const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 30); };
