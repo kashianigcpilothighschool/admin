@@ -1313,6 +1313,14 @@ table.seat td.l:not(.blank)::after, table.seat td.rt:not(.blank)::after {
 }
 table.seat td.blank { background:repeating-linear-gradient(135deg,#F4ECDD 0 3pt,#EDE3D0 3pt 6pt) !important; }
 </style>
+<style id="benchWide">
+/* বেঞ্চের প্রস্থ বাড়ানো: পাতার দুই পাশের ফাঁকায় ০.১ ইঞ্চি করে ছড়ানো, জোড়ার মাঝের পথ সরু। উচ্চতা অপরিবর্তিত। পর্দা ও প্রিন্ট দুটিতেই */
+table.seat { width:calc(100% + 0.2in); margin-left:-0.1in; margin-right:-0.1in; }
+table.seat td.g { width:9pt; }
+table.seat.two col:nth-child(1), table.seat.two col:nth-child(2),
+table.seat.two col:nth-child(4), table.seat.two col:nth-child(5) { width:23.5% !important; }
+table.seat.two col:nth-child(3) { width:6% !important; }
+</style>
 </head>
 <body>
 
