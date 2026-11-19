@@ -1145,6 +1145,13 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
 
                 await sbApi('seatPlanSave', token, roomId, { ...allData, roomId: roomId });
 
+                // এডিটে কক্ষ নং/ভবন/তলা/শিফট বদলালে পুরোনো রেকর্ড মুছে ফেলা (নইলে ডুপ্লিকেট থেকে যায়)
+                if (window.__editingId && window.__editingId !== roomId) {
+                    try { await sbApi('seatPlanDelete', token, window.__editingId); }
+                    catch (e) { console.warn('পুরোনো রেকর্ড মোছা যায়নি:', e.message); }
+                }
+                window.__editingId = roomId;
+
                 window.__seatSaved = true;   // সফল হলে অটো রিফ্রেশের জন্য ফ্ল্যাগ
                 showAlert('সিট প্লান সফলভাবে সংরক্ষিত হয়েছে!', 'success');
                 log('সফল: seatPlans/' + roomId, 'success');
@@ -2097,9 +2104,9 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     }
     // অন্য সংরক্ষিত রুমে ব্যবহৃত রোল (এই রুম বাদে)
     function usedSaved(key) {
-        const me = currentRoomId(), out = [];
+        const me = currentRoomId(), editing = window.__editingId || '', out = [];
         savedRows.forEach(r => {
-            if (!r || r.id === '__center__' || r.id === me || !r.data) return;
+            if (!r || r.id === '__center__' || r.id === me || r.id === editing || !r.data) return;
             if (window.shiftOfRow(r) !== window.currentShift()) return;   // শুধু একই শিফটের কক্ষ
             (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
                 if (rg.classKey === key && Array.isArray(rg.rolls)) rg.rolls.forEach(x => { const v = window.__stu.fromSaved(key, x); if (!isNaN(v)) out.push(v); });
@@ -2738,6 +2745,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             const pick = current.find(r => r.id === roomSel.value);
             if (!pick) return;
             fill(pick.data);
+            window.__editingId = pick.id;   // কোন সংরক্ষিত কক্ষ এডিট হচ্ছে
             try { if (typeof updateAll === 'function') updateAll(); } catch (e) {}
             close();
             showAlert(bn(en(pick.data.roomInfo.roomNumber)) + ' নং কক্ষের তথ্য ফর্মে ফিরে এসেছে। পরিবর্তন করে "সাবমিট" চাপুন।', 'success');
