@@ -3086,5 +3086,161 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     };
 })();
 </script>
+<script>
+// ===== শিফট অনুযায়ী শ্রেণি নির্ধারণ: সকালে শুধু নির্ধারিত শ্রেণি, দুপুরে শুধু নির্ধারিত শ্রেণি =====
+(function () {
+    const $ = id => document.getElementById(id);
+    const KEY = 'seatplan_shift_classes';   // { noMorning: [শ্রেণির key...], noNoon: [...] } — তালিকায় না থাকলে শ্রেণি অনুমোদিত
+    const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const SHN = { morning: 'সকাল', noon: 'দুপুর' };
+
+    function load() {
+        try {
+            const c = JSON.parse(localStorage.getItem(KEY) || 'null');
+            if (c && Array.isArray(c.noMorning) && Array.isArray(c.noNoon)) return c;
+        } catch (e) {}
+        return { noMorning: [], noNoon: [] };
+    }
+    function allowed(k) {
+        const sh = window.currentShift && window.currentShift();
+        if (!sh || !k) return true;
+        const c = load();
+        return (sh === 'morning' ? c.noMorning : c.noNoon).indexOf(k) === -1;
+    }
+    const labelOf = k => { const g = window.__stu && window.__stu.st.map[k]; return g ? g.label.replace('শ্রেণি: ', '') : k; };
+
+    // ---- বাটন ও নোট ----
+    const loadBtn = $('stuLoadBtn');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'add-range-btn'; btn.id = 'shiftClsBtn';
+    btn.textContent = '⚙ শিফট অনুযায়ী শ্রেণি';
+    loadBtn.insertAdjacentElement('afterend', btn);
+    const note = document.createElement('div');
+    note.id = 'shiftClsNote';
+    note.style.cssText = 'font-size:12.5px;margin-top:6px;color:#9ee6bd';
+    $('stuStatus').insertAdjacentElement('afterend', note);
+
+    // ---- নির্বাচনের তালিকায় শুধু অনুমোদিত শ্রেণি দেখানো ----
+    function apply() {
+        document.querySelectorAll('#columnInputs select.stu-class, #schoolForms select.school-select').forEach(sel => {
+            [...sel.options].forEach(o => {
+                const k = sel.classList.contains('stu-class') ? o.value : (o.dataset.k || '');
+                if (!k) return;
+                const bad = !allowed(k) && !o.selected;   // আগে বাছা থাকলে (এডিটের ক্ষেত্রে) থাকবে
+                o.hidden = bad; o.disabled = bad;
+            });
+        });
+        const st = window.__stu && window.__stu.st, sh = window.currentShift && window.currentShift();
+        if (!st || !st.loaded || !sh) { note.textContent = ''; return; }
+        const ok = st.keys.filter(allowed).length;
+        note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
+    }
+    let tm = null;
+    const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 30); };
+    ['columnInputs', 'schoolForms'].forEach(id => new MutationObserver(sched).observe($(id), { childList: true, subtree: true }));
+    $('examTime').addEventListener('change', sched);
+    new MutationObserver(sched).observe($('stuStatus'), { childList: true, characterData: true, subtree: true });
+
+    // ---- সাবমিটে অননুমোদিত শ্রেণি আটকানো ----
+    const _qv = quickValidation;
+    quickValidation = function () {
+        const e = _qv(), bad = new Set();
+        document.querySelectorAll('#columnInputs select.stu-class').forEach(s => { if (s.value && !allowed(s.value)) bad.add(s.value); });
+        document.querySelectorAll('#schoolForms .school-select').forEach(s => { const o = s.selectedOptions[0], k = o && o.dataset.k; if (k && !allowed(k)) bad.add(k); });
+        if (bad.size) {
+            const sh = window.currentShift();
+            e.push('এই শ্রেণি ' + SHN[sh] + ' শিফটে নির্ধারিত নয়: ' + [...bad].map(labelOf).join(', '));
+        }
+        return e;
+    };
+
+    // ---- সেটিংস ডায়ালগ ----
+    function css() {
+        if ($('shiftClsCss')) return;
+        const s = document.createElement('style'); s.id = 'shiftClsCss';
+        s.textContent = `
+        #shiftClsDlg{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(16,26,51,.55);backdrop-filter:blur(6px)}
+        #shiftClsDlg .sc-box{width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;background:#fff;color:#1E2330;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(16,26,51,.45)}
+        #shiftClsDlg .sc-head{padding:16px 20px;color:#fff;background:linear-gradient(135deg,#101A33,#33456F)}
+        #shiftClsDlg .sc-head h3{margin:0;font-size:18px}
+        #shiftClsDlg .sc-head p{margin:3px 0 0;font-size:12.5px;color:#F1E2C3}
+        #shiftClsDlg .sc-body{padding:10px 20px;overflow:auto}
+        #shiftClsDlg table{width:100%;border-collapse:collapse;font-size:14px}
+        #shiftClsDlg th{position:sticky;top:0;background:#EEF1F8;padding:8px;text-align:center;font-weight:700}
+        #shiftClsDlg th:first-child,#shiftClsDlg td:first-child{text-align:left}
+        #shiftClsDlg td{padding:8px;border-top:1px solid #EDEAE0;text-align:center}
+        #shiftClsDlg input[type=checkbox]{width:19px;height:19px;cursor:pointer;accent-color:#1D2B4F}
+        #shiftClsDlg .sc-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid #EDEAE0}
+        #shiftClsDlg .sc-foot button{flex:1;padding:11px;border:0;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
+        #shiftClsDlg .sc-cancel{background:#EEF1F8;color:#1D2B4F}
+        #shiftClsDlg .sc-save{background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}`;
+        document.head.appendChild(s);
+    }
+    btn.addEventListener('click', () => {
+        const st = window.__stu && window.__stu.st;
+        if (!st || !st.loaded) { showAlert('আগে Students লোড করুন, তারপর শিফট অনুযায়ী শ্রেণি ঠিক করুন।', 'error'); return; }
+        if ($('shiftClsDlg')) return;
+        css();
+        const c = load();
+        const ov = document.createElement('div'); ov.id = 'shiftClsDlg';
+        ov.innerHTML = '<div class="sc-box"><div class="sc-head"><h3>শিফট অনুযায়ী শ্রেণি</h3><p>যে শিফটে যে শ্রেণি বসবে সেটিতে টিক দিন। দুই শিফটে টিক দিলে দুই শিফটেই পাবে।</p></div>' +
+            '<div class="sc-body"><table><thead><tr><th>শ্রেণি</th><th>🌅 সকাল<br><label style="font-weight:500;font-size:11.5px"><input type="checkbox" id="scAllM" checked> সব</label></th>' +
+            '<th>☀️ দুপুর<br><label style="font-weight:500;font-size:11.5px"><input type="checkbox" id="scAllN" checked> সব</label></th></tr></thead><tbody>' +
+            st.keys.map(k => '<tr data-k="' + esc(k) + '"><td>' + esc(labelOf(k)) + '</td>' +
+                '<td><input type="checkbox" class="m"' + (c.noMorning.indexOf(k) === -1 ? ' checked' : '') + '></td>' +
+                '<td><input type="checkbox" class="n"' + (c.noNoon.indexOf(k) === -1 ? ' checked' : '') + '></td></tr>').join('') +
+            '</tbody></table></div><div class="sc-foot"><button type="button" class="sc-cancel">বাতিল</button><button type="button" class="sc-save">সংরক্ষণ করুন</button></div></div>';
+        document.body.appendChild(ov);
+        const close = () => ov.remove();
+        ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+        ov.querySelector('.sc-cancel').onclick = close;
+        const toggle = (cls, on) => ov.querySelectorAll('input.' + cls).forEach(x => { x.checked = on; });
+        $('scAllM').onchange = e => toggle('m', e.target.checked);
+        $('scAllN').onchange = e => toggle('n', e.target.checked);
+        ov.querySelector('.sc-save').onclick = () => {
+            const nm = [], nn = [];
+            ov.querySelectorAll('tbody tr').forEach(tr => {
+                if (!tr.querySelector('.m').checked) nm.push(tr.dataset.k);
+                if (!tr.querySelector('.n').checked) nn.push(tr.dataset.k);
+            });
+            const cfg = { noMorning: nm, noNoon: nn };
+            try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch (e) {}
+            close(); apply();
+            pushServer(cfg).then(ok => showAlert(ok ? 'শিফট অনুযায়ী শ্রেণি সংরক্ষিত হয়েছে (সার্ভারেও — সব কম্পিউটারে একই থাকবে)।' : 'এই ব্রাউজারে সংরক্ষিত হয়েছে, কিন্তু সার্ভারে সংরক্ষণ করা যায়নি।', ok ? 'success' : 'error'));
+        };
+    });
+    // ---- সার্ভারে স্থায়ী সংরক্ষণ: একবার ঠিক করলে সব ব্রাউজার/কম্পিউটারে একই থাকবে ----
+    async function serverGet() {
+        const { api: sb, token } = await window.fbReady;
+        const rows = await sb('seatPlanList', token);
+        const c = (Array.isArray(rows) ? rows : []).find(r => r && r.id === '__center__');
+        return { sb, token, data: (c && c.data) || {} };
+    }
+    async function pushServer(cfg) {
+        try {
+            const { sb, token, data } = await serverGet();
+            const center = Object.assign({}, data.center || {}, { shiftClasses: cfg });
+            await sb('seatPlanSave', token, '__center__', Object.assign({}, data, { center: center }));
+            return true;
+        } catch (e) { console.warn('শিফট-শ্রেণি সার্ভারে সংরক্ষণ হয়নি:', e.message); return false; }
+    }
+    async function pullServer() {
+        try {
+            const { data } = await serverGet();
+            const sc = data.center && data.center.shiftClasses;
+            if (sc && Array.isArray(sc.noMorning) && Array.isArray(sc.noNoon)) {
+                try { localStorage.setItem(KEY, JSON.stringify(sc)); } catch (e) {}
+                apply();
+            } else {
+                const l = localStorage.getItem(KEY);   // সার্ভারে নেই কিন্তু এই ব্রাউজারে আছে → সার্ভারে তুলে দেওয়া
+                if (l) pushServer(JSON.parse(l));
+            }
+        } catch (e) { console.warn('শিফট-শ্রেণি সার্ভার থেকে আনা যায়নি:', e.message); }
+    }
+    window.fbReady.then(pullServer);
+    apply();
+})();
+</script>
 </body>
 </html>
