@@ -843,7 +843,7 @@
                             <option value="ব্যবসায় শিক্ষা">ব্যবসায় শিক্ষা</option>
                             <option value="বিজ্ঞান ও মানবিক">বিজ্ঞান ও মানবিক</option>
                             <option value="সকল বিভাগ">সকল বিভাগ</option>
-                            <option value="প্রযোজ্য নয়">প্রযোজ্য নয়</option>
+                            <option value="প্রযোজ্য নয়" selected>প্রযোজ্য নয়</option>
                         </select>
                     </div>
                     <div class="info-item">
@@ -3367,6 +3367,48 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     }
     window.fbReady.then(pullServer);
     apply();
+})();
+</script>
+<script>
+// ===== কক্ষ নং: সাবমিটের পর পরের বার নিজে থেকে পরের নম্বর বসবে (১০১ → ১০২) =====
+(function () {
+    const KEY = 'seatplan_next_room';
+    const BN = '০১২৩৪৫৬৭৮৯';
+    const toEn = v => String(v == null ? '' : v).replace(/[০-৯]/g, d => String(BN.indexOf(d)));
+    const toBn = v => String(v).replace(/\d/g, d => BN[+d]);
+    const box = document.getElementById('roomNumber');
+    if (!box) return;
+
+    // শেষের সংখ্যা ১ বাড়ায়; বাংলা/ইংরেজি অঙ্ক ও শুরুর শূন্য (০০৯ → ০১০) ঠিক রাখে; শেষে সংখ্যা না থাকলে null
+    function nextRoom(v) {
+        const raw = String(v || '').trim(), m = toEn(raw).match(/^(.*?)(\d+)$/);
+        if (!m) return null;
+        let num = String(parseInt(m[2], 10) + 1);
+        while (num.length < m[2].length) num = '0' + num;
+        const out = m[1] + num;
+        return /[০-৯]/.test(raw) ? toBn(out) : out;
+    }
+
+    // লোডের সময় সংরক্ষিত পরের নম্বর বসানো
+    try {
+        const saved = localStorage.getItem(KEY);
+        if (saved) {
+            box.value = saved;
+            const fire = () => box.dispatchEvent(new Event('change', { bubbles: true }));
+            fire();
+            if (window.fbReady) window.fbReady.then(fire).catch(() => {});
+        }
+    } catch (e) {}
+
+    // সাবমিট সফল হলে পরের নম্বর রেখে দেওয়া (এডিটের সময় নম্বর এগোবে না)
+    const _prev = fastGenerateSeatPlan;
+    fastGenerateSeatPlan = async function () {
+        const wasEditing = !!window.__editingId, used = box.value.trim();
+        await _prev();
+        if (!window.__seatSaved || wasEditing) return;
+        const nx = nextRoom(used);
+        if (nx) { try { localStorage.setItem(KEY, nx); } catch (e) {} }
+    };
 })();
 </script>
 </body>
