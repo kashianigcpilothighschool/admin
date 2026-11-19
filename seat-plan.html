@@ -2603,6 +2603,10 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         #editDlg .ed-foot button:hover:not(:disabled){filter:brightness(1.05)}
         #editDlg .ed-foot button:active:not(:disabled){transform:scale(.98)}
         #editDlg .ed-go:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+        #editDlg .ed-del{flex:none!important;padding:13px 14px!important;background:var(--error-bg,#FCEDEB);color:var(--error,#C0392B);border:1px solid rgba(192,57,43,.25)!important}
+        #editDlg .ed-del.sure{background:var(--error,#C0392B);color:#fff;animation:edShake .3s}
+        #editDlg .ed-del:disabled{opacity:.45;cursor:not-allowed}
+        @keyframes edShake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
         @keyframes edFade{from{opacity:0}to{opacity:1}}
         @keyframes edPop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
         @media (max-width:480px){#editDlg{align-items:flex-end;padding:0}#editDlg .ed-box{max-width:none;border-radius:20px 20px 0 0}}
@@ -2648,18 +2652,23 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
                 '<div class="ed-sel"><select id="editRoomSel"></select></div>' +
                 '<div class="ed-prev" id="editPrev"></div>' +
               '</div>' +
-              '<div class="ed-foot"><button type="button" class="ed-cancel">বাতিল</button>' +
+              '<div class="ed-foot"><button type="button" class="ed-del" id="editDel" title="এই কক্ষ স্থায়ীভাবে মুছুন">🗑 ডিলিট</button>' +
+              '<button type="button" class="ed-cancel">বাতিল</button>' +
               '<button type="button" class="ed-go" id="editLoad">তথ্য লোড করুন</button></div>' +
             '</div>';
         document.body.appendChild(ov);
 
         const roomSel = $('editRoomSel'), prev = $('editPrev'), go = $('editLoad');
         let current = [];
+        const del = $('editDel');
+        let delTimer = null, deletedAny = false;
+        function resetDel() { clearTimeout(delTimer); del.classList.remove('sure'); del.textContent = '🗑 ডিলিট'; }
 
         function showPrev() {
             const r = current.find(x => x.id === roomSel.value);
-            if (!r) { prev.innerHTML = '<div class="ed-empty">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</div>'; go.disabled = true; return; }
-            go.disabled = false;
+            resetDel();
+            if (!r) { prev.innerHTML = '<div class="ed-empty">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</div>'; go.disabled = true; del.disabled = true; return; }
+            go.disabled = false; del.disabled = false;
             const i = r.data.roomInfo;
             const chips = [i.building, i.floor, i.gender, i.department, i.direction && i.direction !== 'নির্বাচিত নয়' ? i.direction : '']
                 .map(x => String(x || '').trim()).filter(Boolean).map(x => '<span>' + esc(x) + '</span>').join('');
@@ -2681,12 +2690,39 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         roomSel.addEventListener('change', showPrev);
         fillRooms();
 
-        const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+        const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); if (deletedAny) location.reload(); };
         const onKey = e => { if (e.key === 'Escape') close(); };
         document.addEventListener('keydown', onKey);
         ov.querySelector('.ed-x').onclick = close;
         ov.querySelector('.ed-cancel').onclick = close;
         ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+
+        del.onclick = async () => {
+            const pick = current.find(r => r.id === roomSel.value);
+            if (!pick) return;
+            const name = bn(en(pick.data.roomInfo.roomNumber)) + ' নং কক্ষ';
+            if (!del.classList.contains('sure')) {   // প্রথম চাপ: নিশ্চিতকরণ
+                del.classList.add('sure'); del.textContent = 'নিশ্চিত? আবার চাপুন';
+                delTimer = setTimeout(resetDel, 4000);
+                return;
+            }
+            resetDel(); del.disabled = true; go.disabled = true;
+            try {
+                const { api: sbApi, token } = await window.fbReady;
+                await sbApi('seatPlanDelete', token, pick.id);
+                deletedAny = true;
+                rows = rows.filter(r => r.id !== pick.id);
+                count.morning = 0; count.noon = 0; rows.forEach(r => { count[window.shiftOfRow(r)]++; });
+                ov.querySelectorAll('.ed-seg button').forEach(b => { const sm = b.querySelector('small'); if (sm) sm.textContent = bn(count[b.dataset.sh]); });
+                fillRooms();
+                showAlert(name + ' মুছে ফেলা হয়েছে।', 'success');
+                log('কক্ষ ডিলিট: ' + pick.id, 'success');
+                if (!rows.length) close();
+            } catch (e) {
+                showAlert('কক্ষ মুছতে ত্রুটি: ' + e.message, 'error');
+                del.disabled = false; go.disabled = false;
+            }
+        };
 
         go.onclick = () => {
             const pick = current.find(r => r.id === roomSel.value);
