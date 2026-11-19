@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ভার্সন: V12 -->
+    <meta name="version" content="V12">
     <title>পরীক্ষা কক্ষের তথ্য</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ===== সিট প্লান — ভার্সন V12 ===== */
         /* ===== সোলেমানলিপি ফন্ট: পিসিতে ইনস্টল থাকলে সেটি, নইলে ফাইলের পাশের SolaimanLipi.ttf ===== */
         @font-face {
             font-family: 'SolaimanLipi';
@@ -827,7 +830,7 @@
                     <div class="info-item">
                         <span class="info-label">কক্ষ নং:</span>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="roomNumber" value="১" style="width: 55px; text-align: center;">
+                            <input type="text" id="roomNumber" value="" style="width: 55px; text-align: center;">
                             <select id="genderSelect">
                                 <option value="বালক">বালক</option>
                                 <option value="বালিকা">বালিকা</option>
@@ -2931,14 +2934,31 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     }
 
     // ---------- হিসাব ----------
-    // সংরক্ষিত সব কক্ষ (সকাল + দুপুর) থেকে শ্রেণি-ভিত্তিক ব্যবহৃত রোল, শিফটসহ
+    // ---------- চলতি শিফট ----------
+    const SHN2 = { morning: 'সকাল', noon: 'দুপুর' };
+    const SHI2 = { morning: '🌅', noon: '☀️' };
+    const curShift = () => { const v = window.currentShift && window.currentShift(); return v === 'morning' || v === 'noon' ? v : ''; };
+    let lastSig = '';
+    function sigNow() {
+        const S = window.__stu, st = S && S.st; if (!st || !st.loaded) return '';
+        const c = curShift(), ok = (c && window.shiftClassAllowed) ? window.shiftClassAllowed : () => true;
+        return c + '|' + st.keys.filter(ok).join(',');
+    }
+    // শিফট বা শিফটের অনুমোদিত শ্রেণি বদলালে হিসাব নতুন করে আঁকা (সার্চ বক্সে লেখার সময় নয়)
+    window.__suCheck = function () { if (sigNow() !== lastSig) draw(); };
+
+    // সংরক্ষিত কক্ষ থেকে শ্রেণি-ভিত্তিক ব্যবহৃত রোল (শিফট বাছা থাকলে শুধু চলতি শিফট; না থাকলে সকাল + দুপুর)
     function compute() {
         const S = window.__stu, st = S && S.st;
         if (!st || !st.loaded) return null;
         const per = {}, roomSet = { morning: new Set(), noon: new Set() };
+        // শুধু চলতি শিফটের তথ্য: শিফট বাছা থাকলে শুধু ওই শিফটের কক্ষ ও ওই শিফটে অনুমোদিত শ্রেণি
+        const cur = curShift(), okCls = (cur && window.shiftClassAllowed) ? window.shiftClassAllowed : () => true;
+        lastSig = sigNow();
         saved.forEach(r => {
             if (!r || r.id === '__center__' || !r.data) return;
             const sh = (window.shiftOfRow ? window.shiftOfRow(r) : 'morning') === 'noon' ? 'noon' : 'morning';
+            if (cur && sh !== cur) return;
             const room = String(((r.data.roomInfo || {}).roomNumber) || '').trim();
             let any = false;
             (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
@@ -2957,7 +2977,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         const pctOf = (u, t) => !t ? 0 : (u >= t ? 100 : Math.min(99, Math.round(u / t * 100)));
         let tTotal = 0, tUsed = 0, tMor = 0, tNoon = 0;
         const dups = [];
-        const rows = st.keys.map(k => {
+        const rows = st.keys.filter(okCls).map(k => {
             const g = st.map[k], p = per[k] || { morning: new Set(), noon: new Set(), occ: {} };
             const usedSet = new Set();
             let mor = 0, noon = 0;
@@ -2984,7 +3004,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             return { key: k, label, total, mor, noon, used, left, pct: pctOf(used, total), cls, runs };
         });
         return {
-            rows, dups, tTotal, tUsed, tLeft: tTotal - tUsed, tMor, tNoon,
+            cur, rows, dups, tTotal, tUsed, tLeft: tTotal - tUsed, tMor, tNoon,
             pct: pctOf(tUsed, tTotal), roomsMor: roomSet.morning.size, roomsNoon: roomSet.noon.size
         };
     }
@@ -3011,12 +3031,12 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             return '<tr><td>' + esc(r.label) +
                 (r.left ? '<span class="su-rem" title="' + esc(r.runs.join(', ')) + '">বাকি রোল: ' + esc(shown) + '</span>' : '') + '</td>' +
                 '<td class="c">' + bnN(r.total) + '</td>' +
-                '<td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>' +
+                (last.cur ? '' : '<td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>') +
                 '<td class="c" style="color:#9ee6bd;font-weight:700">' + bnN(r.used) + '</td>' +
                 '<td class="c" style="color:' + (r.left ? '#f0a89e' : '#9ee6bd') + ';font-weight:700">' + (r.left ? bnN(r.left) : '✔ ০') + '</td>' +
                 '<td class="c"><span class="su-badge ' + r.cls + '">' + STAT[r.cls] + '</span>' +
                 '<div class="su-mini"><i style="width:' + r.pct + '%;background:' + rowBar(r) + '"></i></div></td></tr>';
-        }).join('') : '<tr><td colspan="7" class="su-empty">এই শর্তে কোনো শ্রেণি পাওয়া যায়নি</td></tr>';
+        }).join('') : '<tr><td colspan="' + (last.cur ? 5 : 7) + '" class="su-empty">এই শর্তে কোনো শ্রেণি পাওয়া যায়নি</td></tr>';
         const c = $('suCount'); if (c) c.textContent = bnN(list.length) + '/' + bnN(last.rows.length) + 'টি শ্রেণি';
     }
 
@@ -3026,7 +3046,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         if (!d) { box.innerHTML = ''; last = null; return; }
         last = d;
         updateStatus(d);
-        const head = '<div class="su-head"><span class="su-title">📊 শ্রেণিভিত্তিক হিসাব</span>' +
+        const head = '<div class="su-head"><span class="su-title">📊 শ্রেণিভিত্তিক হিসাব' + (d.cur ? ' — ' + SHI2[d.cur] + ' ' + SHN2[d.cur] + ' শিফট' : '') + '</span>' +
             '<button type="button" class="su-btn" id="stuUsageEye" title="' + (open ? 'হিসাব লুকান' : 'হিসাব দেখুন') + '" aria-expanded="' + open + '">' + (open ? '🙈 লুকান' : '👁 দেখুন') + '</button>' +
             '<button type="button" class="su-btn pri" id="suPrint" title="A4 পাতায় রিপোর্ট প্রিন্ট / PDF">🖨 রিপোর্ট প্রিন্ট</button></div>';
         if (!open) { box.innerHTML = head; return; }
@@ -3045,12 +3065,14 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             '<div class="su-card left"><b>' + bnN(d.tLeft) + '</b><span>বাকি</span></div>' +
             '<div class="su-card pct"><b>' + bnN(d.pct) + '%</b><span>অগ্রগতি</span></div></div>' +
             '<div class="su-bar"><i style="width:' + d.pct + '%"></i></div>' +
-            '<div class="su-shift"><span>🌅 সকাল: ' + bnN(d.roomsMor) + 'টি কক্ষ • ' + bnN(d.tMor) + ' জন</span><span>☀️ দুপুর: ' + bnN(d.roomsNoon) + 'টি কক্ষ • ' + bnN(d.tNoon) + ' জন</span></div>' +
+            '<div class="su-shift">' +
+              (d.cur !== 'noon' ? '<span>🌅 সকাল: ' + bnN(d.roomsMor) + 'টি কক্ষ • ' + bnN(d.tMor) + ' জন</span>' : '') +
+              (d.cur !== 'morning' ? '<span>☀️ দুপুর: ' + bnN(d.roomsNoon) + 'টি কক্ষ • ' + bnN(d.tNoon) + ' জন</span>' : '') + '</div>' +
             warn +
             '<div class="su-tools">' + pill('all', 'সব') + pill('left', 'বাকি আছে') + pill('done', 'সম্পূর্ণ') + pill('none', 'শুরু হয়নি') +
             '<input type="search" class="su-search" id="suQ" placeholder="🔍 শ্রেণি খুঁজুন (যেমন: ৯ম, বালিকা)" value="' + esc(query) + '">' +
             '<span id="suCount" style="font-size:11.5px;color:#c9cfdb"></span></div>' +
-            '<div class="su-wrap"><table class="su-tbl"><thead><tr><th style="text-align:left">শ্রেণি</th><th class="c">মোট</th><th class="c">🌅 সকাল</th><th class="c">☀️ দুপুর</th>' +
+            '<div class="su-wrap"><table class="su-tbl"><thead><tr><th style="text-align:left">শ্রেণি</th><th class="c">মোট</th>' + (d.cur ? '' : '<th class="c">🌅 সকাল</th><th class="c">☀️ দুপুর</th>') +
             '<th class="c">ব্যবহৃত</th><th class="c">বাকি</th><th class="c">অবস্থা</th></tr></thead><tbody id="suBody"></tbody></table></div>';
         drawRows();
     }
@@ -3066,7 +3088,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
 
         const body = d.rows.map((r, i) =>
             '<tr><td class="c">' + bnN(i + 1) + '</td><td>' + esc(r.label) + '</td>' +
-            '<td class="c">' + bnN(r.total) + '</td><td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>' +
+            '<td class="c">' + bnN(r.total) + '</td>' + (d.cur ? '' : '<td class="c">' + bnN(r.mor) + '</td><td class="c">' + bnN(r.noon) + '</td>') +
             '<td class="c"><b>' + bnN(r.used) + '</b></td><td class="c"><b>' + bnN(r.left) + '</b></td>' +
             '<td class="c">' + STAT[r.cls] + '<div class="bar"><i style="width:' + r.pct + '%"></i></div></td>' +
             '<td class="rem">' + (r.left ? esc(r.runs.join(', ')) : '—') + '</td></tr>').join('');
@@ -3075,16 +3097,18 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
               d.dups.map(x => esc(x.cls) + ' ' + esc(x.roll) + ' (' + x.shift + ', কক্ষ ' + x.rooms.join('/') + ')').join('; ') + '</div>'
             : '';
         return '<div class="su-sheet">' +
-            '<h1>শ্রেণিভিত্তিক পরীক্ষার্থী ব্যবহার রিপোর্ট</h1>' +
+            '<h1>শ্রেণিভিত্তিক পরীক্ষার্থী ব্যবহার রিপোর্ট' + (d.cur ? ' — ' + SHN2[d.cur] + ' শিফট' : '') + '</h1>' +
             (exam ? '<div class="sub">' + esc(exam) + (time ? ' • শুরু: ' + esc(time) : '') + '</div>' : '') +
             '<div class="meta"><span>সেশন: ' + (sess ? bnN(esc(sess)) : '—') + '</span><span>প্রিন্টের সময়: ' + esc(when) + '</span></div>' +
             '<div class="sum"><div><b>' + bnN(d.tTotal) + '</b>মোট শিক্ষার্থী</div><div><b>' + bnN(d.tUsed) + '</b>সিটে বসানো হয়েছে</div>' +
             '<div><b>' + bnN(d.tLeft) + '</b>বাকি</div><div><b>' + bnN(d.pct) + '%</b>অগ্রগতি</div></div>' +
-            '<div class="shifts">🌅 সকাল শিফট: ' + bnN(d.roomsMor) + 'টি কক্ষ, ' + bnN(d.tMor) + ' জন &nbsp;|&nbsp; ☀️ দুপুর শিফট: ' + bnN(d.roomsNoon) + 'টি কক্ষ, ' + bnN(d.tNoon) + ' জন</div>' +
-            '<table><thead><tr><th style="width:5%">ক্রম</th><th>শ্রেণি</th><th style="width:7%">মোট</th><th style="width:7%">সকাল</th><th style="width:7%">দুপুর</th>' +
+            '<div class="shifts">' + (d.cur === 'morning' ? '🌅 সকাল শিফট: ' + bnN(d.roomsMor) + 'টি কক্ষ, ' + bnN(d.tMor) + ' জন'
+                : d.cur === 'noon' ? '☀️ দুপুর শিফট: ' + bnN(d.roomsNoon) + 'টি কক্ষ, ' + bnN(d.tNoon) + ' জন'
+                : '🌅 সকাল শিফট: ' + bnN(d.roomsMor) + 'টি কক্ষ, ' + bnN(d.tMor) + ' জন &nbsp;|&nbsp; ☀️ দুপুর শিফট: ' + bnN(d.roomsNoon) + 'টি কক্ষ, ' + bnN(d.tNoon) + ' জন') + '</div>' +
+            '<table><thead><tr><th style="width:5%">ক্রম</th><th>শ্রেণি</th><th style="width:7%">মোট</th>' + (d.cur ? '' : '<th style="width:7%">সকাল</th><th style="width:7%">দুপুর</th>') +
             '<th style="width:8%">ব্যবহৃত</th><th style="width:7%">বাকি</th><th style="width:13%">অবস্থা</th><th style="width:22%">বাকি রোল</th></tr></thead>' +
             '<tbody>' + body + '</tbody>' +
-            '<tfoot><tr><td colspan="2" class="c">সর্বমোট</td><td class="c">' + bnN(d.tTotal) + '</td><td class="c">' + bnN(d.tMor) + '</td><td class="c">' + bnN(d.tNoon) + '</td>' +
+            '<tfoot><tr><td colspan="2" class="c">সর্বমোট</td><td class="c">' + bnN(d.tTotal) + '</td>' + (d.cur ? '' : '<td class="c">' + bnN(d.tMor) + '</td><td class="c">' + bnN(d.tNoon) + '</td>') +
             '<td class="c">' + bnN(d.tUsed) + '</td><td class="c">' + bnN(d.tLeft) + '</td><td class="c">' + bnN(d.pct) + '%</td><td></td></tr></tfoot></table>' +
             warn +
             '<div class="sign"><span>প্রস্তুতকারী</span><span>কেন্দ্র সচিব</span></div>' +
@@ -3122,6 +3146,9 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     // সাবমিটের পর হালনাগাদ
     const _fg = fastGenerateSeatPlan;
     fastGenerateSeatPlan = async function () { await _fg(); await loadSaved(); };
+
+    const _et = $('examTime');
+    if (_et) _et.addEventListener('change', () => setTimeout(window.__suCheck, 60));
 
     window.fbReady.then(loadSaved);
 })();
@@ -3164,6 +3191,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         const c = load();
         return (sh === 'morning' ? c.noMorning : c.noNoon).indexOf(k) === -1;
     }
+    window.shiftClassAllowed = allowed;   // 📊 শ্রেণিভিত্তিক হিসাব এটি ব্যবহার করে
     const labelOf = k => { const g = window.__stu && window.__stu.st.map[k]; return g ? g.label.replace('শ্রেণি: ', '') : k; };
 
     // ---- বাটন ও নোট ----
@@ -3210,6 +3238,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
 
     // ---- নির্বাচনের তালিকায় শুধু অনুমোদিত শ্রেণি দেখানো ----
     function apply() {
+        if (window.__suCheck) window.__suCheck();
         document.querySelectorAll('#columnInputs select.stu-class, #schoolForms select.school-select').forEach(sel => {
             [...sel.options].forEach(o => {
                 const k = sel.classList.contains('stu-class') ? o.value : (o.dataset.k || '');
@@ -3219,10 +3248,20 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             });
         });
         const st = window.__stu && window.__stu.st, sh = window.currentShift && window.currentShift();
+        // শিক্ষার্থী তথ্য (Students টেবিল) বার: শুধু বর্তমান শিফটের শ্রেণি ও শিক্ষার্থী সংখ্যা দেখানো
+        const stMsg = $('stuStatus');
+        if (st && st.loaded && stMsg && stMsg.textContent.indexOf('✅') === 0) {
+            const keys = sh ? st.keys.filter(allowed) : st.keys;
+            const cnt = keys.reduce((a, k) => a + st.map[k].n, 0);
+            const txt = sh
+                ? '✅ ' + SHN[sh] + ' শিফট: ' + bnN(cnt) + ' জন শিক্ষার্থী (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। এখন প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন।'
+                : '✅ ' + bnN(cnt) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। শিফট অনুযায়ী দেখতে পরীক্ষা শুরুর সময় বাছুন।';
+            if (stMsg.textContent !== txt) stMsg.textContent = txt;
+        }
         if (!st || !st.loaded || !sh) { note.textContent = ''; detail.innerHTML = ''; return; }
         const ok = st.keys.filter(allowed).length;
         note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
-        renderDetail(st, sh);
+        detail.innerHTML = '';   // শ্রেণিভিত্তিক তালিকা এখানে নয় — শুধু 📊 শ্রেণিভিত্তিক হিসাব-এ দেখাবে
     }
     let tm = null;
     const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 30); };
@@ -3478,16 +3517,41 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         return /[০-৯]/.test(raw) ? toBn(out) : out;
     }
 
-    // লোডের সময় সংরক্ষিত পরের নম্বর বসানো
+    const fire = () => box.dispatchEvent(new Event('change', { bubbles: true }));
+    let touched = false;
+    box.addEventListener('input', e => { if (e.isTrusted) touched = true; });
+
+    // সংরক্ষিত কক্ষগুলোর (সার্ভার) মধ্যে বর্তমান শিফটের সর্বোচ্চ কক্ষ নং-এর পরেরটি বসানো (১০২ থাকলে ১০৩)
+    async function applyNextFromServer() {
+        if (touched || window.__editingId) return;
+        try {
+            const { api: sbApi, token } = await window.fbReady;
+            const list = await sbApi('seatPlanList', token);
+            const sh = window.currentShift && window.currentShift();
+            let best = null, bestN = -1;
+            (Array.isArray(list) ? list : []).forEach(r => {
+                if (!r || r.id === '__center__' || !r.data) return;
+                if (sh && window.shiftOfRow && window.shiftOfRow(r) !== sh) return;
+                const raw = String((r.data.roomInfo || {}).roomNumber || '').trim();
+                const m = toEn(raw).match(/(\d+)$/);
+                if (!m) return;
+                const n = parseInt(m[1], 10);
+                if (n > bestN) { bestN = n; best = raw; }
+            });
+            const nx = best ? nextRoom(best) : '';   // এই শিফটে কোনো কক্ষ না থাকলে ঘর ফাঁকা
+            if (!touched && !window.__editingId && box.value !== nx) { box.value = nx; fire(); }
+        } catch (e) { console.warn('পরের কক্ষ নং সার্ভার থেকে আনা যায়নি:', e.message); }
+    }
+
+    // লোডের সময়: আগে এই ব্রাউজারে সংরক্ষিত নম্বর (দ্রুত), তারপর সার্ভার থেকে নিশ্চিত করা
     try {
         const saved = localStorage.getItem(KEY);
-        if (saved) {
-            box.value = saved;
-            const fire = () => box.dispatchEvent(new Event('change', { bubbles: true }));
-            fire();
-            if (window.fbReady) window.fbReady.then(fire).catch(() => {});
-        }
+        if (saved) { box.value = saved; fire(); }
     } catch (e) {}
+    if (window.fbReady) window.fbReady.then(applyNextFromServer).catch(() => {});
+    // পরীক্ষার সময় (শিফট) বদলালে ওই শিফটের শেষ কক্ষের পরেরটি
+    const et = document.getElementById('examTime');
+    if (et) et.addEventListener('change', () => setTimeout(applyNextFromServer, 0));
 
     // সাবমিট সফল হলে পরের নম্বর রেখে দেওয়া (এডিটের সময় নম্বর এগোবে না)
     const _prev = fastGenerateSeatPlan;
