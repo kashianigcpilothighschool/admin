@@ -3155,52 +3155,116 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         return e;
     };
 
-    // ---- সেটিংস ডায়ালগ ----
+    // ---- সেটিংস ডায়ালগ (সার্চ • প্রিসেট • ব্যবহারের হিসাব • সতর্কতা) ----
     function css() {
         if ($('shiftClsCss')) return;
         const s = document.createElement('style'); s.id = 'shiftClsCss';
         s.textContent = `
-        #shiftClsDlg{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(16,26,51,.55);backdrop-filter:blur(6px)}
-        #shiftClsDlg .sc-box{width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;background:#fff;color:#1E2330;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(16,26,51,.45)}
+        #shiftClsDlg{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(16,26,51,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+        #shiftClsDlg .sc-box{width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;background:#fff;color:#1E2330;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(16,26,51,.45)}
         #shiftClsDlg .sc-head{padding:16px 20px;color:#fff;background:linear-gradient(135deg,#101A33,#33456F)}
         #shiftClsDlg .sc-head h3{margin:0;font-size:18px}
         #shiftClsDlg .sc-head p{margin:3px 0 0;font-size:12.5px;color:#F1E2C3}
-        #shiftClsDlg .sc-body{padding:10px 20px;overflow:auto}
+        #shiftClsDlg .sc-tools{display:flex;flex-wrap:wrap;gap:8px;padding:12px 20px 4px;align-items:center}
+        #shiftClsDlg .sc-tools input[type=search]{flex:1;min-width:150px;padding:8px 12px;border:1.5px solid #E4E0D4;border-radius:999px;font:inherit;font-size:13.5px}
+        #shiftClsDlg .sc-tools input[type=search]:focus{outline:none;border-color:#1D2B4F;box-shadow:0 0 0 3px rgba(29,43,79,.12)}
+        #shiftClsDlg .sc-pre{padding:6px 12px;border-radius:999px;border:1px solid #B9822E;background:#FBF3E0;color:#5a3c0c;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+        #shiftClsDlg .sc-pre:hover{background:#F1E2C3}
+        #shiftClsDlg .sc-body{padding:6px 20px 10px;overflow:auto}
         #shiftClsDlg table{width:100%;border-collapse:collapse;font-size:14px}
-        #shiftClsDlg th{position:sticky;top:0;background:#EEF1F8;padding:8px;text-align:center;font-weight:700}
+        #shiftClsDlg th{position:sticky;top:0;z-index:1;background:#EEF1F8;padding:8px;text-align:center;font-weight:700}
         #shiftClsDlg th:first-child,#shiftClsDlg td:first-child{text-align:left}
-        #shiftClsDlg td{padding:8px;border-top:1px solid #EDEAE0;text-align:center}
-        #shiftClsDlg input[type=checkbox]{width:19px;height:19px;cursor:pointer;accent-color:#1D2B4F}
+        #shiftClsDlg td{padding:8px;border-top:1px solid #EDEAE0;text-align:center;vertical-align:top}
+        #shiftClsDlg td small{display:block;font-size:11.5px;color:#6B7280;margin-top:2px}
+        #shiftClsDlg tr.warn td{background:#FFF6E5}
+        #shiftClsDlg tr.bad td{background:#FCEDEB}
+        #shiftClsDlg .sc-w{display:block;margin-top:3px;font-size:11.5px;color:#C0392B;line-height:1.5}
+        #shiftClsDlg input[type=checkbox]{width:20px;height:20px;cursor:pointer;accent-color:#1D2B4F}
+        #shiftClsDlg .sc-sum{padding:8px 20px;font-size:12.5px;color:#33456F;background:#F7F8FC;border-top:1px solid #EDEAE0}
         #shiftClsDlg .sc-foot{display:flex;gap:10px;padding:14px 20px;border-top:1px solid #EDEAE0}
         #shiftClsDlg .sc-foot button{flex:1;padding:11px;border:0;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
         #shiftClsDlg .sc-cancel{background:#EEF1F8;color:#1D2B4F}
-        #shiftClsDlg .sc-save{background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}`;
+        #shiftClsDlg .sc-save{flex:1.6!important;background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}`;
         document.head.appendChild(s);
     }
-    btn.addEventListener('click', () => {
+    // সংরক্ষিত কক্ষগুলো থেকে শ্রেণি-ভিত্তিক ব্যবহৃত সংখ্যা (শিফটসহ)
+    async function usageBySaved() {
+        const out = {};
+        try {
+            const { api: sb, token } = await window.fbReady;
+            const rows = await sb('seatPlanList', token);
+            (Array.isArray(rows) ? rows : []).forEach(r => {
+                if (!r || r.id === '__center__' || !r.data) return;
+                const sh = window.shiftOfRow(r) === 'noon' ? 'noon' : 'morning';
+                (r.data.columnData || []).forEach(c => (c.ranges || []).forEach(rg => {
+                    if (!rg.classKey || !Array.isArray(rg.rolls)) return;
+                    const u = out[rg.classKey] || (out[rg.classKey] = { morning: 0, noon: 0 });
+                    u[sh] += rg.rolls.length;
+                }));
+            });
+        } catch (e) { console.warn('ব্যবহারের হিসাব আনা যায়নি:', e.message); }
+        return out;
+    }
+    btn.addEventListener('click', async () => {
         const st = window.__stu && window.__stu.st;
         if (!st || !st.loaded) { showAlert('আগে Students লোড করুন, তারপর শিফট অনুযায়ী শ্রেণি ঠিক করুন।', 'error'); return; }
+        if ($('shiftClsDlg')) return;
+        btn.disabled = true;
+        const use = await usageBySaved();
+        btn.disabled = false;
         if ($('shiftClsDlg')) return;
         css();
         const c = load();
         const ov = document.createElement('div'); ov.id = 'shiftClsDlg';
-        ov.innerHTML = '<div class="sc-box"><div class="sc-head"><h3>শিফট অনুযায়ী শ্রেণি</h3><p>যে শিফটে যে শ্রেণি বসবে সেটিতে টিক দিন। দুই শিফটে টিক দিলে দুই শিফটেই পাবে।</p></div>' +
-            '<div class="sc-body"><table><thead><tr><th>শ্রেণি</th><th>🌅 সকাল<br><label style="font-weight:500;font-size:11.5px"><input type="checkbox" id="scAllM" checked> সব</label></th>' +
-            '<th>☀️ দুপুর<br><label style="font-weight:500;font-size:11.5px"><input type="checkbox" id="scAllN" checked> সব</label></th></tr></thead><tbody>' +
-            st.keys.map(k => '<tr data-k="' + esc(k) + '"><td>' + esc(labelOf(k)) + '</td>' +
-                '<td><input type="checkbox" class="m"' + (c.noMorning.indexOf(k) === -1 ? ' checked' : '') + '></td>' +
-                '<td><input type="checkbox" class="n"' + (c.noNoon.indexOf(k) === -1 ? ' checked' : '') + '></td></tr>').join('') +
-            '</tbody></table></div><div class="sc-foot"><button type="button" class="sc-cancel">বাতিল</button><button type="button" class="sc-save">সংরক্ষণ করুন</button></div></div>';
+        ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+        ov.innerHTML = '<div class="sc-box"><div class="sc-head"><h3>শিফট অনুযায়ী শ্রেণি</h3><p>যে শিফটে যে শ্রেণি বসবে সেখানে টিক দিন। দুই শিফটে টিক দিলে দুই শিফটেই পাবে।</p></div>' +
+            '<div class="sc-tools"><input type="search" id="scQ" placeholder="🔍 শ্রেণি খুঁজুন (যেমন: ৯ম, বালিকা)">' +
+            '<button type="button" class="sc-pre" data-p="m">সব সকালে</button><button type="button" class="sc-pre" data-p="n">সব দুপুরে</button><button type="button" class="sc-pre" data-p="b">দুই শিফটেই সব</button></div>' +
+            '<div class="sc-body"><table><thead><tr><th>শ্রেণি</th><th>🌅 সকাল</th><th>☀️ দুপুর</th></tr></thead><tbody>' +
+            st.keys.map(k => {
+                const u = use[k] || { morning: 0, noon: 0 };
+                return '<tr data-k="' + esc(k) + '" data-l="' + esc(labelOf(k)) + '" data-um="' + u.morning + '" data-un="' + u.noon + '">' +
+                    '<td><b>' + esc(labelOf(k)) + '</b><small>মোট ' + bnN(st.map[k].n) + ' জন</small><span class="sc-w"></span></td>' +
+                    '<td><input type="checkbox" class="m"' + (c.noMorning.indexOf(k) === -1 ? ' checked' : '') + '>' + '<small>ব্যবহৃত ' + bnN(u.morning) + '</small></td>' +
+                    '<td><input type="checkbox" class="n"' + (c.noNoon.indexOf(k) === -1 ? ' checked' : '') + '>' + '<small>ব্যবহৃত ' + bnN(u.noon) + '</small></td></tr>';
+            }).join('') +
+            '</tbody></table></div><div class="sc-sum" id="scSum"></div>' +
+            '<div class="sc-foot"><button type="button" class="sc-cancel">বাতিল</button><button type="button" class="sc-save">সংরক্ষণ করুন</button></div></div>';
         document.body.appendChild(ov);
-        const close = () => ov.remove();
+
+        const rows = [...ov.querySelectorAll('tbody tr')];
+        function refresh() {
+            let m = 0, n = 0, none = 0;
+            rows.forEach(tr => {
+                const cm = tr.querySelector('.m').checked, cn = tr.querySelector('.n').checked;
+                const um = +tr.dataset.um, un = +tr.dataset.un, w = [];
+                if (cm) m++; if (cn) n++;
+                if (!cm && !cn) { none++; w.push('কোনো শিফটে নেই — এই শ্রেণি সিটে বসানো যাবে না'); }
+                if (!cm && um > 0) w.push('সকালের কক্ষে ইতোমধ্যে ' + bnN(um) + ' জন বসানো আছে');
+                if (!cn && un > 0) w.push('দুপুরের কক্ষে ইতোমধ্যে ' + bnN(un) + ' জন বসানো আছে');
+                tr.querySelector('.sc-w').innerHTML = w.map(esc).join('<br>');
+                tr.className = (!cm && !cn) ? 'bad' : (w.length ? 'warn' : '');
+            });
+            $('scSum').textContent = '🌅 সকাল: ' + bnN(m) + 'টি শ্রেণি • ☀️ দুপুর: ' + bnN(n) + 'টি শ্রেণি' + (none ? ' • ⚠ কোনো শিফটে নেই: ' + bnN(none) + 'টি' : '');
+        }
+        const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+        const onKey = e => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', onKey);
         ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+        ov.addEventListener('change', e => { if (e.target.matches('input.m, input.n')) refresh(); });
         ov.querySelector('.sc-cancel').onclick = close;
-        const toggle = (cls, on) => ov.querySelectorAll('input.' + cls).forEach(x => { x.checked = on; });
-        $('scAllM').onchange = e => toggle('m', e.target.checked);
-        $('scAllN').onchange = e => toggle('n', e.target.checked);
+        ov.querySelectorAll('.sc-pre').forEach(b => b.onclick = () => {
+            const p = b.dataset.p;
+            rows.forEach(tr => { tr.querySelector('.m').checked = p !== 'n'; tr.querySelector('.n').checked = p !== 'm'; });
+            refresh();
+        });
+        $('scQ').addEventListener('input', e => {
+            const q = bnN(e.target.value.trim()).toLowerCase();
+            rows.forEach(tr => { tr.style.display = (!q || bnN(tr.dataset.l).toLowerCase().indexOf(q) > -1) ? '' : 'none'; });
+        });
         ov.querySelector('.sc-save').onclick = () => {
             const nm = [], nn = [];
-            ov.querySelectorAll('tbody tr').forEach(tr => {
+            rows.forEach(tr => {
                 if (!tr.querySelector('.m').checked) nm.push(tr.dataset.k);
                 if (!tr.querySelector('.n').checked) nn.push(tr.dataset.k);
             });
@@ -3209,7 +3273,10 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             close(); apply();
             pushServer(cfg).then(ok => showAlert(ok ? 'শিফট অনুযায়ী শ্রেণি সংরক্ষিত হয়েছে (সার্ভারেও — সব কম্পিউটারে একই থাকবে)।' : 'এই ব্রাউজারে সংরক্ষিত হয়েছে, কিন্তু সার্ভারে সংরক্ষণ করা যায়নি।', ok ? 'success' : 'error'));
         };
+        refresh();
+        $('scQ').focus();
     });
+
     // ---- সার্ভারে স্থায়ী সংরক্ষণ: একবার ঠিক করলে সব ব্রাউজার/কম্পিউটারে একই থাকবে ----
     async function serverGet() {
         const { api: sb, token } = await window.fbReady;
