@@ -2709,7 +2709,16 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             resetDel(); del.disabled = true; go.disabled = true;
             try {
                 const { api: sbApi, token } = await window.fbReady;
-                await sbApi('seatPlanDelete', token, pick.id);
+                const names = ['seatPlanDelete', 'seatPlanRemove', 'deleteSeatPlan', 'seatPlanDel'];
+                let ok = false, lastErr = null;
+                for (const fn of names) {
+                    try { await sbApi(fn, token, pick.id); ok = true; break; }
+                    catch (e) { lastErr = e; console.warn(fn + ' ব্যর্থ:', e.message); }
+                }
+                if (!ok) throw new Error((lastErr && lastErr.message) || 'অজানা ত্রুটি');
+                // নিশ্চিত হওয়া: সত্যিই মুছেছে কিনা
+                const after = await sbApi('seatPlanList', token);
+                if ((Array.isArray(after) ? after : []).some(r => r && r.id === pick.id)) throw new Error('সার্ভার সফল বলেছে কিন্তু কক্ষটি এখনো আছে');
                 deletedAny = true;
                 rows = rows.filter(r => r.id !== pick.id);
                 count.morning = 0; count.noon = 0; rows.forEach(r => { count[window.shiftOfRow(r)]++; });
