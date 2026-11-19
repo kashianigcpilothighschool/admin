@@ -1587,7 +1587,7 @@ const bnSection = s => { const t = String(s || '').trim(), l = t.toLowerCase();
   if (!t) return ''; if (/^(boys?|male|বালক)$/.test(l)) return 'বালক'; if (/^(girls?|female|বালিকা)$/.test(l)) return 'বালিকা'; return t; };
 // লেবেল: শ্রেণি: ৯ম (বিজ্ঞান- বালক) | শ্রেণি: ৬ষ্ঠ (B) | শ্রেণি: ৭ম
 // শাখার অক্ষর (ইংরেজি → বাংলা); প্রয়োজনে এখানে আরও যোগ করুন
-const SEC_BN = { A: 'ক', B: 'খ', C: 'গ' };
+const SEC_BN = { A: 'ক (বালিকা)', B: 'খ (বালক)', C: 'গ' };
 const isKnownGroup = t => /^(sci|hum|bus|com)|বিজ্ঞান|মানবিক|ব্যবসায়/i.test(String(t || '').trim());
 const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b;
   // "6 -C Boys" ধরনের: বিজ্ঞান/মানবিক/ব্যবসায় গ্রুপ ছাড়া একটি অক্ষর থাকলে → "৬ষ্ঠ -ক ( বালক)"
@@ -1595,7 +1595,8 @@ const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseIn
   const letter = toks.find(t => /^[A-Za-z]$/.test(t) || /^[\u0995-\u0999]$/.test(t));
   const gender = toks.map(bnSection).find(t => t === 'বালক' || t === 'বালিকা');
   if (letter && !toks.some(isKnownGroup)) {
-    return 'শ্রেণি: ' + n + ' -' + (SEC_BN[letter.toUpperCase()] || letter) + (gender ? ' ( ' + gender + ')' : '');
+    const sec = SEC_BN[letter.toUpperCase()] || letter;   // নামে আগে থেকেই ( ) থাকলে বালক/বালিকা আবার যোগ হবে না
+    return 'শ্রেণি: ' + n + ' -' + sec + (gender && !sec.includes('(') ? ' ( ' + gender + ')' : '');
   }
   return labelOld(r); };
 const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b; const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
@@ -1982,7 +1983,7 @@ function renderPlan(p) {
   const two = !seatsByCol[2].some(v => v) && !seatsByCol[3].some(v => v);
   const use = two ? [0, 1, 4, 5] : [0, 1, 2, 3, 4, 5];
 
-  // DOOR: যে সিটের শুরু রোলে D লেখা, সেই সিটেই DOOR বসে। পাশাপাশি দুই সিট DOOR হলে একসাথে মিলে এক ঘর হয়।
+  // DOOR: যে সিটের শুরু রোলে D লেখা, সেই সিটেই DOOR বসে। পাশাপাশি দুই সিট DOOR হলে, বা এক সিট DOOR ও অন্য সিট ফাঁকা হলে, একসাথে মিলে ২ ঘর জুড়ে এক DOOR হয়। পাশের সিটে রোল থাকলে সেটি ঢাকা পড়বে না।
   const isD = (ci, i) => seatsByCol[ci][i] === 'DOOR';
   let body = '';
   for (let i = 0; i < rows; i++) {
@@ -1991,8 +1992,13 @@ function renderPlan(p) {
     use.forEach((ci) => {
       if ((!two && ci === 2) || ci === 4) tr += '<td class="g"></td>';
       if (skip.has(ci)) return;
+      if (ci % 2 === 0 && use.includes(ci + 1) && isD(ci + 1, i) && seatsByCol[ci][i] == null) {
+        tr += '<td class="door" colspan="2">DOOR</td>';
+        skip.add(ci + 1);
+        return;
+      }
       if (isD(ci, i)) {
-        if (ci % 2 === 0 && use.includes(ci + 1) && isD(ci + 1, i)) {
+        if (ci % 2 === 0 && use.includes(ci + 1) && (isD(ci + 1, i) || seatsByCol[ci + 1][i] == null)) {
           tr += '<td class="door" colspan="2">DOOR</td>';
           skip.add(ci + 1);
         } else {
