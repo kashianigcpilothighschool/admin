@@ -3021,5 +3021,164 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
     };
 })();
 </script>
+<script>
+// ===== শিক্ষার্থী তথ্য (Students টেবিল) — উন্নত সংস্করণ =====
+// ফিচার: Session মনে রাখা + সাজেশন • Enter চাপলে লোড • লোডিং স্পিনার • শ্রেণিভিত্তিক সারাংশ কার্ড
+//        রোল রেঞ্জ / সাফিক্স রোল / ফাঁক (gap) দেখানো • শ্রেণি খোঁজা • সর্বশেষ হালনাগাদের সময় • নতুন Session সতর্কতা
+(function () {
+    const $ = id => document.getElementById(id);
+    const bnN = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const SKEY = 'seatplan_stu_sessions';
+
+    const btn = $('stuLoadBtn'), sess = $('stuSession'), status = $('stuStatus');
+    if (!btn || !sess || !status) return;
+    const bar = btn.closest('.column-input');
+    if (!bar) return;
+    bar.classList.add('stu-bar');
+
+    // ---------- স্টাইল ----------
+    const css = document.createElement('style');
+    css.textContent = `
+    .stu-bar .column-label::after { content: ""; }
+    .stu-bar #stuSession { width: 110px; text-align: center; font-weight: 600; }
+    .stu-bar #stuLoadBtn { display: inline-flex; align-items: center; gap: 8px; }
+    .stu-bar #stuLoadBtn.is-loading::before {
+        content: ""; width: 13px; height: 13px; border-radius: 50%;
+        border: 2px solid rgba(255,255,255,.3); border-top-color: var(--gold-bright);
+        animation: spin .8s linear infinite;
+    }
+    .stu-bar #stuLoadBtn:disabled { opacity: .7; cursor: progress; }
+    #stuStatus { padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+    #stuInfo { margin-top: 12px; font-size: 12.5px; color: #fff; }
+    #stuInfo .si-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+    #stuInfo .si-chip { padding: 3px 11px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e6eaf3; font-size: 12px; }
+    #stuInfo .si-chip b { color: #F1E2C3; }
+    #stuInfo .si-stale { background: rgba(224,160,48,.2); border-color: #e0a030; color: #ffe2a8; font-weight: 700; }
+    #stuInfo .si-btn { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--gold); background: rgba(214,162,78,.15); color: #F1E2C3; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+    #stuInfo .si-btn:hover { background: rgba(214,162,78,.32); }
+    #stuInfo .si-search { flex: 1; min-width: 140px; padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: 12.5px; }
+    #stuInfo .si-search::placeholder { color: rgba(255,255,255,.5); }
+    #stuInfo .si-search:focus { outline: none; border-color: var(--gold-bright); box-shadow: 0 0 0 3px rgba(214,162,78,.25); }
+    #stuInfo .si-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 300px; overflow: auto; padding-right: 2px; }
+    #stuInfo .si-card { padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11); }
+    #stuInfo .si-card:hover { border-color: rgba(214,162,78,.5); }
+    #stuInfo .si-card h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #F1E2C3; }
+    #stuInfo .si-card .n { float: right; font-size: 15px; font-weight: 800; color: #9ee6bd; line-height: 1.2; }
+    #stuInfo .si-card small { display: block; color: #c9cfdb; font-size: 11.5px; line-height: 1.55; }
+    #stuInfo .si-card .gap { color: #f0a89e; }
+    #stuInfo .si-card .bar { height: 4px; margin-top: 6px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
+    #stuInfo .si-card .bar i { display: block; height: 100%; background: linear-gradient(90deg, #23895B, #9ee6bd); }
+    #stuInfo .si-empty { padding: 14px; text-align: center; color: #c9cfdb; }
+    `;
+    document.head.appendChild(css);
+
+    // ---------- Session: মনে রাখা + সাজেশন + Enter ----------
+    function getRecent() { try { return JSON.parse(localStorage.getItem(SKEY) || '[]'); } catch (e) { return []; } }
+    function saveRecent(s) {
+        if (!s) return;
+        try {
+            const list = [s].concat(getRecent().filter(x => x !== s)).slice(0, 6);
+            localStorage.setItem(SKEY, JSON.stringify(list));
+        } catch (e) {}
+        fillList();
+    }
+    const dl = document.createElement('datalist'); dl.id = 'stuSessionList';
+    document.body.appendChild(dl);
+    sess.setAttribute('list', 'stuSessionList');
+    sess.setAttribute('autocomplete', 'off');
+    function fillList() {
+        const y = String(new Date().getFullYear());
+        const set = [...new Set(getRecent().concat([String(+y - 1), y, String(+y + 1)]))];
+        dl.innerHTML = set.map(s => '<option value="' + esc(s) + '"></option>').join('');
+    }
+    fillList();
+    // শেষবার ব্যবহৃত Session ফিরিয়ে আনা (স্বয়ংক্রিয় লোডের আগেই, কারণ fbReady নেটওয়ার্কের পর শেষ হয়)
+    const lastUsed = getRecent()[0];
+    if (lastUsed) sess.value = lastUsed;
+    sess.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); btn.click(); } });
+    sess.addEventListener('input', () => draw());
+
+    // ---------- লোডিং স্পিনার (বাটনের disabled অবস্থা দেখে) ----------
+    new MutationObserver(() => {
+        btn.classList.toggle('is-loading', btn.disabled);
+        if (!btn.disabled) draw();
+    }).observe(btn, { attributes: true, attributeFilter: ['disabled'] });
+
+    // ---------- তথ্য প্যানেল ----------
+    const box = document.createElement('div');
+    box.id = 'stuInfo';
+    bar.appendChild(box);
+    let query = '', lastMap = null, loadedSession = '', loadedAt = null;
+
+    function stats() {
+        const S = window.__stu, st = S && S.st;
+        if (!st || !st.loaded) return null;
+        let total = 0, vars = 0, gaps = 0;
+        const rows = st.keys.map(k => {
+            const g = st.map[k];
+            const bases = [...new Set([...g.rolls].map(v => S.baseOf(v)))].sort((a, b) => a - b);
+            const min = bases[0], max = bases[bases.length - 1];
+            const gap = bases.length ? (max - min + 1 - bases.length) : 0;
+            const sufCount = Object.keys(g.hasVar || {}).length;
+            total += g.n; vars += sufCount; gaps += gap;
+            return { k, label: g.label.replace('শ্রেণি: ', ''), n: g.n, min, max, gap, sufCount, minL: S.rollLabel(k, Math.min.apply(null, [...g.rolls])), maxL: S.rollLabel(k, Math.max.apply(null, [...g.rolls])) };
+        });
+        return { rows, total, vars, gaps, classes: rows.length, maxN: Math.max.apply(null, rows.map(r => r.n).concat([1])) };
+    }
+
+    function drawCards(d) {
+        const grid = $('siGrid'); if (!grid) return;
+        const q = bnN(query.trim()).toLowerCase();
+        const list = d.rows.filter(r => !q || bnN(r.label).toLowerCase().indexOf(q) > -1);
+        grid.innerHTML = list.length ? list.map(r =>
+            '<div class="si-card"><span class="n">' + bnN(r.n) + '</span><h4>' + esc(r.label) + '</h4>' +
+            '<small>রোল: ' + bnN(esc(r.minL)) + ' – ' + bnN(esc(r.maxL)) + '</small>' +
+            (r.sufCount ? '<small>সাফিক্স রোল (যেমন ০০২ (H)): ' + bnN(r.sufCount) + 'টি নম্বরে</small>' : '') +
+            (r.gap > 0 ? '<small class="gap">মাঝে ' + bnN(r.gap) + 'টি রোল নম্বর নেই</small>' : '') +
+            '<div class="bar"><i style="width:' + Math.round(r.n / d.maxN * 100) + '%"></i></div></div>'
+        ).join('') : '<div class="si-empty">এই নামে কোনো শ্রেণি পাওয়া যায়নি</div>';
+    }
+
+    function draw() {
+        const d = stats();
+        if (!d) { box.innerHTML = ''; return; }
+        const st = window.__stu.st;
+        if (st.map !== lastMap) {            // নতুন লোড হয়েছে
+            lastMap = st.map; loadedSession = sess.value.trim(); loadedAt = new Date();
+            saveRecent(loadedSession);
+        }
+        const stale = sess.value.trim() !== loadedSession;
+        let t = '';
+        try { t = loadedAt.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }); } catch (e) { t = ''; }
+        box.innerHTML =
+            '<div class="si-meta">' +
+            '<span class="si-chip">Session: <b>' + bnN(esc(loadedSession)) + '</b></span>' +
+            '<span class="si-chip">মোট <b>' + bnN(d.total) + '</b> জন</span>' +
+            '<span class="si-chip"><b>' + bnN(d.classes) + '</b>টি শ্রেণি/শাখা</span>' +
+            (d.vars ? '<span class="si-chip">সাফিক্স রোল: <b>' + bnN(d.vars) + '</b></span>' : '') +
+            (d.gaps ? '<span class="si-chip">রোল ফাঁক: <b>' + bnN(d.gaps) + '</b></span>' : '') +
+            (t ? '<span class="si-chip">হালনাগাদ: <b>' + t + '</b></span>' : '') +
+            (stale ? '<span class="si-chip si-stale">⚠ Session বদলেছে — আবার লোড করুন</span>' : '') +
+            '</div>' +
+            '<div class="si-meta"><input type="search" class="si-search" id="siQ" placeholder="🔍 শ্রেণি খুঁজুন (যেমন: ৯ম, বিজ্ঞান, বালিকা)" value="' + esc(query) + '">' +
+            '<button type="button" class="si-btn" id="siCopy" title="শ্রেণি ও শিক্ষার্থী সংখ্যার তালিকা কপি করুন">📋 তালিকা কপি</button></div>' +
+            '<div class="si-grid" id="siGrid"></div>';
+        drawCards(d);
+        const q = $('siQ');
+        q.addEventListener('input', () => { query = q.value; const dd = stats(); if (dd) drawCards(dd); });
+        $('siCopy').addEventListener('click', async () => {
+            const dd = stats(); if (!dd) return;
+            const text = 'Session ' + loadedSession + '\n' + dd.rows.map(r => r.label + ' : ' + r.n + ' জন (রোল ' + r.minL + '–' + r.maxL + ')').join('\n') + '\nমোট : ' + dd.total + ' জন';
+            try { await navigator.clipboard.writeText(text); showAlert('শ্রেণির তালিকা কপি হয়েছে।', 'success'); }
+            catch (e) { showAlert('কপি করা যায়নি।', 'error'); }
+        });
+    }
+
+    // Students লোড হলে/স্ট্যাটাস বদলালে প্যানেল হালনাগাদ
+    new MutationObserver(() => draw()).observe(status, { childList: true, characterData: true, subtree: true });
+    draw();
+})();
+</script>
 </body>
 </html>
