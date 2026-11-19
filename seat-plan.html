@@ -1738,7 +1738,7 @@ window.withToken = function (u) { return u + (u.indexOf('?') >= 0 ? '&' : '?') +
           if (!t) return ''; if (/^(boys?|male|বালক)$/.test(l)) return 'বালক'; if (/^(girls?|female|বালিকা)$/.test(l)) return 'বালিকা'; return t; };
         // লেবেল: শ্রেণি: ৯ম (বিজ্ঞান- বালক) | শ্রেণি: ৬ষ্ঠ (B) | শ্রেণি: ৭ম
         // শাখার অক্ষর (ইংরেজি → বাংলা); প্রয়োজনে এখানে আরও যোগ করুন
-const SEC_BN = { A: 'ক', B: 'খ', C: 'গ' };
+const SEC_BN = { A: 'ক (বালিকা)', B: 'খ (বালক)', C: 'গ' };
 const isKnownGroup = t => /^(sci|hum|bus|com)|বিজ্ঞান|মানবিক|ব্যবসায়/i.test(String(t || '').trim());
 const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b;
   // "6 -C Boys" ধরনের: বিজ্ঞান/মানবিক/ব্যবসায় গ্রুপ ছাড়া একটি অক্ষর থাকলে → "৬ষ্ঠ -ক ( বালক)"
@@ -1746,7 +1746,8 @@ const labelBn = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseIn
   const letter = toks.find(t => /^[A-Za-z]$/.test(t) || /^[\u0995-\u0999]$/.test(t));
   const gender = toks.map(bnSection).find(t => t === 'বালক' || t === 'বালিকা');
   if (letter && !toks.some(isKnownGroup)) {
-    return 'শ্রেণি: ' + n + ' -' + (SEC_BN[letter.toUpperCase()] || letter) + (gender ? ' ( ' + gender + ')' : '');
+    const sec = SEC_BN[letter.toUpperCase()] || letter;   // নামে আগে থেকেই ( ) থাকলে বালক/বালিকা আবার যোগ হবে না
+    return 'শ্রেণি: ' + n + ' -' + sec + (gender && !sec.includes('(') ? ' ( ' + gender + ')' : '');
   }
   return labelOld(r); };
 const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseInt(b, 10)] || b; const parts = [bnGroup(r.grp), bnSection(r.section)].filter(Boolean);
