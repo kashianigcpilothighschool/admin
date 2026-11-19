@@ -3199,10 +3199,6 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     btn.type = 'button'; btn.className = 'add-range-btn'; btn.id = 'shiftClsBtn';
     btn.textContent = '⚙ শিফট অনুযায়ী শ্রেণি';
     loadBtn.insertAdjacentElement('afterend', btn);
-    const totals = document.createElement('div');
-    totals.id = 'shiftTotals';
-    totals.style.cssText = 'font-size:13px;margin-top:6px;color:#F1E2C3;font-weight:600';
-    $('stuStatus').insertAdjacentElement('afterend', totals);
     const note = document.createElement('div');
     note.id = 'shiftClsNote';
     note.style.cssText = 'display:inline;font-size:12.5px;margin:6px 8px 0 0;color:#9ee6bd;font-weight:700';
@@ -3251,34 +3247,31 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             });
         });
         const st = window.__stu && window.__stu.st, sh = window.currentShift && window.currentShift();
-        // শিক্ষার্থী তথ্য (Students টেবিল) বার: শুধু বর্তমান শিফটের শ্রেণি ও শিক্ষার্থী সংখ্যা দেখানো
+        // Students বার: মোট শিক্ষার্থী + সকাল শিফটে কত + দুপুর/বিকাল শিফটে কত (শিফট নির্ধারণের সেটিং অনুযায়ী)
         const stMsg = $('stuStatus');
-        if (st && st.loaded && stMsg && stMsg.textContent.indexOf('✅') === 0) {
-            const keys = sh ? st.keys.filter(allowed) : st.keys;
-            const cnt = keys.reduce((a, k) => a + st.map[k].n, 0);
-            const txt = sh
-                ? '✅ ' + SHN[sh] + ' শিফট: ' + bnN(cnt) + ' জন শিক্ষার্থী (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। এখন প্রতিটি রেঞ্জের পাশে শ্রেণি বাছুন।'
-                : '✅ ' + bnN(cnt) + ' জন শিক্ষার্থী লোড হয়েছে (' + bnN(keys.length) + 'টি শ্রেণি/শাখা)। শিফট অনুযায়ী দেখতে পরীক্ষা শুরুর সময় বাছুন।';
-            if (stMsg.textContent !== txt) stMsg.textContent = txt;
-        }
-        // মোট শিক্ষার্থী + সকাল শিফটে কত + দুপুর/বিকাল শিফটে কত (শিফট নির্ধারণের সেটিং অনুযায়ী)
-        if (st && st.loaded) {
+        if (st && st.loaded && stMsg && /^(✅|👥)/.test(stMsg.textContent)) {
             const c = load();
             const sum = keys => keys.reduce((a, k) => a + st.map[k].n, 0);
-            const tAll = sum(st.keys);
             const kMor = st.keys.filter(k => c.noMorning.indexOf(k) === -1);
             const kNoon = st.keys.filter(k => c.noNoon.indexOf(k) === -1);
-            const tx = '👥 মোট শিক্ষার্থী: ' + bnN(tAll) + ' জন • 🌅 সকাল শিফটে: ' + bnN(sum(kMor)) + ' জন (' + bnN(kMor.length) + 'টি শ্রেণি/শাখা)' +
+            const tx = '👥 মোট শিক্ষার্থী: ' + bnN(sum(st.keys)) + ' জন • 🌅 সকাল শিফটে: ' + bnN(sum(kMor)) + ' জন (' + bnN(kMor.length) + 'টি শ্রেণি/শাখা)' +
                 ' • ☀️ দুপুর/বিকাল শিফটে: ' + bnN(sum(kNoon)) + ' জন (' + bnN(kNoon.length) + 'টি শ্রেণি/শাখা)';
-            if (totals.textContent !== tx) totals.textContent = tx;
-        } else if (totals.textContent) totals.textContent = '';
+            if (stMsg.textContent !== tx) stMsg.textContent = tx;
+        }
         if (!st || !st.loaded || !sh) { note.textContent = ''; detail.innerHTML = ''; return; }
         const ok = st.keys.filter(allowed).length;
         note.textContent = '🕘 ' + SHN[sh] + ' শিফট: ' + bnN(ok) + 'টি শ্রেণি নির্ধারিত' + (ok === st.keys.length ? ' (সব শ্রেণি)' : '');
-        // চলতি (running) শিফটের নির্ধারিত শ্রেণিগুলোর সংখ্যা: যেমন "অষ্টম শ্রেণি: ৭৮৭ জন"
+        // চলতি শিফটের নির্ধারিত শ্রেণি অনুযায়ী সংখ্যা (শাখা/গ্রুপ নয়, শুধু শ্রেণি): যেমন "৮ম শ্রেণি: ৭৮৭ জন"
         const rk = st.keys.filter(allowed);
         const chip = 'display:inline-block;margin:3px 6px 0 0;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:12.5px';
-        const html = rk.map(k => '<span style="' + chip + '">' + esc(labelOf(k)) + ': <b style="color:#9ee6bd">' + bnN(st.map[k].n) + ' জন</b></span>').join('');
+        const ORD = { 1:'১ম',2:'২য়',3:'৩য়',4:'৪র্থ',5:'৫ম',6:'৬ষ্ঠ',7:'৭ম',8:'৮ম',9:'৯ম',10:'১০ম',11:'১১শ',12:'১২শ' };
+        const byCls = {}, order = [];
+        rk.forEach(k => {
+            const b = parseInt(String(k).trim(), 10), ck = isNaN(b) ? String(k).trim().split(' ')[0] : String(b);
+            if (!(ck in byCls)) { byCls[ck] = 0; order.push(ck); }
+            byCls[ck] += st.map[k].n;
+        });
+        const html = order.map(ck => '<span style="' + chip + '">' + esc(ORD[ck] ? ORD[ck] + ' শ্রেণি' : ck) + ': <b style="color:#9ee6bd">' + bnN(byCls[ck]) + ' জন</b></span>').join('');
         if (detail.innerHTML !== html) detail.innerHTML = html;
     }
     let tm = null;
