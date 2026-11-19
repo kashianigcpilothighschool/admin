@@ -3187,6 +3187,12 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         #shiftClsDlg .sc-save{flex:1.6!important;background:linear-gradient(135deg,#D6A24E,#B9822E);color:#101A33}
         #shiftClsDlg tr.sc-cls td{background:#EEF1F8;border-top:2px solid #C9CFDB}
         #shiftClsDlg tr.sc-cls td small{display:inline;margin-left:6px}
+        #shiftClsDlg tr.sc-cls td:not(:first-child) small{display:block;margin:2px 0 0}
+        #shiftClsDlg .sc-tg{border:0;background:#fff;border-radius:6px;width:24px;height:24px;margin-right:6px;cursor:pointer;color:#1D2B4F;font-size:13px;line-height:1;box-shadow:0 0 0 1px #C9CFDB}
+        #shiftClsDlg .sc-tg:hover{background:#F1E2C3}
+        #shiftClsDlg tr.sc-hid{display:none!important}
+        #shiftClsDlg th{box-shadow:0 1px 0 #C9CFDB}
+        @media(max-width:520px){#shiftClsDlg .sc-body{padding:6px 10px 10px}#shiftClsDlg td,#shiftClsDlg th{padding:6px 4px}#shiftClsDlg table{font-size:13px}}
         #shiftClsDlg tr[data-c] td:first-child{padding-left:22px}`;
         document.head.appendChild(s);
     }
@@ -3227,15 +3233,17 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             (function () {
                 const baseOfKey = k => String(k).trim().split(' ')[0];
                 const cnt = {}; st.keys.forEach(k => { const b = baseOfKey(k); cnt[b] = (cnt[b] || 0) + 1; });
-                const seen = {};
+                const seen = {}, tot = {}, aM = {}, aN = {};
+                st.keys.forEach(k => { const b = baseOfKey(k), u = use[k] || { morning: 0, noon: 0 };
+                    tot[b] = (tot[b] || 0) + st.map[k].n; aM[b] = (aM[b] || 0) + u.morning; aN[b] = (aN[b] || 0) + u.noon; });
                 return st.keys.map(k => {
                 const b = baseOfKey(k);
                 let head = '';
                 if (cnt[b] > 1 && !seen[b]) {
                     seen[b] = 1;
                     const cl = (labelOf(k).split(/[\s(]/)[0]) || b;
-                    head = '<tr class="sc-cls" data-c="' + esc(b) + '" data-l="' + esc(cl) + '"><td><b>শ্রেণি: ' + esc(cl) + '</b><small>সব শাখা একসাথে</small></td>' +
-                        '<td><input type="checkbox" class="cm" title="এই শ্রেণির সব শাখা"></td><td><input type="checkbox" class="cn" title="এই শ্রেণির সব শাখা"></td></tr>';
+                    head = '<tr class="sc-cls" data-c="' + esc(b) + '" data-l="' + esc(cl) + '"><td><button type="button" class="sc-tg" title="শাখাগুলো লুকান/দেখান" aria-expanded="true">▾</button><b>শ্রেণি: ' + esc(cl) + '</b><small>' + bnN(cnt[b]) + 'টি শাখা • মোট ' + bnN(tot[b]) + ' জন • সব শাখা একসাথে</small></td>' +
+                        '<td><input type="checkbox" class="cm" title="এই শ্রেণির সব শাখা"><small>ব্যবহৃত ' + bnN(aM[b]) + '</small></td><td><input type="checkbox" class="cn" title="এই শ্রেণির সব শাখা"><small>ব্যবহৃত ' + bnN(aN[b]) + '</small></td></tr>';
                 }
                 const u = use[k] || { morning: 0, noon: 0 };
                 return head + '<tr data-k="' + esc(k) + '"' + (cnt[b] > 1 ? ' data-c="' + esc(b) + '"' : '') + ' data-l="' + esc(labelOf(k)) + '" data-um="' + u.morning + '" data-un="' + u.noon + '">' +
@@ -3261,25 +3269,40 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
                 });
             });
         }
+        function applyCollapse() {
+            heads.forEach(h => {
+                const col = h.classList.contains('col');
+                h.querySelector('.sc-tg').textContent = col ? '▸' : '▾';
+                h.querySelector('.sc-tg').setAttribute('aria-expanded', col ? 'false' : 'true');
+                rows.forEach(tr => { if (tr.dataset.c === h.dataset.c) tr.classList.toggle('sc-hid', col); });
+            });
+        }
+        const snap = () => rows.map(tr => (tr.querySelector('.m').checked ? 1 : 0) + '' + (tr.querySelector('.n').checked ? 1 : 0)).join('');
+        const init = snap();
         function refresh() {
             syncHeads();
-            let m = 0, n = 0, none = 0;
+            let m = 0, n = 0, none = 0, sm = 0, sn = 0;
             rows.forEach(tr => {
-                const cm = tr.querySelector('.m').checked, cn = tr.querySelector('.n').checked;
+                const cm = tr.querySelector('.m').checked, cn = tr.querySelector('.n').checked, ns = (st.map[tr.dataset.k] || {}).n || 0;
                 const um = +tr.dataset.um, un = +tr.dataset.un, w = [];
-                if (cm) m++; if (cn) n++;
+                if (cm) { m++; sm += ns; } if (cn) { n++; sn += ns; }
                 if (!cm && !cn) { none++; w.push('কোনো শিফটে নেই — এই শ্রেণি সিটে বসানো যাবে না'); }
                 if (!cm && um > 0) w.push('সকালের কক্ষে ইতোমধ্যে ' + bnN(um) + ' জন বসানো আছে');
                 if (!cn && un > 0) w.push('দুপুরের কক্ষে ইতোমধ্যে ' + bnN(un) + ' জন বসানো আছে');
                 tr.querySelector('.sc-w').innerHTML = w.map(esc).join('<br>');
                 tr.className = (!cm && !cn) ? 'bad' : (w.length ? 'warn' : '');
             });
-            $('scSum').textContent = '🌅 সকাল: ' + bnN(m) + 'টি শ্রেণি • ☀️ দুপুর: ' + bnN(n) + 'টি শ্রেণি' + (none ? ' • ⚠ কোনো শিফটে নেই: ' + bnN(none) + 'টি' : '');
+            $('scSum').textContent = '🌅 সকাল: ' + bnN(m) + 'টি শ্রেণি (' + bnN(sm) + ' জন) • ☀️ দুপুর: ' + bnN(n) + 'টি শ্রেণি (' + bnN(sn) + ' জন)' + (none ? ' • ⚠ কোনো শিফটে নেই: ' + bnN(none) + 'টি' : '');
         }
         const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
-        const onKey = e => { if (e.key === 'Escape') close(); };
+        const tryClose = () => { if (snap() !== init && !confirm('সংরক্ষণ না করা পরিবর্তন আছে। তবুও বন্ধ করবেন?')) return; close(); };
+        const onKey = e => { if (e.key === 'Escape') tryClose(); };
         document.addEventListener('keydown', onKey);
-        ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+        ov.addEventListener('mousedown', e => { if (e.target === ov) tryClose(); });
+        ov.addEventListener('click', e => {
+            const tg = e.target.closest('.sc-tg'); if (!tg) return;
+            tg.closest('tr').classList.toggle('col'); applyCollapse();
+        });
         ov.addEventListener('change', e => {
             if (e.target.matches('input.cm, input.cn')) {   // শ্রেণির টিক → ওই শ্রেণির সব শাখা
                 const h = e.target.closest('tr'), rc = e.target.classList.contains('cm') ? 'm' : 'n';
@@ -3287,7 +3310,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
                 refresh();
             } else if (e.target.matches('input.m, input.n')) refresh();
         });
-        ov.querySelector('.sc-cancel').onclick = close;
+        ov.querySelector('.sc-cancel').onclick = tryClose;
         ov.querySelectorAll('.sc-pre').forEach(b => b.onclick = () => {
             const p = b.dataset.p;
             rows.forEach(tr => { tr.querySelector('.m').checked = p !== 'n'; tr.querySelector('.n').checked = p !== 'm'; });
@@ -3296,6 +3319,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         $('scQ').addEventListener('input', e => {
             const q = bnN(e.target.value.trim()).toLowerCase();
             rows.forEach(tr => { tr.style.display = (!q || bnN(tr.dataset.l).toLowerCase().indexOf(q) > -1) ? '' : 'none'; });
+            if (q) { heads.forEach(h => h.classList.remove('col')); applyCollapse(); }
             heads.forEach(h => { h.style.display = rows.some(tr => tr.dataset.c === h.dataset.c && tr.style.display !== 'none') ? '' : 'none'; });
         });
         ov.querySelector('.sc-save').onclick = () => {
