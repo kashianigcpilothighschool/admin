@@ -771,6 +771,8 @@ function repeatHeaderPatch() {
     'body.rh-on #tabPrint .part-label{display:none!important}',
     '#tabTab .pmeta,#tabTab .sigs{display:none!important}',
     'body #tabTab{border-color:transparent!important;box-shadow:none!important}',
+    'body.rh-on #tabTab{break-after:avoid;page-break-after:avoid}',
+    'body.rh-on #tabTab .tbl-wrap,body.rh-on #tabTab #tabPrint{break-inside:auto}',
     '#tabTab #rhFrame{display:block!important;position:fixed;top:0;left:0;right:0;bottom:0;border:5px solid #14306B;border-radius:6px;box-shadow:inset 0 0 0 4px #fff,inset 0 0 0 5.5px #14306B;box-sizing:border-box;pointer-events:none}',
     'body #tabTab table.rhd .rhp{font-size:12pt;font-weight:700;margin-top:3px;text-align:center}',
     'body #tabTab .tbl-wrap table.rhd,body #tabTab #tabPrint table.rhd{border-top:0!important;border-left:0!important}',
@@ -821,7 +823,7 @@ function repeatHeaderPatch() {
     var N = tb0 ? [].filter.call(tb0.rows, function (r) { return r.style.display !== 'none'; }).length : 0;
     var ps = $('rhRows');
     if (!ps) { ps = document.createElement('style'); ps.id = 'rhRows'; document.head.appendChild(ps); }
-    ps.textContent = (N > 0 && N <= 24) ? '@media print{body.rh-on #tabTab table.rhd tbody tr{height:calc((100vh - 112mm)/' + N + ')}}' : '';
+    ps.textContent = (N > 0 && N <= 24) ? '@media print{body.rh-on #tabTab table.rhd tbody tr{height:calc((100vh - 142mm)/' + N + ')}}' : '';
     document.body.classList.add('rh-on');
   });
   window.addEventListener('afterprint', strip);
