@@ -1597,6 +1597,8 @@ function spRoomHtml(p, meta) {
   });
   return `<div class='sp-room'><div class='sp-h'><b>কক্ষ: ${esc(rm.name)}</b><span>${esc(meta.title)} · শিক্ষার্থী ${p.count} জন · বেঞ্চ ${rm.rows}×${rm.cols}</span></div><div class='sp-front'>শিক্ষকের টেবিল / বোর্ড</div>${t}</table></div>`;
 }
+// রোল স্লিপের জন্য: কক্ষ অনুযায়ী বসানো শিক্ষার্থী (আসন নং সহ) ব্রাউজারে রাখা হয়
+const spCompact = (plan) => plan.map((p) => { let n = 0; const st = []; p.grid.forEach((row, r) => row.forEach((s, c) => { if (s) st.push({ class_base: s.class_base, grp: s.grp, section: s.section, roll: s.roll, name: s.name, seat: ++n, pos: (r + 1) + "-" + (c + 1) }); })); return { room: p.room.name, students: st }; });
 function spListRows(plan) {
   const out = [];
   plan.forEach((p) => { let n = 0; p.grid.forEach((row, r) => row.forEach((s, c) => { if (s) out.push({ s, room: p.room.name, seat: ++n, pos: (r + 1) + "-" + (c + 1) }); })); });
@@ -1664,7 +1666,7 @@ async function vSeatPlan() {
     $("spGrp").innerHTML = m.size ? '<label class="lbl" style="margin-top:0">যেসব ক্লাস/শাখা বসাবেন</label>' + [...m].sort((a, b) => a[0].localeCompare(b[0], "bn")).map(([k, n]) => `<label style="display:inline-flex;gap:6px;align-items:center;margin:3px 14px 3px 0;font-size:13px"><input type="checkbox" value="${esc(k)}" ${first || old.has(k) ? "checked" : ""}> ${esc(k)} (${n})</label>`).join("") : "";
     info();
   };
-  const store = () => spSave({ students, rooms: readRooms(), school: $("spSchool").value, title: $("spTitle").value, date: $("spDate").value, mode: $("spMode").value, names: $("spNames").checked, keys: selKeys(), sess: $("spSess").value });
+  const store = () => spSave({ plan: spPlan ? spCompact(spPlan) : spLoad().plan, students, rooms: readRooms(), school: $("spSchool").value, title: $("spTitle").value, date: $("spDate").value, mode: $("spMode").value, names: $("spNames").checked, keys: selKeys(), sess: $("spSess").value });
   const loadText = (t) => { try { students = spParse(t); if (!students.length) throw new Error("কোনো শিক্ষার্থী পাওয়া যায়নি।"); sv.keys = null; grpBox(); store(); $("spMsg").innerHTML = '<span style="color:var(--sage)">✅ ' + students.length + " জন শিক্ষার্থী লোড হয়েছে।</span>"; } catch (x) { $("spMsg").innerHTML = '<span style="color:var(--brick)">❌ ' + esc(x.message) + "</span>"; } };
   $("spFile").onchange = async () => { const f = $("spFile").files[0]; if (f) { $("spPaste").value = await f.text(); loadText($("spPaste").value); } };
   $("spLoad").onclick = () => loadText($("spPaste").value);
@@ -1679,7 +1681,7 @@ async function vSeatPlan() {
     sv.keys = null; grpBox(); store();
     $("spMsg").innerHTML = '<span style="color:var(--sage)">✅ students টেবিল থেকে ' + students.length + " জন শিক্ষার্থী লোড হয়েছে। এবার ক্লাস বেছে কক্ষ ঠিক করুন।</span>";
   });
-  $("spClr").onclick = () => { if (!confirm("লোড করা শিক্ষার্থীর তালিকা মুছবেন?")) return; students = []; sv.keys = null; grpBox(); store(); $("spOut").style.display = "none"; };
+  $("spClr").onclick = () => { if (!confirm("লোড করা শিক্ষার্থীর তালিকা মুছবেন?")) return; spPlan = null; spSave({ ...spLoad(), plan: null }); students = []; sv.keys = null; grpBox(); store(); $("spOut").style.display = "none"; };
   $("spAddRoom").onclick = () => { readRooms(); rooms.push({ name: String(rooms.length ? "কক্ষ " + (rooms.length + 1) : "১০১"), rows: 6, cols: 4, per: 2 }); $("spRooms").innerHTML = rooms.map(roomRow).join(""); info(); store(); };
   $("spRooms").addEventListener("click", (e) => { const b = e.target.closest("[data-del]"); if (!b) return; readRooms(); if (rooms.length < 2) return toast("অন্তত একটি কক্ষ লাগবে।", true); rooms.splice(+b.dataset.del, 1); $("spRooms").innerHTML = rooms.map(roomRow).join(""); info(); store(); });
   $("spRooms").addEventListener("input", () => { info(); store(); });
