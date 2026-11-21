@@ -3575,5 +3575,334 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     };
 })();
 </script>
+<script>
+// ===== এক নজরে আসন বিন্যাস: সংরক্ষিত কক্ষ থেকে স্বয়ংক্রিয় টেবিল (প্রিন্ট / PDF / কপি) =====
+// বসাতে হবে: ফাইলের সবচেয়ে শেষের script ব্লকের পরে, body বন্ধ হওয়ার ঠিক আগে
+(function () {
+    if (window.__glanceInit) return; window.__glanceInit = true;
+
+    // ---------- Config (প্রয়োজনে এখানে বদলান) ----------
+    const CFG = {
+        title: 'এক নজরে আসন বিন্যাস',
+        signLeft: 'প্রস্তুতকারী',
+        signRight: 'কেন্দ্র সচিব',
+        sep: ' থেকে '            // রোল রেঞ্জের মাঝের শব্দ: "৫০০১ থেকে ৫০৪০"
+    };
+
+    const $ = id => document.getElementById(id);
+    const BN = '০১২৩৪৫৬৭৮৯';
+    const bn = s => String(s == null ? '' : s).replace(/\d/g, d => BN[d]);
+    const en = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => String(BN.indexOf(d)));
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const SHN = { morning: 'কেন্দ্র', noon: 'ভেন্যু' };
+
+    const shiftOf = r => (window.shiftOfRow ? window.shiftOfRow(r) : 'morning') === 'noon' ? 'noon' : 'morning';
+
+    // ---------- ডেটা (V13: শ্রেণি + রোল; রোল সংরক্ষণ rg.classKey / rg.rolls) ----------
+    const A = () => window.__stu || null;
+    const stT = () => (window.__stu && window.__stu.st) || { loaded: false, map: {}, keys: [] };
+    const pad3 = n => String(n).padStart(3, '0');
+    function rollNum(key, x) {   // সংরক্ষিত রোল → ভেতরের সংখ্যা (সাফিক্স রোল যেমন ২.০০১ সহ)
+        const a = A();
+        if (a && a.fromSaved) { const v = a.fromSaved(key, x); if (!isNaN(v)) return v; }
+        const m = en(x).match(/\d+/); return m ? parseInt(m[0], 10) : NaN;
+    }
+    function rollTxt(key, v, prefix) {   // "IX-০০১" ধরনের লেখা
+        const a = A(), known = key && stT().map[key];
+        const pf = known && a && a.prefixOf ? a.prefixOf(key) : (prefix || '');
+        const lab = known && a && a.rollLabel ? a.rollLabel(key, v) : pad3(Math.floor(Number(v) + 1e-9));
+        return bn((pf ? pf + '-' : '') + lab);
+    }
+    const classLabel = key => !key ? '' : ((stT().map[key] && stT().map[key].label) || ('শ্রেণি ' + key));
+    const keyByLabel = name => (stT().keys || []).find(k => classLabel(k) === String(name).trim()) || '';
+    const keyOrd = key => { const i = (stT().keys || []).indexOf(key); return i >= 0 ? i : (parseFloat(key) || 0); };
+    function groupsOfRow(r) {   // কক্ষের রোল শ্রেণি ধরে আলাদা
+        const by = {};
+        ((r.data && r.data.columnData) || []).forEach(c => (c.ranges || []).forEach(rg => {
+            if (!Array.isArray(rg.rolls) || !rg.rolls.length) return;
+            const key = rg.classKey || '';
+            const g = by[key] || (by[key] = { key, prefix: rg.prefix || '', set: new Set() });
+            rg.rolls.forEach(x => { const v = rollNum(key, x); if (!isNaN(v)) g.set.add(v); });
+        }));
+        return Object.keys(by).map(k => ({ key: by[k].key, prefix: by[k].prefix, rolls: [...by[k].set] }));
+    }
+    let posCache = {};
+    function posMap(key) {   // শ্রেণির নিজস্ব রোল তালিকার ক্রম: মাঝের রোল না থাকলেও রেঞ্জ ভাঙবে না
+        if (!key) return null;
+        if (key in posCache) return posCache[key];
+        const g = stT().map && stT().map[key];
+        let m = null;
+        if (g) { m = {}; [...g.rolls].sort((a, b) => a - b).forEach((v, i) => { m[v] = i; }); }
+        return (posCache[key] = m);
+    }
+    function runsOf(rolls, key) {
+        const m = posMap(key), out = [];
+        let a = null, z = null, zp = null, n = 0;
+        rolls.slice().sort((x, y) => x - y).forEach(v => {
+            const p = m && m[v] != null ? m[v] : Math.floor(v + 1e-9);
+            if (a !== null && p === zp + 1) { z = v; zp = p; n++; }
+            else { if (a !== null) out.push({ from: a, to: z, n }); a = z = v; zp = p; n = 1; }
+        });
+        if (a !== null) out.push({ from: a, to: z, n });
+        return out;
+    }
+    const placeOf = ri => [String(ri.building || '').trim(), ri.floor ? '(' + String(ri.floor).trim() + ')' : ''].filter(Boolean).join(' ');
+    const sk = e => e.ord * 1e6 + e.from;   // শ্রেণি → রোল ক্রম
+
+    // সংরক্ষিত কক্ষ → টেবিলের সারি
+    function build(rows, shift, sortBy) {
+        posCache = {};
+        const list = [];
+        rows.filter(r => shiftOf(r) === shift).forEach(r => {
+            const ri = r.data.roomInfo || {};
+            const room = String(ri.roomNumber || '').trim();
+            const roomNum = parseInt(en(room), 10) || 0;
+            const place = placeOf(ri);
+            // প্রথম পছন্দ: "শ্রেণি / শাখা / গ্রুপ নির্বাচন করুন" ঘরে যা বাছা হয়েছে (নাম + শুরু–শেষ রোল) — সিটে ঠিক তাই দেখাবে
+            const sel = (r.data.schools || []).filter(x => x && String(x.name || '').trim() && x.startRoll && x.endRoll);
+            const gs = groupsOfRow(r);
+            if (sel.length) {
+                sel.forEach(x => {
+                    const key = keyByLabel(x.name), a = Number(x.startRoll), z = Number(x.endRoll);
+                    list.push({ label: String(x.name).trim(), ord: key ? keyOrd(key) : 0, from: a, to: z,
+                        fromTxt: key ? rollTxt(key, a) : bn(a), toTxt: key ? rollTxt(key, z) : bn(z),
+                        n: x.studentCount || (z - a + 1), room, roomNum, place });
+                });
+            } else if (gs.length) {   // নির্বাচিত ঘর না থাকলে সিটে বসানো রোল (classKey) থেকে
+                gs.forEach(g => runsOf(g.rolls, g.key).forEach(rn => list.push({
+                    label: classLabel(g.key), ord: keyOrd(g.key), from: rn.from, to: rn.to,
+                    fromTxt: rollTxt(g.key, rn.from, g.prefix), toTxt: rollTxt(g.key, rn.to, g.prefix), n: rn.n, room, roomNum, place })));
+            }
+        });
+        // একটি কক্ষের সব শ্রেণি/রেঞ্জ পরপর; কক্ষের ক্রম: কক্ষ নম্বর অথবা কক্ষের সবচেয়ে ছোট (শ্রেণি, রোল) অনুযায়ী
+        const groups = {};
+        list.forEach(e => { const g = e.room + '|' + e.place; (groups[g] = groups[g] || { min: sk(e), roomNum: e.roomNum, items: [] }); groups[g].min = Math.min(groups[g].min, sk(e)); groups[g].items.push(e); });
+        const order = Object.values(groups).sort(sortBy === 'roll' ? (a, b) => a.min - b.min || a.roomNum - b.roomNum : (a, b) => a.roomNum - b.roomNum || a.min - b.min);
+        const out = [];
+        order.forEach(g => g.items.sort((a, b) => sk(a) - sk(b)).forEach(e => out.push(e)));
+        return out;
+    }
+    const rollText = e => e.fromTxt + (e.to !== e.from ? CFG.sep + e.toTxt : '');
+
+    // ---------- টেবিল HTML (প্রিভিউ ও প্রিন্ট একই) ----------
+    function tableHtml(list, o) {
+        let zebra = 0, prev = null;
+        const total = list.reduce((s, e) => s + e.n, 0);
+        const rooms = new Set(list.map(e => e.room)).size;
+        const body = list.map((e, i) => {
+            const same = prev && prev.room === e.room && prev.place === e.place;
+            if (!same) zebra ^= 1;
+            let span = 1;
+            if (!same) { for (let j = i + 1; j < list.length && list[j].room === e.room && list[j].place === e.place; j++) span++; }
+            prev = e;
+            return '<tr class="z' + zebra + '">' +
+                (o.label ? '<td class="gl-l">' + esc(e.label || '—') + '</td>' : '') +
+                '<td class="gl-r">' + esc(rollText(e)) + '</td>' +
+                (same ? '' : '<td class="gl-room"' + (span > 1 ? ' rowspan="' + span + '"' : '') + '>' + bn(esc(e.room)) + '</td>' +
+                    '<td class="gl-p"' + (span > 1 ? ' rowspan="' + span + '"' : '') + '>' + esc(e.place || '—') + '</td>') +
+                (o.count ? '<td class="gl-n">' + bn(e.n) + ' জন</td>' : '') + '</tr>';
+        }).join('');
+        const cols = 3 + (o.label ? 1 : 0) + (o.count ? 1 : 0);
+        return '<table class="gl-tbl"><thead><tr>' + (o.label ? '<th>শ্রেণি</th>' : '') + '<th>রোল নং</th><th>কক্ষ নং</th><th>কক্ষ পরিচিতি</th>' + (o.count ? '<th>পরীক্ষার্থী</th>' : '') + '</tr></thead><tbody>' +
+            (body || '<tr><td colspan="' + cols + '" class="gl-empty">এই শিফটে কোনো সংরক্ষিত কক্ষ নেই</td></tr>') + '</tbody>' +
+            (list.length ? '<tfoot><tr><td colspan="' + (cols - (o.count ? 1 : 0)) + '">মোট ' + bn(rooms) + 'টি কক্ষ</td>' + (o.count ? '<td class="gl-n">' + bn(total) + ' জন</td>' : '') + '</tr></tfoot>' : '') + '</table>';
+    }
+    // ---------- অফিসিয়াল প্রিন্ট শিট (সাদা-কালো, সরকারি চিঠির ধাঁচ) ----------
+    function officialTable(list, o) {
+        let prev = null, serial = 0;
+        const total = list.reduce((s, e) => s + e.n, 0);
+        let body = '';
+        list.forEach((e, i) => {
+            const same = prev && prev.room === e.room && prev.place === e.place;
+            let span = 1;
+            if (!same) { serial++; for (let j = i + 1; j < list.length && list[j].room === e.room && list[j].place === e.place; j++) span++; }
+            prev = e;
+            const rs = span > 1 ? ' rowspan="' + span + '"' : '';
+            if (!same) body += (i ? '</tbody>' : '') + '<tbody class="rg">';
+            body += '<tr>' + (same ? '' : '<td class="c"' + rs + '>' + bn(serial) + '</td>') +
+                (o.label ? '<td class="l">' + esc(e.label || '—') + '</td>' : '') +
+                '<td class="c">' + esc(rollText(e)) + '</td>' +
+                (same ? '' : '<td class="c b"' + rs + '>' + bn(esc(e.room)) + '</td><td class="l"' + rs + '>' + esc(e.place || '—') + '</td>') +
+                (o.count ? '<td class="c">' + bn(e.n) + '</td>' : '') + '</tr>';
+        });
+        if (list.length) body += '</tbody>';
+        const nc = 4 + (o.label ? 1 : 0);   // ক্রম, (বিদ্যালয়), রোল, কক্ষ নং, কক্ষ পরিচিতি
+        return '<table class="gl-ot"><thead><tr><th style="width:7%">ক্রম</th>' + (o.label ? '<th>শ্রেণি</th>' : '') +
+            '<th style="width:30%">রোল নং</th><th style="width:9%">কক্ষ নং</th><th>কক্ষ পরিচিতি</th>' + (o.count ? '<th style="width:11%">পরীক্ষার্থী সংখ্যা</th>' : '') + '</tr></thead>' + body +
+            (list.length ? '<tfoot>' + (o.count ? '<tr><td colspan="' + nc + '" class="r">মোট পরীক্ষার্থী:</td><td class="c b">' + bn(total) + '</td></tr>' : '') +
+                '<tr class="sg"><td colspan="' + (nc + (o.count ? 1 : 0)) + '" class="sgn"><div class="of-sign"><span>' + esc(CFG.signLeft) + '</span><span>' + esc(CFG.signRight) + '</span></div></td></tr></tfoot>' : '') + '</table>';
+    }
+    function officialSheet(o, rows, list) {
+        const nm = ($('examName') || {}).value || '', yr = ($('examYear') || {}).value || '';
+        const exam = [nm, yr ? bn(yr) : ''].filter(Boolean).join(' ');
+        const first = rows.find(r => shiftOf(r) === o.shift && r.data && r.data.examStartTime);
+        const time = (first && first.data.examStartTime) || '';
+        return '<div class="gl-of">' +
+            (o.center ? '<div class="of-center">' + esc(o.center) + '</div>' : '') +
+            (exam ? '<div class="of-exam">' + esc(exam) + '</div>' : '') +
+            '<div class="of-title"><span>' + esc(CFG.title) + '</span></div>' +
+            officialTable(list, o) +
+            '<div class="of-foot">সিট প্ল্যান সিস্টেম থেকে স্বয়ংক্রিয়ভাবে প্রস্তুত</div></div>';
+    }
+    function headHtml(o, rows) {
+        const nm = ($('examName') || {}).value || '', yr = ($('examYear') || {}).value || '';
+        const exam = [nm, yr ? bn(yr) : ''].filter(Boolean).join(' ');
+        const first = rows.find(r => shiftOf(r) === o.shift && r.data && r.data.examStartTime);
+        const time = o.time || (first && first.data.examStartTime) || '';
+        return '<div class="gl-h1">' + esc(CFG.title) + '</div>' +
+            (exam ? '<div class="gl-h2">' + esc(exam) + '</div>' : '') +
+            '<div class="gl-h3">' + SHN[o.shift] + (time ? ' • শুরু: ' + bn(esc(time)) : '') + (o.date ? ' • তারিখ: ' + bn(esc(o.date)) : '') + '</div>';
+    }
+
+    // ---------- CSS ----------
+    function injectCss() {
+        if ($('glStyle')) return;
+        const s = document.createElement('style'); s.id = 'glStyle';
+        s.textContent = `
+        #glDlg { position:fixed; inset:0; z-index:100000; background:rgba(10,16,34,.62); display:flex; align-items:center; justify-content:center; padding:14px; font-family:inherit; }
+        #glDlg .gl-card { background:#fff; color:#1b2540; width:min(860px,100%); max-height:94vh; border-radius:16px; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.45); overflow:hidden; }
+        #glDlg .gl-top { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; background:#1D2B4F; color:#F1E2C3; font-weight:700; }
+        #glDlg .gl-x { background:none; border:0; color:#F1E2C3; font-size:20px; cursor:pointer; }
+        #glDlg .gl-ctl { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; padding:10px 16px; border-bottom:1px solid #e3e7f1; font-size:13px; }
+        #glDlg .gl-seg button { padding:5px 14px; border:1px solid #1D2B4F; background:#fff; color:#1D2B4F; font:inherit; font-weight:600; cursor:pointer; }
+        #glDlg .gl-seg button:first-child { border-radius:99px 0 0 99px; } #glDlg .gl-seg button:last-child { border-radius:0 99px 99px 0; border-left:0; }
+        #glDlg .gl-seg button.on { background:#1D2B4F; color:#F1E2C3; }
+        #glDlg select, #glDlg input[type=text] { padding:4px 8px; border:1px solid #b9c1d6; border-radius:8px; font:inherit; font-size:13px; }
+        #glDlg label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
+        #glDlg .gl-body { padding:14px 16px; overflow:auto; background:#f5f6fa; }
+        #glDlg .gl-paper { background:#fff; border:1px solid #d5dae8; border-radius:10px; padding:12px; }
+        #glDlg .gl-foot { display:flex; gap:8px; justify-content:flex-end; padding:10px 16px; border-top:1px solid #e3e7f1; flex-wrap:wrap; }
+        #glDlg .gl-btn { padding:7px 16px; border-radius:99px; border:1px solid #1D2B4F; background:#fff; color:#1D2B4F; font:inherit; font-weight:700; cursor:pointer; }
+        #glDlg .gl-btn.pri { background:#D6A24E; border-color:#D6A24E; color:#101A33; }
+        .gl-h1 { text-align:center; font-size:20px; font-weight:800; color:#8a1f2b; }
+        .gl-h2 { text-align:center; font-size:14px; font-weight:700; margin-top:2px; }
+        .gl-h3 { text-align:center; font-size:12.5px; margin:6px 0 10px; padding:4px; background:#fbf3cf; border:1px solid #d8c987; }
+        .gl-tbl { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .gl-tbl th, .gl-tbl td { border:1px solid #6b7384; padding:5px 8px; text-align:center; vertical-align:middle; }
+        .gl-tbl th { background:#fbe9a8; font-weight:800; }
+        .gl-tbl tr.z1 td { background:#e4ecf8; } .gl-tbl tr.z0 td { background:#fff; }
+        .gl-tbl td.gl-r { font-weight:700; } .gl-tbl td.gl-room { font-size:1.15em; font-weight:800; }
+        .gl-tbl td.gl-l { text-align:left; } .gl-tbl td.gl-p { text-align:left; }
+        .gl-tbl tfoot td { background:#f3f0e6; font-weight:800; }
+        .gl-tbl .gl-empty { padding:18px; color:#666; }
+        #glSheet { display:none; }
+        .gl-sheet { font-family:'SolaimanLipi','Hind Siliguri','Kalpurush',sans-serif; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .gl-sheet .gl-h1 { font-size:22pt; } .gl-sheet .gl-h2 { font-size:13pt; } .gl-sheet .gl-h3 { font-size:11pt; }
+        .gl-sheet .gl-tbl { font-size:12pt; } .gl-sheet .gl-tbl tr { break-inside:avoid; page-break-inside:avoid; }
+        .gl-sheet thead { display:table-header-group; } .gl-sheet tfoot { display:table-row-group; }
+        .gl-sheet .gl-sign { display:flex; justify-content:space-around; margin-top:46px; font-size:11pt; break-inside:avoid; }
+        .gl-sheet .gl-sign span { border-top:1px solid #000; padding-top:3px; min-width:150px; text-align:center; }
+        .gl-of { font-family:'SolaimanLipi','Kalpurush','Noto Serif Bengali','Hind Siliguri',serif; color:#000; font-size:24pt; line-height:1.4; }
+        .gl-of .of-center { text-align:center; font-size:38pt; font-weight:800; }
+        .gl-of .of-exam { text-align:center; font-size:84pt; font-weight:700; margin-top:2px; }
+        .gl-of .of-title { display:flex; align-items:center; gap:22px; margin:16px 0 18px; }
+        .gl-of .of-title::before, .gl-of .of-title::after { content:""; flex:1; height:6px; border-top:2px solid #000; border-bottom:1px solid #000; }
+        .gl-of .of-title span { display:inline-block; font-size:32pt; font-weight:800; padding:4px 40px; border:3px double #000; border-radius:4px; }
+        .gl-of .of-meta { display:flex; justify-content:space-between; gap:10px; font-size:11.5pt; font-weight:600; border-top:1.5px solid #000; border-bottom:1px solid #000; padding:4px 2px; margin-bottom:8px; }
+        .gl-ot { width:100%; border-collapse:collapse; font-size:24pt; border:3px solid #000; }
+        .gl-ot th, .gl-ot td { border:1.5px solid #000; padding:6px 12px; vertical-align:middle; }
+        .gl-ot th { background:#dcdcdc !important; font-weight:800; text-align:center; border-bottom:4px double #000; }
+        .gl-ot tbody.rg:nth-of-type(even) td { background:#f2f2f2 !important; }
+        .gl-ot tbody.rg + tbody.rg tr:first-child td { border-top:2.5px solid #000; }
+        .gl-ot td.c { text-align:center; } .gl-ot td.l { text-align:left; } .gl-ot td.r { text-align:right; font-weight:800; } .gl-ot td.b { font-weight:800; font-size:1.3em; }
+        .gl-ot tfoot td { background:#f2f2f2 !important; font-weight:800; }
+        .gl-ot thead { display:table-header-group; } .gl-ot tfoot { display:table-row-group; } .gl-ot tr, .gl-ot tbody.rg { break-inside:avoid; page-break-inside:avoid; }
+        .gl-ot tfoot tr.sg { break-before:avoid; page-break-before:avoid; }
+        .gl-ot tfoot td.sgn { border:0 !important; background:#fff !important; padding:0 !important; }
+        .gl-of .of-sign { display:flex; justify-content:space-between; margin-top:80px; font-size:23pt; font-weight:600; break-inside:avoid; }
+        .gl-of .of-sign span { border-top:1.5px solid #000; padding-top:4px; min-width:300px; text-align:center; }
+        .gl-of .of-foot { margin-top:20px; text-align:center; font-size:17pt; color:#444; }
+        @media print {
+            html, body.gl-printing { background:#fff !important; padding:0 !important; margin:0 !important; height:auto !important; min-height:0 !important; overflow:visible !important; }
+            body.gl-printing > *:not(#glSheet) { display:none !important; }
+            body.gl-printing #glSheet { display:block !important; position:static !important; }
+            body.gl-printing #glSheet, body.gl-printing #glSheet * { visibility:visible !important; }
+            body.gl-printing #glSheet .gl-tbl th, body.gl-printing #glSheet .gl-tbl td { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        }`;
+        document.head.appendChild(s);
+    }
+
+    // ---------- ডায়ালগ ----------
+    let rowsAll = [], centerGuess = '';
+    async function loadRows() {
+        const { api: sbApi, token } = await window.fbReady;
+        const list = await sbApi('seatPlanList', token);
+        const cr = (Array.isArray(list) ? list : []).find(r => r && r.id === '__center__'), cc = (cr && cr.data && cr.data.center) || {};
+        centerGuess = String(cc.name || cc.centerName || cc.title || cc.college || cc.school || '').trim();
+        rowsAll = (Array.isArray(list) ? list : []).filter(r => r && r.id && String(r.id).indexOf('__') !== 0 && r.data && r.data.roomInfo);
+    }
+    async function openGlance() {
+        if ($('glDlg')) return;
+        const btn = $('glanceBtn'); if (btn) btn.disabled = true;
+        try { await loadRows(); }
+        catch (e) { if (typeof showAlert === 'function') showAlert('তথ্য আনতে ত্রুটি: ' + e.message, 'error'); if (btn) btn.disabled = false; return; }
+        if (btn) btn.disabled = false;
+        if (!rowsAll.length) { if (typeof showAlert === 'function') showAlert('কোনো সংরক্ষিত কক্ষ পাওয়া যায়নি!', 'error'); return; }
+        injectCss();
+        const o = { shift: (window.currentShift && window.currentShift()) === 'noon' ? 'noon' : 'morning', sort: 'room', label: true, count: false, date: '', time: '', center: '', memo: '' };
+        try { o.center = localStorage.getItem('glance.center') || ''; } catch (x) {}
+        if (!o.center && centerGuess) o.center = centerGuess;
+        const ov = document.createElement('div'); ov.id = 'glDlg'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+        ov.innerHTML =
+            '<div class="gl-card"><div class="gl-top"><span>📋 ' + esc(CFG.title) + '</span><button type="button" class="gl-x" aria-label="বন্ধ করুন">✕</button></div>' +
+            '<div class="gl-ctl"><span class="gl-seg" id="glSeg"><button type="button" data-sh="morning">🏫 কেন্দ্র</button><button type="button" data-sh="noon">📍 ভেন্যু</button></span>' +
+            '<label>সাজান: <select id="glSort"><option value="room">কক্ষ নম্বর অনুযায়ী</option><option value="roll">রোল অনুযায়ী (কক্ষ একসাথে)</option></select></label>' +
+            '<label><input type="checkbox" id="glLabel" checked> শ্রেণি কলাম</label>' +
+            '<label><input type="checkbox" id="glCount"> পরীক্ষার্থী সংখ্যা</label>' +
+                        '<label>কেন্দ্রের নাম: <input type="text" id="glCenter" placeholder="প্রতিষ্ঠানের নাম" size="26"></label></div>' +
+            '<div class="gl-body"><div class="gl-paper" id="glPaper"></div></div>' +
+            '<div class="gl-foot">' +
+            '<button type="button" class="gl-btn" id="glReload">🔄 হালনাগাদ</button>' +
+            '<button type="button" class="gl-btn pri" id="glPrint">🖨 প্রিন্ট / PDF</button></div></div>';
+        document.body.appendChild(ov);
+
+        const view = () => {
+            ov.querySelectorAll('#glSeg button').forEach(b => b.classList.toggle('on', b.dataset.sh === o.shift));
+            const list = build(rowsAll, o.shift, o.sort);
+            $('glPaper').innerHTML = headHtml(o, rowsAll) + tableHtml(list, o);
+            return list;
+        };
+        const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
+        const onKey = e => { if (e.key === 'Escape') close(); };
+        document.addEventListener('keydown', onKey);
+        ov.querySelector('.gl-x').onclick = close;
+        ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
+        ov.querySelectorAll('#glSeg button').forEach(b => b.onclick = () => { o.shift = b.dataset.sh; view(); });
+        $('glSort').onchange = e => { o.sort = e.target.value; view(); };
+        $('glLabel').onchange = e => { o.label = e.target.checked; view(); };
+        $('glCount').onchange = e => { o.count = e.target.checked; view(); };
+        $('glReload').onclick = async () => { try { await loadRows(); view(); } catch (e) { if (typeof showAlert === 'function') showAlert('তথ্য আনতে ত্রুটি: ' + e.message, 'error'); } };
+        $('glPrint').onclick = () => {
+            const list = build(rowsAll, o.shift, o.sort);
+            let sh = $('glSheet'); if (!sh) { sh = document.createElement('div'); sh.id = 'glSheet'; document.body.appendChild(sh); }
+            sh.innerHTML = '<div class="gl-sheet">' + officialSheet(o, rowsAll, list) + '</div>';
+            // ল্যান্ডস্কেপ: প্রিন্টের মুহূর্তে সাধারণ @page বসে, প্রিন্ট শেষে সরে যায় (আপনার অন্য প্রিন্টে প্রভাব ফেলে না)
+            let ps = $('glPageStyle'); if (ps) ps.remove();
+            ps = document.createElement('style'); ps.id = 'glPageStyle';
+            ps.textContent = '@page { size: 14in 8.5in; margin: 0.4in; @bottom-center { content: "পৃষ্ঠা " counter(page, bengali); font-size: 14pt; } }';
+            document.head.appendChild(ps);
+            document.body.classList.add('gl-printing');
+            window.addEventListener('afterprint', function done() { document.body.classList.remove('gl-printing'); const x = $('glPageStyle'); if (x) x.remove(); window.removeEventListener('afterprint', done); });
+            setTimeout(() => window.print(), 60);
+        };
+        $('glCenter').value = o.center;
+        $('glCenter').oninput = e => { o.center = e.target.value.trim(); try { localStorage.setItem('glance.center', o.center); } catch (x) {} };
+        view();
+    }
+    window.openGlance = openGlance;
+    window.__glanceTest = { build, tableHtml, runsOf, rollText };   // শুধু পরীক্ষার জন্য
+
+    // ---------- বাটন: "এডিট"-এর পাশে ----------
+    const anchor = $('editPrintBtn');
+    if (anchor && !$('glanceBtn')) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.id = 'glanceBtn'; b.className = 'print-btn no-print';
+        b.title = 'সংরক্ষিত কক্ষ থেকে এক নজরে আসন বিন্যাস টেবিল';
+        b.textContent = 'এক নজরে';
+        b.addEventListener('click', openGlance);
+        anchor.insertAdjacentElement('afterend', b);
+    }
+})();
+</script>
 </body>
 </html>
