@@ -358,14 +358,14 @@
         <h2>স্বাগতম</h2>
         <p>আপনার অ্যাকাউন্টে প্রবেশ করুন</p>
       </div>
-      <form id="loginForm">
+      <form id="loginForm" method="post" action="#" autocomplete="on">
         <div class="form-group">
-          <input type="email" id="lEmail" placeholder=" " required autocomplete="username">
+          <input type="email" id="lEmail" name="username" placeholder=" " required autocomplete="username">
           <label for="lEmail">ইমেইল ঠিকানা</label>
           <span class="icon">✉️</span>
         </div>
         <div class="form-group">
-          <input type="password" id="lPass" placeholder=" " required autocomplete="current-password">
+          <input type="password" id="lPass" name="password" placeholder=" " required autocomplete="current-password">
           <label for="lPass">পাসওয়ার্ড</label>
           <span class="icon">🔒</span>
           <span class="password-toggle" onclick="togglePassword('lPass', this)">👁️</span>
@@ -892,6 +892,11 @@ $("loginForm").addEventListener("submit", async (e) => {
 let otpEmail = "", otpPass = "", otpTimerId = null;
 async function completeLogin(token) {
   TOKEN = token;
+  // ব্রাউজারের "পাসওয়ার্ড সেভ করবেন?" বার্তা: OTP সহ লগইন সফল হওয়ার পর (Chrome/Edge)
+  try {
+    const em = $("lEmail").value.trim(), pw = $("lPass").value;
+    if (window.PasswordCredential && em && pw) navigator.credentials.store(new PasswordCredential({ id: em, password: pw, name: em })).catch(() => {});
+  } catch (e) {}
   const me = await api("whoAmI", TOKEN);                 // কে ঢুকল: অ্যাডমিন, শিক্ষক না অফিস
   ME = me; sessionStorage.setItem("app_token", TOKEN);
   otpPass = ""; clearInterval(otpTimerId);
@@ -983,6 +988,45 @@ function setupOtpBoxes(selector) {
 }
 setupOtpBoxes(".reset-otp-digit");
 setupOtpBoxes(".otp-digit");
+
+// ============================================================
+// 📧 OTP অটোফিল (ইমেইল): পেস্ট বোতাম + ফিরে এলে ক্লিপবোর্ড থেকে নেওয়া + ইমেইলের লিংক
+// ============================================================
+const otpBoxes = (sel) => Array.from(document.querySelectorAll(sel));
+const pickCode = (t) => { const m = String(t || "").match(/(?<!\d)\d{6}(?!\d)/); return m ? m[0] : ""; };   // পুরো ইমেইল লেখা পেস্ট করলেও ৬ ডিজিট বের করে
+function putCode(sel, code, submit) {
+  const b = otpBoxes(sel); if (!b.length || code.length !== b.length) return false;
+  code.split("").forEach((c, i) => (b[i].value = c));
+  b[b.length - 1].focus();
+  if (submit) { const f = b[0].closest("form"), btn = f && f.querySelector("button[type=submit]"); if (btn && !btn.disabled) setTimeout(() => f.requestSubmit(), 150); }
+  return true;
+}
+let lastClipCode = "";
+async function pasteOtp(sel, submit, errId, silent) {
+  try {
+    const code = pickCode(await navigator.clipboard.readText());
+    if (code && !(silent && code === lastClipCode)) { lastClipCode = code; putCode(sel, code, submit); }
+    else if (!code && !silent && errId) showMsg(errId, "ক্লিপবোর্ডে ৬ ডিজিটের কোড পাওয়া যায়নি। ইমেইল থেকে কোডটি কপি করে আবার চাপুন।");
+  } catch (e) {
+    if (!silent && errId) showMsg(errId, "ক্লিপবোর্ড পড়ার অনুমতি মেলেনি। কোডটি কপি করে প্রথম ঘরে পেস্ট করুন।");
+  }
+}
+// ইমেইল অ্যাপ থেকে কোড কপি করে পেজে ফিরলে ঘর খালি থাকলে নিজে বসবে (একই কোড দুইবার নয়)
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if ($("otpStep").style.display === "block" && otpBoxes(".otp-digit").every((i) => !i.value)) pasteOtp(".otp-digit", true, "otpError", true);
+  else if ($("resetStep").style.display === "block" && otpBoxes(".reset-otp-digit").every((i) => !i.value)) pasteOtp(".reset-otp-digit", false, "resetError", true);
+});
+// ইমেইলের লিংক: https://সাইট/#otp=123456&e=ইমেইল — ক্লিক করলে কোড বসে নিজে যাচাই হবে (লগইন OTP)
+(function () {
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  const code = h.get("otp"), em = h.get("e");
+  if (code === null && em === null) return;
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}   // কোড ঠিকানায় থেকে যাবে না
+  if (!/^\d{6}$/.test(code || "") || !em) return;
+  otpEmail = em; $("otpEmailDisplay").textContent = em;
+  goToStep("otpStep"); putCode(".otp-digit", code, true);
+})();
 
 // লগইন OTP: কোড জমা
 $("otpForm").addEventListener("submit", async (e) => {
