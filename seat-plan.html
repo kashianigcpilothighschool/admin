@@ -2733,6 +2733,11 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         function showPrev() {
             const r = current.find(x => x.id === roomSel.value);
             resetDel();
+            if (roomSel.value === '__all__') {
+                prev.innerHTML = '<div class="t"><b>সব কক্ষ</b><span class="ed-badge">' + bn(rows.length) + 'টি কক্ষ</span></div>' +
+                    '<div class="ed-chips"><span>দুই শিফট মিলিয়ে সংরক্ষিত সব কক্ষ</span></div>';
+                go.disabled = true; del.disabled = false; return;
+            }
             if (!r) { prev.innerHTML = '<div class="ed-empty">এই শিফটে কোনো কক্ষ সংরক্ষিত নেই</div>'; go.disabled = true; del.disabled = true; return; }
             go.disabled = false; del.disabled = false;
             const i = r.data.roomInfo;
@@ -2744,9 +2749,10 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         function fillRooms() {
             ov.querySelectorAll('.ed-seg button').forEach(b => b.classList.toggle('on', b.dataset.sh === shift));
             current = rows.filter(r => window.shiftOfRow(r) === shift).sort((x, y) => numOf(x) - numOf(y));
-            roomSel.innerHTML = current.length
+            roomSel.innerHTML = (current.length
                 ? current.map(r => '<option value="' + esc(r.id) + '">' + bn(esc(en(r.data.roomInfo.roomNumber))) + ' নং কক্ষ</option>').join('')
-                : '<option value="">— কোনো কক্ষ নেই —</option>';
+                : '<option value="">— কোনো কক্ষ নেই —</option>')
+                + (rows.length ? '<option value="__all__">🗑 সব কক্ষ (' + bn(rows.length) + 'টি)</option>' : '');
             showPrev();
         }
         ov.querySelector('.ed-seg').addEventListener('click', e => {
@@ -2764,38 +2770,61 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         ov.addEventListener('mousedown', e => { if (e.target === ov) close(); });
 
         del.onclick = async () => {
+            const isAll = roomSel.value === '__all__';
             const pick = current.find(r => r.id === roomSel.value);
-            if (!pick) return;
-            const name = bn(en(pick.data.roomInfo.roomNumber)) + ' নং কক্ষ';
+            if (!isAll && !pick) return;
+            const targets = isAll ? rows.slice() : [pick];
+            const name = isAll ? 'সব ' + bn(targets.length) + 'টি কক্ষ' : bn(en(pick.data.roomInfo.roomNumber)) + ' নং কক্ষ';
             if (!del.classList.contains('sure')) {   // প্রথম চাপ: নিশ্চিতকরণ
-                del.classList.add('sure'); del.textContent = 'নিশ্চিত? আবার চাপুন';
-                delTimer = setTimeout(resetDel, 4000);
+                del.classList.add('sure'); del.textContent = isAll ? 'নিশ্চিত? সব ' + bn(targets.length) + 'টি মুছবে — আবার চাপুন' : 'নিশ্চিত? আবার চাপুন';
+                delTimer = setTimeout(resetDel, isAll ? 5000 : 4000);
                 return;
             }
-            resetDel(); del.disabled = true; go.disabled = true;
+            clearTimeout(delTimer); del.classList.remove('sure'); del.disabled = true; go.disabled = true;
+            if (isAll) del.textContent = 'মুছে ফেলা হচ্ছে…';
+            let lastErr = null;
             try {
                 const { api: sbApi, token } = await window.fbReady;
                 const names = ['seatPlanDelete', 'seatPlanRemove', 'deleteSeatPlan', 'seatPlanDel'];
-                let ok = false, lastErr = null;
-                for (const fn of names) {
-                    try { await sbApi(fn, token, pick.id); ok = true; break; }
-                    catch (e) { lastErr = e; console.warn(fn + ' ব্যর্থ:', e.message); }
+                let fn = null;
+                for (let i = 0; i < targets.length; i++) {
+                    if (isAll) del.textContent = 'মুছে ফেলা হচ্ছে… ' + bn(i + 1) + '/' + bn(targets.length);
+                    const t = targets[i];
+                    try {
+                        if (fn) { await sbApi(fn, token, t.id); }
+                        else {
+                            let done = false;
+                            for (const n of names) {
+                                try { await sbApi(n, token, t.id); fn = n; done = true; break; }
+                                catch (e) { lastErr = e; console.warn(n + ' ব্যর্থ:', e.message); }
+                            }
+                            if (!done) throw lastErr || new Error('অজানা ত্রুটি');
+                        }
+                    } catch (e) { lastErr = e; }
                 }
-                if (!ok) throw new Error((lastErr && lastErr.message) || 'অজানা ত্রুটি');
                 // নিশ্চিত হওয়া: সত্যিই মুছেছে কিনা
                 const after = await sbApi('seatPlanList', token);
-                if ((Array.isArray(after) ? after : []).some(r => r && r.id === pick.id)) throw new Error('সার্ভার সফল বলেছে কিন্তু কক্ষটি এখনো আছে');
-                deletedAny = true;
-                rows = rows.filter(r => r.id !== pick.id);
+                const left = new Set((Array.isArray(after) ? after : []).filter(r => r).map(r => r.id));
+                const gone = targets.filter(t => !left.has(t.id));
+                if (gone.length) deletedAny = true;
+                const goneIds = new Set(gone.map(t => t.id));
+                rows = rows.filter(r => !goneIds.has(r.id));
                 count.morning = 0; count.noon = 0; rows.forEach(r => { count[window.shiftOfRow(r)]++; });
                 ov.querySelectorAll('.ed-seg button').forEach(b => { const sm = b.querySelector('small'); if (sm) sm.textContent = bn(count[b.dataset.sh]); });
+                const failed = targets.length - gone.length;
+                if (failed) {
+                    showAlert(bn(gone.length) + 'টি মুছেছে, ' + bn(failed) + 'টি মুছতে ব্যর্থ' + (lastErr ? ': ' + lastErr.message : '') + '।', 'error');
+                    log('কক্ষ ডিলিট আংশিক: ' + gone.length + ' মুছেছে, ' + failed + ' বাকি', 'error');
+                } else {
+                    showAlert(name + ' মুছে ফেলা হয়েছে।', 'success');
+                    log(isAll ? 'সব কক্ষ ডিলিট: ' + gone.length + 'টি' : 'কক্ষ ডিলিট: ' + pick.id, 'success');
+                }
+                del.disabled = false; go.disabled = false;
+                if (!rows.length) { close(); return; }
                 fillRooms();
-                showAlert(name + ' মুছে ফেলা হয়েছে।', 'success');
-                log('কক্ষ ডিলিট: ' + pick.id, 'success');
-                if (!rows.length) close();
             } catch (e) {
                 showAlert('কক্ষ মুছতে ত্রুটি: ' + e.message, 'error');
-                del.disabled = false; go.disabled = false;
+                del.disabled = false; go.disabled = false; resetDel(); showPrev();
             }
         };
 
