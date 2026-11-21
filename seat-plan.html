@@ -3594,7 +3594,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     const bn = s => String(s == null ? '' : s).replace(/\d/g, d => BN[d]);
     const en = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => String(BN.indexOf(d)));
     const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const SHN = { morning: 'কেন্দ্র', noon: 'ভেন্যু' };
+    const SHN = { morning: 'সকাল', noon: 'বিকাল' };
 
     const shiftOf = r => (window.shiftOfRow ? window.shiftOfRow(r) : 'morning') === 'noon' ? 'noon' : 'morning';
 
@@ -3708,7 +3708,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             (list.length ? '<tfoot><tr><td colspan="' + (cols - (o.count ? 1 : 0)) + '">মোট ' + bn(rooms) + 'টি কক্ষ</td>' + (o.count ? '<td class="gl-n">' + bn(total) + ' জন</td>' : '') + '</tr></tfoot>' : '') + '</table>';
     }
     // ---------- অফিসিয়াল প্রিন্ট শিট (সাদা-কালো, সরকারি চিঠির ধাঁচ) ----------
-    function officialTable(list, o) {
+    function officialTable(list, o, exam) {
         let prev = null, serial = 0;
         const total = list.reduce((s, e) => s + e.n, 0);
         let body = '';
@@ -3727,7 +3727,12 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         });
         if (list.length) body += '</tbody>';
         const nc = 4 + (o.label ? 1 : 0);   // ক্রম, (বিদ্যালয়), রোল, কক্ষ নং, কক্ষ পরিচিতি
-        return '<table class="gl-ot"><thead><tr><th style="width:7%">ক্রম</th>' + (o.label ? '<th>শ্রেণি</th>' : '') +
+        const hc = 4 + (o.label ? 1 : 0) + (o.count ? 1 : 0);
+        const hdr = '<tr class="of-hr"><th colspan="' + hc + '">' +
+            (o.center ? '<div class="of-center">' + esc(o.center) + '</div>' : '') +
+            (exam ? '<div class="of-exam">' + esc(exam) + '</div>' : '') +
+            '<div class="of-title"><span>' + esc(CFG.title) + '</span></div></th></tr>';
+        return '<table class="gl-ot"><thead>' + hdr + '<tr class="of-ch"><th style="width:7%">ক্রম</th>' + (o.label ? '<th>শ্রেণি</th>' : '') +
             '<th style="width:30%">রোল নং</th><th style="width:9%">কক্ষ নং</th><th>কক্ষ পরিচিতি</th>' + (o.count ? '<th style="width:11%">পরীক্ষার্থী সংখ্যা</th>' : '') + '</tr></thead>' + body +
             (list.length ? '<tfoot>' + (o.count ? '<tr><td colspan="' + nc + '" class="r">মোট পরীক্ষার্থী:</td><td class="c b">' + bn(total) + '</td></tr>' : '') +
                 '<tr class="sg"><td colspan="' + (nc + (o.count ? 1 : 0)) + '" class="sgn"><div class="of-sign"><span>' + esc(CFG.signLeft) + '</span><span>' + esc(CFG.signRight) + '</span></div></td></tr></tfoot>' : '') + '</table>';
@@ -3738,10 +3743,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         const first = rows.find(r => shiftOf(r) === o.shift && r.data && r.data.examStartTime);
         const time = (first && first.data.examStartTime) || '';
         return '<div class="gl-of">' +
-            (o.center ? '<div class="of-center">' + esc(o.center) + '</div>' : '') +
-            (exam ? '<div class="of-exam">' + esc(exam) + '</div>' : '') +
-            '<div class="of-title"><span>' + esc(CFG.title) + '</span></div>' +
-            officialTable(list, o) +
+            officialTable(list, o, exam) +
             '<div class="of-foot">সিট প্ল্যান সিস্টেম থেকে স্বয়ংক্রিয়ভাবে প্রস্তুত</div></div>';
     }
     function headHtml(o, rows) {
@@ -3799,7 +3801,9 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         .gl-of .of-title::before, .gl-of .of-title::after { content:""; flex:1; height:6px; border-top:2px solid #000; border-bottom:1px solid #000; }
         .gl-of .of-title span { display:inline-block; font-size:32pt; font-weight:800; padding:4px 40px; border:3px double #000; border-radius:4px; }
         .gl-of .of-meta { display:flex; justify-content:space-between; gap:10px; font-size:11.5pt; font-weight:600; border-top:1.5px solid #000; border-bottom:1px solid #000; padding:4px 2px; margin-bottom:8px; }
-        .gl-ot { width:100%; border-collapse:collapse; font-size:24pt; border:3px solid #000; }
+        .gl-ot { width:100%; border-collapse:collapse; font-size:24pt; border:0; }
+        .gl-ot thead tr.of-hr th { border:0 !important; background:#fff !important; padding:0 0 6px; font-weight:400; }
+        .gl-ot thead tr.of-ch th { border-top:3px solid #000; }
         .gl-ot th, .gl-ot td { border:1.5px solid #000; padding:6px 12px; vertical-align:middle; }
         .gl-ot th { background:#dcdcdc !important; font-weight:800; text-align:center; border-bottom:4px double #000; }
         .gl-ot tbody.rg:nth-of-type(even) td { background:#f2f2f2 !important; }
@@ -3845,7 +3849,7 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
         const ov = document.createElement('div'); ov.id = 'glDlg'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
         ov.innerHTML =
             '<div class="gl-card"><div class="gl-top"><span>📋 ' + esc(CFG.title) + '</span><button type="button" class="gl-x" aria-label="বন্ধ করুন">✕</button></div>' +
-            '<div class="gl-ctl"><span class="gl-seg" id="glSeg"><button type="button" data-sh="morning">🏫 কেন্দ্র</button><button type="button" data-sh="noon">📍 ভেন্যু</button></span>' +
+            '<div class="gl-ctl"><span class="gl-seg" id="glSeg"><button type="button" data-sh="morning">🌅 সকাল</button><button type="button" data-sh="noon">☀️ বিকাল</button></span>' +
             '<label>সাজান: <select id="glSort"><option value="room">কক্ষ নম্বর অনুযায়ী</option><option value="roll">রোল অনুযায়ী (কক্ষ একসাথে)</option></select></label>' +
             '<label><input type="checkbox" id="glLabel" checked> শ্রেণি কলাম</label>' +
             '<label><input type="checkbox" id="glCount"> পরীক্ষার্থী সংখ্যা</label>' +
