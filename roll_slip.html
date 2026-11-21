@@ -37,7 +37,7 @@
   .slip .roll b { font-size: 25pt; font-weight: 700; letter-spacing: .5px; }
   .slip .dots { letter-spacing: 1px; }
   .slip.hasmeta .roll { margin-top: 3mm; }
-  .slip .foot { margin-top: auto; width: 100%; padding-top: 2mm; font-size: 14pt; font-weight: 700; text-align: center; white-space: nowrap; }
+  .slip .foot { margin-top: auto; width: 100%; padding-top: 2mm; font-size: 10.5pt; font-weight: 700; display: flex; justify-content: center; align-items: baseline; gap: 3mm; white-space: nowrap; }
   .slip .roll .meta { font-size: 10pt; font-weight: 600; margin-top: 1mm; line-height: 1.3; }
   .slip .ttl .sch { display: block; font-size: 12pt; font-weight: 600; margin-bottom: 1mm; }
 
@@ -122,7 +122,7 @@ function render() {
     slips.push(empty ? '<div></div>' :
       '<div class="slip' + (it && it.meta ? ' hasmeta' : '') + '"><div class="logo">' + (logo ? '<img src="' + logo + '" alt="">' : '') + '</div>' +
       '<div class="ttl">' + titleHtml + '</div><div class="roll">' + rollHtml + '</div>' +
-      (it && it.room ? '<div class="foot">কক্ষ নং- ' + bn(esc(it.room)) + '</div>' : '') + '</div>');
+      (it && (it.room || it.clsTxt) ? '<div class="foot">' + (it.clsTxt ? '<span>' + esc(it.clsTxt) + '</span>' : '') + (it.room ? '<span>কক্ষ নং- ' + bn(esc(it.room)) + '</span>' : '') + '</div>' : '') + '</div>');
   }
   let html = '';
   for (let p = 0; p < total; p += 8) html += '<div class="sheet">' + slips.slice(p, p + 8).join('') + '</div>';
@@ -219,7 +219,7 @@ function srvPick() {
     sel.forEach(r => {
       if (cur !== null && r.room !== cur) while (out.length % 8) out.push(null);
       cur = r.room;
-      out.push({ roll: r.roll, meta: ['শ্রেণি ' + bn(r.class_base) + ([r.grp, r.section].filter(Boolean).length ? ' ' + [r.grp, r.section].filter(Boolean).join('-') : ''), r.seat ? 'আসন ' + bn(r.seat) : ''].filter(Boolean).join(' · '), room: r.room, txt: rollTxt(r.class_base, r.roll) });
+      out.push({ roll: r.roll, meta: r.seat ? 'আসন ' + bn(r.seat) : '', clsTxt: 'শ্রেণি ' + bn(r.class_base) + ([r.grp, r.section].filter(Boolean).length ? ' ' + [r.grp, r.section].filter(Boolean).join('-') : ''), room: r.room, txt: rollTxt(r.class_base, r.roll) });
     });
     srvRolls = out;
   } else {
