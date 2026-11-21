@@ -817,6 +817,11 @@ function repeatHeaderPatch() {
       var tr = document.createElement('tr'); tr.className = 'rh'; tr.appendChild(th);
       t.tHead.insertBefore(tr, t.tHead.rows[0]); t.classList.add('rhd');
     });
+    var tb0 = $('tabMain') && $('tabMain').tBodies[0];
+    var N = tb0 ? [].filter.call(tb0.rows, function (r) { return r.style.display !== 'none'; }).length : 0;
+    var ps = $('rhRows');
+    if (!ps) { ps = document.createElement('style'); ps.id = 'rhRows'; document.head.appendChild(ps); }
+    ps.textContent = (N > 0 && N <= 24) ? '@media print{body.rh-on #tabTab table.rhd tbody tr{height:calc((100vh - 112mm)/' + N + ')}}' : '';
     document.body.classList.add('rh-on');
   });
   window.addEventListener('afterprint', strip);
