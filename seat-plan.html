@@ -3882,8 +3882,8 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
             const nm = ($('examName') || {}).value || '', yr = ($('examYear') || {}).value || '';
             const exam = [nm, yr ? bn(yr) : ''].filter(Boolean).join(' ');
             const lines = [o.center, exam, CFG.title].filter(Boolean).map(cs);
-            ps.textContent = '@page { size: 14in 8.5in; margin: ' + (lines.length > 2 ? '1.7in' : '1.3in') + ' 0.4in 0.4in; ' +
-                '@top-center { content: "' + lines.join('\\A ') + '"; white-space: pre-wrap; text-align: center; vertical-align: middle; font-family: SolaimanLipi, Kalpurush, "Noto Serif Bengali", "Hind Siliguri", serif; font-size: 24pt; font-weight: 700; color: #000; } ' +
+            ps.textContent = '@page { size: 14in 8.5in; margin: ' + (lines.length > 2 ? '2.3in' : '1.7in') + ' 0.4in 0.4in; ' +
+                '@top-center { content: "' + lines.join('\\A ') + '"; white-space: pre-wrap; text-align: center; vertical-align: middle; font-family: SolaimanLipi, Kalpurush, "Noto Serif Bengali", "Hind Siliguri", serif; font-size: 34pt; font-weight: 700; color: #000; } ' +
                 '@bottom-center { content: "পৃষ্ঠা " counter(page, bengali); font-size: 14pt; } }';
             document.head.appendChild(ps);
             document.body.classList.add('gl-printing');
