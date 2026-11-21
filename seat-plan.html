@@ -3904,5 +3904,57 @@ const labelOld = r => { const b = String(r.class_base).trim(), n = BN_ORD[parseI
     }
 })();
 </script>
+<script>
+// ===== মূল সিট প্ল্যান: ওপরে "শ্রেণি / শাখা / গ্রুপ নির্বাচন করুন"-এ যা বাছা হবে, সিট অংশের শ্রেণি তালিকায় শুধু তাই দেখাবে =====
+(function () {
+    const $ = id => document.getElementById(id);
+    // ওপরের সারিগুলোতে বাছা শ্রেণির key-সমূহ; কিছুই বাছা না থাকলে null (তখন সব শ্রেণি দেখায়)
+    function pickedKeys() {
+        const set = new Set();
+        document.querySelectorAll('#schoolForms .school-select').forEach(s => {
+            const o = s.selectedOptions[0], k = o && o.dataset ? o.dataset.k : '';
+            if (s.value && k) set.add(k);
+        });
+        return set.size ? set : null;
+    }
+    function apply() {
+        const keys = pickedKeys();
+        document.querySelectorAll('#columnInputs select.stu-class').forEach(sel => {
+            [...sel.options].forEach(o => {
+                if (!o.value) return;
+                const bad = !!keys && !keys.has(o.value) && !o.selected;   // আগে বাছা থাকলে সেটি থাকবে
+                o.hidden = bad; o.disabled = bad;
+            });
+        });
+    }
+    let tm = null;
+    const sched = () => { clearTimeout(tm); tm = setTimeout(apply, 120); };   // শিফট-ফিল্টারের (৩০ms) পরে চলবে
+    const sf = $('schoolForms'), ci = $('columnInputs');
+    if (sf) {
+        sf.addEventListener('change', sched);
+        sf.addEventListener('input', sched);
+        new MutationObserver(sched).observe(sf, { childList: true, subtree: true });
+    }
+    if (ci) new MutationObserver(sched).observe(ci, { childList: true, subtree: true });
+    const et = $('examTime'); if (et) et.addEventListener('change', sched);
+    const ss = $('stuStatus'); if (ss) new MutationObserver(sched).observe(ss, { childList: true, characterData: true, subtree: true });
+
+    // সাবমিটের আগে: বাছা হয়নি এমন শ্রেণি সিটে থাকলে আটকানো
+    const _qv = quickValidation;
+    quickValidation = function () {
+        const e = _qv(), keys = pickedKeys();
+        if (keys) {
+            const bad = new Set();
+            document.querySelectorAll('#columnInputs select.stu-class').forEach(s => { if (s.value && !keys.has(s.value)) bad.add(s.value); });
+            if (bad.size) {
+                const lab = k => { const g = window.__stu && window.__stu.st.map[k]; return g ? g.label.replace('শ্রেণি: ', '') : k; };
+                e.push('ওপরে নির্বাচন করা হয়নি এমন শ্রেণি সিটে আছে: ' + [...bad].map(lab).join(', '));
+            }
+        }
+        return e;
+    };
+    sched();
+})();
+</script>
 </body>
 </html>
