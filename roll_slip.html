@@ -115,7 +115,7 @@ function render() {
   for (let i = 0; i < total; i++) {
     const it = useSrv ? srvRolls[i] : null, has = i < n && (!useSrv || it);
     let rollHtml;
-    if (fill && has) rollHtml = 'রোল নং- <b>' + String(useSrv ? it.roll : start + i) + '</b>' + (it && it.meta ? '<div class="meta">' + esc(it.meta) + '</div>' : '');
+    if (fill && has) rollHtml = 'রোল নং- <b>' + String(useSrv ? (it.txt || it.roll) : start + i) + '</b>' + (it && it.meta ? '<div class="meta">' + esc(it.meta) + '</div>' : '');
     else if (fill) rollHtml = '';                                 // শেষ পাতার বাকি ঘর ফাঁকা
     else rollHtml = 'রোল নং-<span class="dots">……………………</span>';
     const empty = fill && !has;
@@ -163,21 +163,23 @@ function srvFillGrp() {
     [...m].sort((a, b) => numCmp(a[0], b[0])).map(([k, n]) => '<option value="' + esc(k) + '">' + esc(k || '(শাখা নেই)') + ' (' + bn(n) + ')</option>').join('');
   srvPick();
 }
-// ===== সিট প্ল্যান ১ (সংরক্ষিত কক্ষ) থেকে কক্ষের তথ্য: রোল → কক্ষ নং =====
+// ===== সিট প্ল্যান ১ (সংরক্ষিত কক্ষ) থেকে কক্ষের তথ্য: [প্রিফিক্স-]রোল → কক্ষ নং =====
 const enN = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
-let spMap = new Map(), spState = '';      // spState: '' | 'loading' | 'done' | 'fail'
-function spRolls(r) {
-  const set = new Set();
-  ((r.data && r.data.columnData) || []).forEach(c => (c.ranges || []).forEach(rg => {
-    if (Array.isArray(rg.rolls)) rg.rolls.forEach(x => { const v = parseInt(enN(x), 10); if (!isNaN(v)) set.add(v); });
-  }));
-  return set;
+const ROMAN = { 1:'I',2:'II',3:'III',4:'IV',5:'V',6:'VI',7:'VII',8:'VIII',9:'IX',10:'X',11:'XI',12:'XII' };
+const prefixOf = k => { const b = parseInt(String(k).trim(), 10); return ROMAN[b] || String(k == null ? '' : k).trim().split(' ')[0]; };   // সিট প্ল্যান ১-এর মতোই: ১০ → X
+function rollLab(raw) {                  // "2" → "002", "2 (H)" → "002 (H)" (সিট প্ল্যান ১-এর রোল লেবেল)
+  const t = enN(raw).trim(), m = t.match(/^(\d+)\s*(.*)$/);
+  if (!m) return t;
+  return String(parseInt(m[1], 10)).padStart(3, '0') + (m[2] ? ' ' + m[2].replace(/\s+/g, ' ').trim() : '');
 }
+const rollTxt = (cls, raw) => { const pf = prefixOf(cls); return (pf ? pf + '-' : '') + rollLab(raw); };   // "X-০০১" ধরনের লেখা (প্রিফিক্সসহ)
+let spMap = new Map(), spState = '';      // spState: '' | 'loading' | 'done' | 'fail'
+const spKey = (pf, lab) => (pf ? pf + '|' : '|') + lab;
 function applySpRooms() {             // srvData-র প্রতিটি রোলে সিট প্ল্যান ১-এর কক্ষ বসানো (না পেলে আগের কক্ষ থাকে)
   srvData.forEach(r => {
     if (r.room0 === undefined) r.room0 = r.room || '';
-    const m = spMap.get(parseInt(enN(r.roll), 10));
-    r.room = m || r.room0;
+    const lab = rollLab(r.roll);
+    r.room = spMap.get(spKey(prefixOf(r.class_base), lab)) || spMap.get(spKey('', lab)) || r.room0;
   });
 }
 async function loadSpRooms() {
@@ -190,7 +192,12 @@ async function loadSpRooms() {
     spMap = new Map();
     rows.forEach(r => {
       const no = String((r.data.roomInfo || {}).roomNumber || '').trim();
-      if (no) spRolls(r).forEach(v => { if (!spMap.has(v)) spMap.set(v, no); });
+      if (!no) return;
+      ((r.data && r.data.columnData) || []).forEach(c => (c.ranges || []).forEach(rg => {
+        if (!Array.isArray(rg.rolls)) return;
+        const pf = rg.prefix || (rg.classKey ? prefixOf(rg.classKey) : '');
+        rg.rolls.forEach(x => { const k = spKey(pf, rollLab(x)); if (!spMap.has(k)) spMap.set(k, no); });
+      }));
     });
     spState = 'done';
     if (srvData.length) { srvFillRoom(); srvFillClass(); }
@@ -212,10 +219,14 @@ function srvPick() {
     sel.forEach(r => {
       if (cur !== null && r.room !== cur) while (out.length % 8) out.push(null);
       cur = r.room;
-      out.push({ roll: r.roll, meta: ['শ্রেণি ' + bn(r.class_base) + ([r.grp, r.section].filter(Boolean).length ? ' ' + [r.grp, r.section].filter(Boolean).join('-') : ''), r.seat ? 'আসন ' + bn(r.seat) : ''].filter(Boolean).join(' · '), room: r.room });
+      out.push({ roll: r.roll, meta: ['শ্রেণি ' + bn(r.class_base) + ([r.grp, r.section].filter(Boolean).length ? ' ' + [r.grp, r.section].filter(Boolean).join('-') : ''), r.seat ? 'আসন ' + bn(r.seat) : ''].filter(Boolean).join(' · '), room: r.room, txt: rollTxt(r.class_base, r.roll) });
     });
     srvRolls = out;
-  } else srvRolls = [...new Set(sel.map(r => Number(r.roll)).filter(n => !isNaN(n)))].sort((a, b) => a - b).map(n => ({ roll: n }));
+  } else {
+    const seen = new Map();
+    sel.forEach(r => { const n = Number(r.roll); if (!isNaN(n)) { const k = r.class_base + '|' + n; if (!seen.has(k)) seen.set(k, { roll: n, cls: r.class_base, txt: rollTxt(r.class_base, r.roll) }); } });
+    srvRolls = [...seen.values()].sort((a, b) => numCmp(a.cls, b.cls) || a.roll - b.roll);
+  }
   const real = srvRolls.filter(Boolean).length;
   if (real) srvSetInfo('✅ ' + bn(real) + ' জনের রোল এসেছে (' + bn(Math.ceil(srvRolls.length / 8)) + ' পাতা)।');
   else if (srvData.length) srvSetInfo('❌ এই বাছাইয়ে কোনো রোল নেই।', true);
