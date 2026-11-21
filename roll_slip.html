@@ -163,14 +163,51 @@ function srvFillGrp() {
     [...m].sort((a, b) => numCmp(a[0], b[0])).map(([k, n]) => '<option value="' + esc(k) + '">' + esc(k || '(শাখা নেই)') + ' (' + bn(n) + ')</option>').join('');
   srvPick();
 }
+// ===== সিট প্ল্যান ১ (সংরক্ষিত কক্ষ) থেকে কক্ষের তথ্য: রোল → কক্ষ নং =====
+const enN = s => String(s == null ? '' : s).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d));
+let spMap = new Map(), spState = '';      // spState: '' | 'loading' | 'done' | 'fail'
+function spRolls(r) {
+  const set = new Set();
+  ((r.data && r.data.columnData) || []).forEach(c => (c.ranges || []).forEach(rg => {
+    if (Array.isArray(rg.rolls)) rg.rolls.forEach(x => { const v = parseInt(enN(x), 10); if (!isNaN(v)) set.add(v); });
+  }));
+  return set;
+}
+function applySpRooms() {             // srvData-র প্রতিটি রোলে সিট প্ল্যান ১-এর কক্ষ বসানো (না পেলে আগের কক্ষ থাকে)
+  srvData.forEach(r => {
+    if (r.room0 === undefined) r.room0 = r.room || '';
+    const m = spMap.get(parseInt(enN(r.roll), 10));
+    r.room = m || r.room0;
+  });
+}
+async function loadSpRooms() {
+  if (spState === 'loading') return;
+  spState = 'loading';
+  try {
+    const list = await api('seatPlanList', TOKEN);
+    const rows = (Array.isArray(list) ? list : []).filter(r => r && r.id && String(r.id).indexOf('__') !== 0 && r.data && r.data.roomInfo);
+    rows.sort((a, b) => (parseInt(enN((a.data.roomInfo || {}).roomNumber), 10) || 0) - (parseInt(enN((b.data.roomInfo || {}).roomNumber), 10) || 0));
+    spMap = new Map();
+    rows.forEach(r => {
+      const no = String((r.data.roomInfo || {}).roomNumber || '').trim();
+      if (no) spRolls(r).forEach(v => { if (!spMap.has(v)) spMap.set(v, no); });
+    });
+    spState = 'done';
+    if (srvData.length) { srvFillRoom(); srvFillClass(); }
+  } catch (e) { spState = 'fail'; console.warn('সিট প্ল্যান ১ থেকে কক্ষ আনা যায়নি:', e.message); }
+}
 function srvFillRoom() {
+  applySpRooms();
+  if (!spState) loadSpRooms();
   const rooms = [...new Set(srvData.map(r => r.room).filter(Boolean))];
   $('srvRoom').innerHTML = rooms.length ? '<option value="">সব কক্ষ (প্রতি কক্ষ নতুন পাতায়)</option>' + rooms.map(r => '<option value="' + esc(r) + '">কক্ষ ' + esc(r) + '</option>').join('') : '<option value="">— কক্ষের তথ্য নেই —</option>';
 }
 function srvPick() {
   const c = $('srvClass').value, g = $('srvGrp').value, rm = $('srvRoom').value;
   const sel = srvData.filter(r => (!c || r.class_base === c) && (g === '' || grpKey(r) === g) && (!rm || r.room === rm));
-  if (sel.some(r => r.room)) {          // কক্ষ অনুযায়ী: আসনের ক্রমে, প্রতি কক্ষ নতুন পাতায়
+  if (sel.some(r => r.room)) {          // কক্ষ অনুযায়ী: কক্ষ নং-এর ক্রমে (কক্ষহীন শেষে), প্রতি কক্ষ নতুন পাতায়
+    const rn = r => r.room ? (parseInt(enN(r.room), 10) || 0) : Infinity;
+    sel.sort((a, b) => (rn(a) === rn(b) ? 0 : rn(a) < rn(b) ? -1 : 1) || String(a.room).localeCompare(String(b.room), undefined, { numeric: true }) || ((a.seat && b.seat) ? 0 : numCmp(a.roll, b.roll)));
     const out = []; let cur = null;
     sel.forEach(r => {
       if (cur !== null && r.room !== cur) while (out.length % 8) out.push(null);
